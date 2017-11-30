@@ -20,7 +20,8 @@ defmodule Thegm.Mixfile do
   def application do
     [
       mod: {Thegm, []},
-      extra_applications: [:logger]
+      #applications: [:mailchimp],
+      extra_applications: [:logger, :mailchimp]
     ]
   end
 
@@ -38,7 +39,9 @@ defmodule Thegm.Mixfile do
       {:phoenix_ecto, "~> 3.2"},
       {:postgrex, ">= 0.0.0"},
       {:gettext, "~> 0.11"},
-      {:cowboy, "~> 1.0"}
+      {:cowboy, "~> 1.0"},
+      {:httpoison, "~> 0.13"},
+      {:mailchimp, "~> 0.0.6"}
     ]
   end
 
