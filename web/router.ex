@@ -8,7 +8,7 @@ defmodule Thegm.Router do
   scope "/", Thegm do
     pipe_through :api
 
-    post "/beta-sub", BetasubController, :create
-    get "/rolldice", RollDiceController, :index 
+    post "/betasub", BetasubController, :create
+    get "/rolldice", RollDiceController, :index
   end
 end
