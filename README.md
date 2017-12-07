@@ -1,9 +1,13 @@
-# Thegm
+# Roll for Guild: API (a.k.a. TheGM)
+
+[![Watch on GitHub][github-watch-badge]][github-watch]
+[![Star on GitHub][github-star-badge]][github-star]
 
 To start your Phoenix app:
 
   * Install dependencies with `mix deps.get`
   * Create and migrate your database with `mix ecto.create && mix ecto.migrate`
+    * If it isn't your first time with this repo and still have the db, just do `mix ecto.migrate`
   * Start Phoenix endpoint with `mix phoenix.server`
 
 Now you can visit [`localhost:4000`](http://localhost:4000) from your browser.
@@ -12,6 +16,7 @@ Ready to run in production? Please [check our deployment guides](http://www.phoe
 
 ## Learn more
 
+  * Roll for Guild: http://www.rollforguild.com
   * Official website: http://www.phoenixframework.org/
   * Guides: http://phoenixframework.org/docs/overview
   * Docs: https://hexdocs.pm/phoenix
