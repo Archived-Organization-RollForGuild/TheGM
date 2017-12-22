@@ -41,7 +41,9 @@ defmodule Thegm.Mixfile do
       {:gettext, "~> 0.11"},
       {:cowboy, "~> 1.0"},
       {:httpoison, "~> 0.13"},
-      {:mailchimp, "~> 0.0.6"}
+      {:mailchimp, "~> 0.0.6"},
+      {:comeonin, "~> 4.0"},
+      {:argon2_elixir, "~> 1.2"}
     ]
   end
 
