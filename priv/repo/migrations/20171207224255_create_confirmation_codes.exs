@@ -7,7 +7,7 @@ defmodule Thegm.Repo.Migrations.CreateConfirmationCodes do
       add :user_id, references(:users, on_delete: :nothing, type: :uuid)
       add :used, :boolean, default: false
 
-      timestamps
+      timestamps()
     end
   end
 end
