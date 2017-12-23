@@ -9,6 +9,19 @@ defmodule Thegm.ErrorView do
     %{errors: %{detail: "Internal server error"}}
   end
 
+  def render("400.json", %{errors: errors}) do
+    %{
+        meta: %{count: length(errors)},
+        errors: Enum.map(errors, &error_json/1)
+    }
+  end
+
+  def error_json(error) do
+    %{
+        detail: error
+    }
+  end
+
   # In case no render clause matches or no
   # template is found, let's render it as 500
   def template_not_found(_template, assigns) do

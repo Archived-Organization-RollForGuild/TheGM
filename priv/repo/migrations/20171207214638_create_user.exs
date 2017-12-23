@@ -9,7 +9,7 @@ defmodule Thegm.Repo.Migrations.CreateUser do
       add :password_hash, :string, null: false
       add :active, :boolean, default: false
 
-      timestamps
+      timestamps()
     end
 
     create unique_index(:users, [:email])
