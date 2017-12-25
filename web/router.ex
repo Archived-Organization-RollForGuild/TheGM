@@ -10,8 +10,10 @@ defmodule Thegm.Router do
 
     post "/betasub", BetasubController, :create
     get "/rolldice", RollDiceController, :index
-    post "/users", UsersController, :create
+    post "/register", UsersController, :create
     #get "/users/:username", UsersController, :show
     get "/users", UsersController, :index
+    post "/login", SessionsController, :create
+    delete "/logout", SessionsController, :delete
   end
 end

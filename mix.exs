@@ -43,7 +43,8 @@ defmodule Thegm.Mixfile do
       {:httpoison, "~> 0.13"},
       {:mailchimp, "~> 0.0.6"},
       {:comeonin, "~> 4.0"},
-      {:argon2_elixir, "~> 1.2"}
+      {:argon2_elixir, "~> 1.2"},
+      {:secure_random, "~> 0.5"}
     ]
   end
 

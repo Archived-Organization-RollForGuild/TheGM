@@ -9,7 +9,7 @@ defmodule Thegm.ErrorView do
     %{errors: %{detail: "Internal server error"}}
   end
 
-  def render("400.json", %{errors: errors}) do
+  def render("error.json", %{errors: errors}) do
     %{
         meta: %{count: length(errors)},
         errors: Enum.map(errors, &error_json/1)

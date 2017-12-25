@@ -10,7 +10,7 @@ defmodule Thegm.UsersController do
 
   def create(conn, %{"data" => %{"attributes" => params, "type" => type}}) do
     case {type, params} do
-      {"users", params} ->
+      {"user", params} ->
         changeset = Users.changeset(%Users{}, params)
 
         case Repo.insert(changeset) do
@@ -20,7 +20,7 @@ defmodule Thegm.UsersController do
       _ ->
         conn
         |> put_status(:bad_request)
-        |> render(Thegm.ErrorView, "400.json", errors: ["Posted a non `users` data type"])
+        |> render(Thegm.ErrorView, "error.json", errors: ["Posted a non `users` data type"])
     end
   end
 end

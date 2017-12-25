@@ -21,5 +21,3 @@ config :thegm, Thegm.Repo,
 config :argon2_elixir,
   t_cost: 2,
   m_cost: 12
-config :bcrypt_elixir, :log_rounds, 4
-config :pbkdf2_elixir, :rounds, 1
