@@ -1,6 +1,7 @@
 defmodule Thegm.RollDiceController do
   use Thegm.Web, :controller
 
+  plug Thegm.AuthenticateUser
   def index(conn, %{"dice" => dice}) do
     result_dice = eat_dice(dice)
 
