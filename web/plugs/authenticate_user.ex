@@ -19,11 +19,11 @@ defmodule Thegm.AuthenticateUser do
     do: find_user_by_session(session)
   end
 
-  defp parse_token(["Bearer bearer=" <> token]) do
-    {:ok, String.replace(token, "\"", "")}
+  def parse_token(["Bearer " <> token]) do
+    {:ok, token}
   end
 
-  defp parse_token(_no_token_provided), do: :error
+  def parse_token(_no_token_provided), do: :error
 
   defp find_session_by_token(token) do
     case Repo.one(from s in Sessions, where: s.token == ^token) do

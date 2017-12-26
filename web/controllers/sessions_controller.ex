@@ -38,4 +38,13 @@ defmodule Thegm.SessionsController do
     end
   end
 
+  def delete(conn, _params) do
+    auth = get_req_header(conn, "authorization")
+    {:ok, token} = Thegm.AuthenticateUser.parse_token(auth)
+
+    session = Repo.one(from s in Sessions, where: s.token == ^token)
+    Repo.delete session
+    conn
+    |> send_resp(:ok, "")
+  end
 end
