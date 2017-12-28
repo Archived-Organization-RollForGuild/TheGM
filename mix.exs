@@ -44,7 +44,8 @@ defmodule Thegm.Mixfile do
       {:mailchimp, "~> 0.0.6"},
       {:comeonin, "~> 4.0"},
       {:argon2_elixir, "~> 1.2"},
-      {:secure_random, "~> 0.5"}
+      {:secure_random, "~> 0.5"},
+      {:distillery, "~> 1.5", runtime: false}
     ]
   end
 
