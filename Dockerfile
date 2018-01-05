@@ -13,10 +13,10 @@ ENV APP_NAME thegm
 
 RUN mkdir -p ${APP_ROOT}
 
-RUN wget --quiet https://s3.amazonaws.com/thegm/releases/${RELEASE}.tar.gz
-RUN tar -xf ${RELEASE}.tar.gz -C ${APP_ROOT}
-RUN rm -rf ${RELEASE}.tar.gz
-RUN chmod 550 ${APP_ROOT}/bin/${APP_NAME}
+RUN wget --quiet https://s3.amazonaws.com/thegm/releases/${RELEASE}.tar.gz && \
+    tar -xf ${RELEASE}.tar.gz -C ${APP_ROOT} && \
+    rm -rf ${RELEASE}.tar.gz && \
+    chmod 550 ${APP_ROOT}/bin/${APP_NAME}
 
 WORKDIR ${APP_ROOT}
 
