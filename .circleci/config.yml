@@ -9,5 +9,3 @@ jobs:
 
     steps:
       - checkout
-      - run: mix ecto.migrate
-      - run: mix phx.serve
