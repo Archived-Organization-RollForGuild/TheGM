@@ -1,0 +1,13 @@
+version: 2
+
+jobs:
+  build:
+    docker:
+      - image: 709489362086.dkr.ecr.us-east-1.amazonaws.com/thegm
+
+    working_directory: ~/repo
+
+    steps:
+      - checkout
+      - run: mix ecto.migrate
+      - run: mix phx.serve
