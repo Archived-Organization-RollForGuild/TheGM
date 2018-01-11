@@ -69,4 +69,12 @@ config :thegm, Thegm.Repo,
   username: System.get_env("DB_USER"),
   password: System.get_env("DB_PASS"),
   database: System.get_env("DB_NAME"),
-pool_size: 15
+  pool_size: 15
+
+# In your config/config.exs file
+config :thegm, MyApp.Mailer,
+  adapter: Bamboo.MailgunAdapter,
+  api_key: System.get_env("MAILGUN_KEY")
+
+config :mailchimp,
+  api_key: System.get_env("MAILCHIMP_KEY")
