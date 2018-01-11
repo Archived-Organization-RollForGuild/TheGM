@@ -20,7 +20,7 @@ defmodule Thegm.Mixfile do
   def application do
     [
       mod: {Thegm, []},
-      #applications: [:mailchimp],
+      #applications: [:mailchimp, :bamboo],
       extra_applications: [:logger, :mailchimp]
     ]
   end
@@ -45,6 +45,7 @@ defmodule Thegm.Mixfile do
       {:comeonin, "~> 4.0"},
       {:argon2_elixir, "~> 1.2"},
       {:secure_random, "~> 0.5"},
+      {:bamboo, "~> 0.8"},
       {:distillery, "~> 1.5", runtime: false}
     ]
   end

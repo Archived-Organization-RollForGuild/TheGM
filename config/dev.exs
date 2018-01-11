@@ -37,8 +37,16 @@ config :phoenix, :stacktrace_depth, 20
 # Configure your database
 config :thegm, Thegm.Repo,
   adapter: Ecto.Adapters.Postgres,
-  username: "postgres",
-  password: "postgres",
-  database: "thegm_dev",
-  hostname: "localhost",
-  pool_size: 10
+  hostname: System.get_env("DB_HOST"),
+  username: System.get_env("DB_USER"),
+  password: System.get_env("DB_PASS"),
+  database: System.get_env("DB_NAME"),
+  pool_size: 15
+
+# In your config/config.exs file
+config :thegm, MyApp.Mailer,
+  adapter: Bamboo.MailgunAdapter,
+  api_key: System.get_env("MAILGUN_KEY")
+
+  mailchimp_key = System.get_env("MAILCHIMP_KEY")
+  Application.put_env(:mailchimp, :api_key, mailchimp_key)

@@ -5,15 +5,23 @@ defmodule Thegm.Router do
     plug :accepts, ["json"]
   end
 
+  pipeline :auth do
+    plug Thegm.AuthenticateUser
+  end
+
   scope "/", Thegm do
-    pipe_through :api
+    pipe_through [:api, :auth]
 
     post "/betasub", BetasubController, :create
     get "/rolldice", RollDiceController, :index
-    post "/register", UsersController, :create
     #get "/users/:username", UsersController, :show
     get "/users", UsersController, :index
-    post "/login", SessionsController, :create
     post "/logout", SessionsController, :delete
+  end
+
+  scope "/", Thegm do
+    pipe_through :api
+    post "/register", UsersController, :create
+    post "/login", SessionsController, :create
   end
 end
