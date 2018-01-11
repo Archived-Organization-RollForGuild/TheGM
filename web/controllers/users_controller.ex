@@ -3,8 +3,6 @@ defmodule Thegm.UsersController do
 
   alias Thegm.Users
 
-  plug Thegm.AuthenticateUser
-
   def index(conn, _params) do
     users = Repo.all(Users)
     render conn, "index.json", users: users
