@@ -44,9 +44,10 @@ config :thegm, Thegm.Repo,
   pool_size: 15
 
 # In your config/config.exs file
-config :thegm, MyApp.Mailer,
+config :thegm, Thegm.Mailer,
   adapter: Bamboo.MailgunAdapter,
-  api_key: System.get_env("MAILGUN_KEY")
+  api_key: System.get_env("MAILGUN_KEY"),
+  domain: "rollforguild.com"
 
-  mailchimp_key = System.get_env("MAILCHIMP_KEY")
-  Application.put_env(:mailchimp, :api_key, mailchimp_key)
+  config :mailchimp,
+    api_key: System.get_env("MAILCHIMP_KEY")
