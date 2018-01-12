@@ -11,10 +11,11 @@ defmodule Thegm.UsersController do
   def create(conn, %{"data" => %{"attributes" => params, "type" => type}}) do
     case {type, params} do
       {"user", params} ->
-        changeset = Users.changeset(%Users{}, params)
+        changeset = Users.create_changeset(%Users{}, params)
 
         case Repo.insert(changeset) do
-          {:ok, _resp} ->
+          {:ok, resp} ->
+            Thegm.ConfirmationCodesController.create(resp.id, resp.email)
             send_resp(conn, :created, "")
         end
       _ ->

@@ -16,8 +16,13 @@ defmodule Thegm.Users do
 
   def changeset(model, params \\ :empty) do
     model
-    |> cast(params, [:username, :email, :password])
-    |> validate_required([:username, :password], message: "Are required")
+    |> cast(params, [:username, :email, :password, :active])
+  end
+
+  def create_changeset(model, params \\ :empty) do
+    model
+    |> changeset(params)
+    |> validate_required([:username, :password, :email], message: "Are required")
     |> unique_constraint(:email, message: "Email is already taken")
     |> unique_constraint(:username, message: "Username is already taken")
     |> validate_format(:email, ~r/@/, message: "Invalid email address")
