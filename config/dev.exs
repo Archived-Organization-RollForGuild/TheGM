@@ -20,7 +20,7 @@ use Mix.Config
 # configured to run both http and https servers on
 # different ports.
 config :thegm, Thegm.Endpoint,
-  http: [port: 4000],
+  http: [port: System.get_env("RFG_API_PORT")],
   debug_errors: true,
   code_reloader: true,
   check_origin: false,
@@ -37,17 +37,17 @@ config :phoenix, :stacktrace_depth, 20
 # Configure your database
 config :thegm, Thegm.Repo,
   adapter: Ecto.Adapters.Postgres,
-  hostname: System.get_env("DB_HOST"),
-  username: System.get_env("DB_USER"),
-  password: System.get_env("DB_PASS"),
-  database: System.get_env("DB_NAME"),
+  hostname: System.get_env("RFG_API_DB_HOST"),
+  username: System.get_env("RFG_API_DB_USER"),
+  password: System.get_env("RFG_API_DB_PASS"),
+  database: System.get_env("RFG_API_DB_NAME"),
   pool_size: 15
 
 # In your config/config.exs file
 config :thegm, Thegm.Mailer,
   adapter: Bamboo.MailgunAdapter,
-  api_key: System.get_env("MAILGUN_KEY"),
+  api_key: System.get_env("RFG_API_MAILGUN_KEY"),
   domain: "rollforguild.com"
 
   config :mailchimp,
-    api_key: System.get_env("MAILCHIMP_KEY")
+    api_key: System.get_env("RFG_API_MAILCHIMP_KEY")
