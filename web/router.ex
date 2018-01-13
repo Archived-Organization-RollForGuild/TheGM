@@ -23,6 +23,6 @@ defmodule Thegm.Router do
     pipe_through :api
     post "/register", UsersController, :create
     post "/login", SessionsController, :create
-    resources "/confirmation", ConfirmationCodesController, only: [:delete]
+    post "/confirmation/:id", ConfirmationCodesController, :create
   end
 end

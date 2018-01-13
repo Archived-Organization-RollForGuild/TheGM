@@ -15,7 +15,7 @@ defmodule Thegm.UsersController do
 
         case Repo.insert(changeset) do
           {:ok, resp} ->
-            Thegm.ConfirmationCodesController.create(resp.id, resp.email)
+            Thegm.ConfirmationCodesController.new(resp.id, resp.email)
             send_resp(conn, :created, "")
         end
       _ ->

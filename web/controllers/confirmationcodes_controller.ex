@@ -3,7 +3,7 @@ defmodule Thegm.ConfirmationCodesController do
 
   alias Thegm.ConfirmationCodes
 
-  def create(user_id, email) do
+  def new(user_id, email) do
     changeset = ConfirmationCodes.changeset(%ConfirmationCodes{},%{"used" => false, "user_id" => user_id})
     case Repo.insert(changeset) do
       {:ok, params} ->
@@ -12,8 +12,9 @@ defmodule Thegm.ConfirmationCodesController do
     end
   end
 
-  def delete(conn, %{"id" => id}) do
+  def create(conn, %{"id" => id}) do
     resp = Repo.get(ConfirmationCodes, id)
+    IO.inspect(resp)
     code = ConfirmationCodes.changeset(resp, %{used: true})
     case Repo.update(code) do
       {:ok, resp2} ->
@@ -24,7 +25,7 @@ defmodule Thegm.ConfirmationCodesController do
             session_changeset = Thegm.Sessions.create_changeset(%Thegm.Sessions{}, %{user_id: resp4.id})
             {:ok, session} = Repo.insert(session_changeset)
             conn
-            |> put_status(:created)
+            |> put_status(:ok)
             |> render(Thegm.SessionsView, "show.json", session: session)
         end
     end
