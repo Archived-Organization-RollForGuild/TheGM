@@ -82,3 +82,7 @@ config :mailchimp,
 
 config :google_maps,
   api_key: System.get_env("RFG_API_GOOGLE_API_KEY")
+
+config :thegm,
+  api_url: "http://api.rollforguild.com",
+  web_url: "https://rollforguild.com"
