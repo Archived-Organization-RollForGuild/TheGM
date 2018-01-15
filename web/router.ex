@@ -21,6 +21,7 @@ defmodule Thegm.Router do
 
   scope "/", Thegm do
     pipe_through :api
+    get "/deathcheck", DeathCheckController, :index
     post "/register", UsersController, :create
     post "/login", SessionsController, :create
     post "/confirmation/:id", ConfirmationCodesController, :create
