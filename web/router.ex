@@ -17,6 +17,7 @@ defmodule Thegm.Router do
     #get "/users/:username", UsersController, :show
     get "/users", UsersController, :index
     post "/logout", SessionsController, :delete
+    resources "groups", GroupsController, except: [:edit, :new]
   end
 
   scope "/", Thegm do
