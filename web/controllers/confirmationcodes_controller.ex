@@ -3,6 +3,7 @@ defmodule Thegm.ConfirmationCodesController do
 
   alias Thegm.ConfirmationCodes
 
+  # TODO: Once logging is implemented, add case for errors
   def new(user_id, email) do
     changeset = ConfirmationCodes.changeset(%ConfirmationCodes{},%{"used" => false, "user_id" => user_id})
     case Repo.insert(changeset) do
