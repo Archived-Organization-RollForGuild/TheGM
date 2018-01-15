@@ -12,25 +12,54 @@ defmodule Thegm.ConfirmationCodesController do
     end
   end
 
+  # It's not really a create, but oh fucking well. It's a post, so it's a create, don't question it.
   def create(conn, %{"id" => id}) do
-    resp = Repo.get(ConfirmationCodes, id)
-    IO.inspect(resp)
-    code = ConfirmationCodes.changeset(resp, %{used: true})
-    case Repo.update(code) do
-      {:ok, resp2} ->
-        resp3 = Repo.get(Thegm.Users, resp2.user_id)
-        user = Thegm.Users.changeset(resp3, %{active: true})
-        case Repo.update(user) do
-          {:ok, resp4} ->
-            session_changeset = Thegm.Sessions.create_changeset(%Thegm.Sessions{}, %{user_id: resp4.id})
-            {:ok, session} = Repo.insert(session_changeset)
-            conn
-            |> put_status(:ok)
-            |> render(Thegm.SessionsView, "show.json", session: session)
+    case Repo.get(ConfirmationCodes, id) do
+      nil ->
+        conn
+        |> put_status(:not_found)
+        |> render(Thegm.ErrorView, "error.json", errors: ["Invalid confirmation code"])
+      resp ->
+        if resp.used do
+          conn
+          |> put_status(:forbidden)
+          |> render(Thegm.ErrorView, "error.json", errors: ["Code already used"])
+        else
+          code = ConfirmationCodes.changeset(resp, %{used: true})
+          case Repo.update(code) do
+            {:ok, resp2} ->
+              case Repo.get(Thegm.Users, resp2.user_id) do
+                nil ->
+                  conn
+                  |> put_status(:not_found)
+                  |> render(Thegm.ErrorView, "error.json", errors: ["Unable to locate user"])
+                resp3 ->
+                  user = Thegm.Users.changeset(resp3, %{active: true})
+                  case Repo.update(user) do
+                    {:ok, resp4} ->
+                      session_changeset = Thegm.Sessions.create_changeset(%Thegm.Sessions{}, %{user_id: resp4.id})
+                      case Repo.insert(session_changeset) do
+                        {:ok, session} ->
+                          conn
+                          |> put_status(:ok)
+                          |> render(Thegm.SessionsView, "show.json", session: session)
+                        {:error, resp5} ->
+                          conn
+                          |> put_status(:bad_request)
+                          |> render(Thegm.ErrorView, "error.json", errors: Enum.map(resp5.errors, fn {k, v} -> Atom.to_string(k) <> ": " <> elem(v, 0) end))
+                      end
+                    {:error, resp4} ->
+                      conn
+                      |> put_status(:bad_request)
+                      |> render(Thegm.ErrorView, "error.json", errors: Enum.map(resp4.errors, fn {k, v} -> Atom.to_string(k) <> ": " <> elem(v, 0) end))
+                  end
+              end
+            {:error, resp2} ->
+              conn
+              |> put_status(:bad_request)
+              |> render(Thegm.ErrorView, "error.json", errors: Enum.map(resp2.errors, fn {k, v} -> Atom.to_string(k) <> ": " <> elem(v, 0) end))
+          end
         end
     end
-    conn
-    |> put_status(:bad_request)
-    |> render(Thegm.ErrorView, "error.json", errors: ["Posted a non `users` data type"])
   end
 end
