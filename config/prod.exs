@@ -13,7 +13,7 @@ use Mix.Config
 # which you typically run after static files are built.
 config :thegm, Thegm.Endpoint,
   http: [:inet6, port: System.get_env("RFG_API_PORT")],
-  url: [host: "example.com", port: 80],
+  url: [host: "api.rollforguild.com", port: 80],
   cache_static_manifest: "priv/static/cache_manifest.json"
 
 # Do not print debug messages in production
@@ -79,3 +79,6 @@ config :thegm, Thegm.Mailer,
 
 config :mailchimp,
   api_key: System.get_env("RFG_API_MAILCHIMP_KEY")
+
+config :google_maps,
+  api_key: System.get_env("RFG_API_GOOGLE_API_KEY")

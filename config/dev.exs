@@ -49,5 +49,8 @@ config :thegm, Thegm.Mailer,
   api_key: System.get_env("RFG_API_MAILGUN_KEY"),
   domain: "rollforguild.com"
 
-  config :mailchimp,
-    api_key: System.get_env("RFG_API_MAILCHIMP_KEY")
+config :mailchimp,
+  api_key: System.get_env("RFG_API_MAILCHIMP_KEY")
+
+config :google_maps,
+  api_key: System.get_env("RFG_API_GOOGLE_API_KEY")

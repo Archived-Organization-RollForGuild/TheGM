@@ -46,6 +46,7 @@ defmodule Thegm.Mixfile do
       {:argon2_elixir, "~> 1.2"},
       {:secure_random, "~> 0.5"},
       {:bamboo, "~> 0.8"},
+      {:google_maps, "~> 0.8"},
       {:distillery, "~> 1.5", runtime: false}
     ]
   end
