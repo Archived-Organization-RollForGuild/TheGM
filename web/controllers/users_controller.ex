@@ -17,11 +17,16 @@ defmodule Thegm.UsersController do
           {:ok, resp} ->
             Thegm.ConfirmationCodesController.new(resp.id, resp.email)
             send_resp(conn, :created, "")
+          {:error, resp} ->
+            error_list = Enum.map(resp.errors, fn {k, v} -> Atom.to_string(k) <> ": " <> elem(v, 0) end)
+            conn
+            |> put_status(:bad_request)
+            |> render(Thegm.ErrorView, "error.json", errors: error_list)
         end
       _ ->
         conn
         |> put_status(:bad_request)
-        |> render(Thegm.ErrorView, "error.json", errors: ["Posted a non `users` data type"])
+        |> render(Thegm.ErrorView, "error.json", errors: ["Posted a non `user` data type"])
     end
   end
 end
