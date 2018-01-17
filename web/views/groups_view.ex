@@ -8,4 +8,12 @@ defmodule Thegm.GroupsView do
   def full_json(group) do
     %{type: "group", attributes: %{name: group.name, address: %{street1: group.street1, street2: group.street2, city: group.city, state: group.state, country: group.country, zip: group.zip}, geo: %{lat: group.lat, lon: group.lon}, contact: %{email: group.email, phone: group.phone}, games: group.games}}
   end
+
+  def render("notmember.json", %{group: group}) do
+    %{data: non_member_json(group)}
+  end
+
+  def non_member_json(group) do
+    %{type: "group", attributes: %{name: group.name, games: group.games}}
+  end
 end

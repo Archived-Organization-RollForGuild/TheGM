@@ -22,7 +22,7 @@ defmodule Thegm.GroupsController do
           {:ok, result} ->
             conn
             |> put_status(:created)
-            |> render(Thegm.GroupsView, "memberof.json", group: result.groups)
+            |> render("memberof.json", group: result.groups)
           {:error, :groups, changeset, %{}} ->
             conn
             |> put_status(:unprocessable_entity)
@@ -31,8 +31,6 @@ defmodule Thegm.GroupsController do
             conn
             |> put_status(:unprocessable_entity)
             |> render(Thegm.ErrorView, "error.json", errors: Enum.map(changeset.errors, fn {k, v} -> Atom.to_string(k) <> ": " <> elem(v, 0) end))
-          catch_all ->
-            IO.inspect catch_all
         end
       _ ->
         conn
@@ -49,8 +47,33 @@ defmodule Thegm.GroupsController do
 
   end
 
-  def show(conn, params) do
-
+  def show(conn, %{"id" => group_id}) do
+    user_id = conn.assigns[:current_user].id
+    case Repo.get(Groups, group_id) do
+      nil ->
+        conn
+        |> put_status(:not_found)
+        |> render(Thegm.ErrorView, "error.json", errors: ["A group with the specified `id` was not found"])
+      group ->
+        case Repo.one(from m in Thegm.GroupMembers, where: m.users_id == ^user_id and m.groups_id == ^group_id) do
+          nil ->
+            conn
+            |> put_status(:ok)
+            |> render(Thegm.GroupsView, "notmember.json", group: group)
+          member ->
+            cond do
+              member.role == "member" ->
+                conn
+                |> put_status(:ok)
+                |> render("memberof.json", group: group)
+              member.role == "admin" ->
+                #todo things for admins
+                conn
+                |> put_status(:ok)
+                |> render("memberof.json", group: group)
+            end
+        end
+    end
   end
 
   def update(conn, params) do
