@@ -59,7 +59,7 @@ defmodule Thegm.GroupsController do
           nil ->
             conn
             |> put_status(:ok)
-            |> render(Thegm.GroupsView, "notmember.json", group: group)
+            |> render("notmember.json", group: group)
           member ->
             cond do
               member.role == "member" ->
