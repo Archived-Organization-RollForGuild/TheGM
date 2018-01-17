@@ -1,4 +1,4 @@
-defmodule Thegm.Emails do
+defmodule Thegm.Mailgun do
   import Bamboo.Email
 
   def email_confirmation_email(email, code) do

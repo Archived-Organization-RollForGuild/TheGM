@@ -16,6 +16,7 @@ defmodule Thegm.UsersController do
         case Repo.insert(changeset) do
           {:ok, resp} ->
             Thegm.ConfirmationCodesController.new(resp.id, resp.email)
+            Thegm.Mailchimp.subscribe_new_user(resp.email)
             send_resp(conn, :created, "")
           {:error, resp} ->
             error_list = Enum.map(resp.errors, fn {k, v} -> Atom.to_string(k) <> ": " <> elem(v, 0) end)

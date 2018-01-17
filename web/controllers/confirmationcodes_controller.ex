@@ -8,7 +8,7 @@ defmodule Thegm.ConfirmationCodesController do
     changeset = ConfirmationCodes.changeset(%ConfirmationCodes{},%{"used" => false, "user_id" => user_id})
     case Repo.insert(changeset) do
       {:ok, params} ->
-        Thegm.Emails.email_confirmation_email(email, params.id)
+        Thegm.Mailgun.email_confirmation_email(email, params.id)
         |> Thegm.Mailer.deliver_now
     end
   end

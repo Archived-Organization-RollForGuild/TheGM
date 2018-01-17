@@ -12,16 +12,16 @@ defmodule Thegm.Router do
   scope "/", Thegm do
     pipe_through [:api, :auth]
 
-    post "/betasub", BetasubController, :create
     get "/rolldice", RollDiceController, :index
     #get "/users/:username", UsersController, :show
     get "/users", UsersController, :index
     post "/logout", SessionsController, :delete
-    resources "groups", GroupsController, except: [:edit, :new]
+    resources "/groups", GroupsController, except: [:edit, :new]
   end
 
   scope "/", Thegm do
     pipe_through :api
+
     get "/deathcheck", DeathCheckController, :index
     post "/register", UsersController, :create
     post "/login", SessionsController, :create
