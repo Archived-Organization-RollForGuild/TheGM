@@ -10,6 +10,7 @@ defmodule Thegm.Users do
     field :password_hash, :string
     field :password, :string, virtual: true
     field :active, :boolean
+    has_many :group_members, Thegm.GroupMembers
 
     timestamps()
   end
@@ -27,7 +28,7 @@ defmodule Thegm.Users do
     |> unique_constraint(:username, message: "Username is already taken")
     |> validate_format(:email, ~r/@/, message: "Invalid email address")
     |> validate_length(:email, min: 4, max: 255)
-    |> validate_format(:username, ~r/^[a-zA-Z0-9_]+$/, message: "Username must be alpha numeric")
+    |> validate_format(:username, ~r/^[a-zA-Z0-9\s'_-]+$/, message: "Username must be alpha numeric")
     |> validate_length(:username, min: 1, max: 200)
     |> validate_length(:password, min: 4)
     |> put_password_hash

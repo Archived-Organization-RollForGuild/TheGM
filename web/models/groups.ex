@@ -18,7 +18,7 @@ defmodule Thegm.Groups do
     field :email, :string
     field :phone, :string
     field :games, {:array, :string}
-    has_many :group_member, Thegm.GroupMembers
+    has_many :group_members, Thegm.GroupMembers
 
     timestamps()
   end
@@ -50,8 +50,6 @@ defmodule Thegm.Groups do
       {:ok, result} ->
         lat = List.first(result["results"])["geometry"]["location"]["lat"]
         lon = List.first(result["results"])["geometry"]["location"]["lng"]
-        IO.puts lat
-        IO.puts lon
         model
         |> put_change(:lat, lat)
         |> put_change(:lon, lon)
