@@ -23,18 +23,14 @@ defmodule Thegm.GroupsController do
             conn
             |> put_status(:created)
             |> render(Thegm.GroupsView, "memberof.json", group: result.groups)
-          {:error, :groups, changeset, errors} ->
-            IO.inspect changeset
-            IO.inspect errors
+          {:error, :groups, changeset, %{}} ->
             conn
             |> put_status(:unprocessable_entity)
-            |> render(Thegm.ErrorView, "error.json", errors: ["Bad group"])
+            |> render(Thegm.ErrorView, "error.json", errors: Enum.map(changeset.errors, fn {k, v} -> Atom.to_string(k) <> ": " <> elem(v, 0) end))
           {:error, :group_members, changeset, errors} ->
-            IO.inspect changeset
-            IO.inspect errors
             conn
             |> put_status(:unprocessable_entity)
-            |> render(Thegm.ErrorView, "error.json", errors: ["Bad member"])
+            |> render(Thegm.ErrorView, "error.json", errors: Enum.map(changeset.errors, fn {k, v} -> Atom.to_string(k) <> ": " <> elem(v, 0) end))
           catch_all ->
             IO.inspect catch_all
         end
