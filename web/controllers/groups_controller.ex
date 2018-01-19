@@ -27,7 +27,7 @@ defmodule Thegm.GroupsController do
             conn
             |> put_status(:unprocessable_entity)
             |> render(Thegm.ErrorView, "error.json", errors: Enum.map(changeset.errors, fn {k, v} -> Atom.to_string(k) <> ": " <> elem(v, 0) end))
-          {:error, :group_members, changeset, errors} ->
+          {:error, :group_members, changeset, %{}} ->
             conn
             |> put_status(:unprocessable_entity)
             |> render(Thegm.ErrorView, "error.json", errors: Enum.map(changeset.errors, fn {k, v} -> Atom.to_string(k) <> ": " <> elem(v, 0) end))
@@ -39,8 +39,37 @@ defmodule Thegm.GroupsController do
     end
   end
 
-  def delete(conn, params) do
-
+  def delete(conn, %{"id" => group_id}) do
+    user_id = conn.assigns[:current_user].id
+    case Repo.get(Groups, group_id) |> Repo.preload(:group_members) do
+      nil ->
+        conn
+        |> put_status(:not_found)
+        |> render(Thegm.ErrorView, "error.json", errors: ["Group not found, maybe you already deleted it?"])
+      group ->
+        case Enum.find(group.group_members, fn x -> x.users_id == user_id end) do
+          nil ->
+            conn
+            |> put_status(:forbidden)
+            |> render(Thegm.ErrorView, "error.json", errors: ["members: Must be member of group", "role: Must be admin of group"])
+          member ->
+            cond do
+              member.role != "admin" ->
+                conn
+                |> put_status(:forbidden)
+                |> render(Thegm.ErrorView, "error.json", errors: ["role: Must be admin"])
+              member.role == "admin" ->
+                case Repo.delete(group) do
+                  {:ok, _} ->
+                    send_resp(conn, :no_contnent, "")
+                  {:error, changeset} ->
+                    conn
+                    |> put_status(:internal_server_error)
+                    |> render(Thegm.ErrorView, "error.json", errors: Enum.map(changeset.errors, fn {k, v} -> Atom.to_string(k) <> ": " <> elem(v, 0) end))
+                end
+            end
+        end
+    end
   end
 
   def index(conn, params) do

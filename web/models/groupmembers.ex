@@ -16,6 +16,7 @@ defmodule Thegm.GroupMembers do
   def changeset(model, params \\ :empty) do
     model
     |> cast(params, [:groups_id, :users_id, :role])
-    |> unique_constraint(:group_id, name: :group_members_groups_id_users_id_index)
+    |> unique_constraint(:groups_id, name: :group_members_groups_id_users_id_index)
+    |> foreign_key_constraint(:groups_id, name: :group_members_groups_id_fk)
   end
 end
