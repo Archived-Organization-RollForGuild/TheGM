@@ -3,6 +3,7 @@ defmodule Thegm.GroupsController do
 
   alias Thegm.Groups
   alias Ecto.Multi
+  import Geo.PostGIS
 
   def create(conn, %{"data" => %{"attributes" => params, "type" => type}}) do
     case {type, params} do
@@ -74,7 +75,49 @@ defmodule Thegm.GroupsController do
   end
 
   def index(conn, params) do
+    case read_search_params(params) do
+      {:ok, settings} ->
+        user_id = conn.assigns[:current_user].id
+        # Get user's current groups so we can properly exclude them
+        memberships = Repo.all(from m in Thegm.GroupMembers, where: m.users_id == ^user_id, select: m.groups_id)
+        IO.inspect memberships
+        # Group search params
+        offset = (settings.page - 1) * settings.limit
+        geom = %Geo.Point{coordinates: {settings.lon, settings.lat}, srid: 4326}
 
+        # Get total in search
+        total = Repo.one(from g in Groups,
+        select: count(g.id),
+        where: st_distancesphere(g.geom, ^geom) <= ^settings.meters and not g.id in ^memberships)
+        IO.inspect total
+
+        # Do the search
+        cond do
+          total > 0 ->
+            groups = Repo.all(
+              from g in Groups,
+              select: %{g | distance: st_distancesphere(g.geom, ^geom)},
+              where: st_distancesphere(g.geom, ^geom) <= ^settings.meters and not g.id in ^memberships,
+              order_by: [asc: st_distancesphere(g.geom, ^geom)],
+              limit: ^settings.limit,
+              offset: ^offset) |> Repo.preload(:group_members)
+
+            meta = %{total: total, limit: settings.limit, offset: offset, count: length(groups)}
+
+            conn
+            |> put_status(:ok)
+            |> render("search.json", groups: groups, meta: meta)
+          true ->
+            meta = %{total: total, limit: settings.limit, offset: offset, count: 0}
+            conn
+            |> put_status(:ok)
+            |> render("search.json", groups: [], meta: meta)
+        end
+      {:error, errors} ->
+        conn
+        |> put_status(:bad_request)
+        |> render(Thegm.ErrorView, "error.json", errors: Enum.map(errors, fn {k, v} -> Atom.to_string(k) <> ": " <> elem(v, 0) end))
+    end
   end
 
   def show(conn, %{"id" => group_id}) do
@@ -108,5 +151,78 @@ defmodule Thegm.GroupsController do
 
   def update(conn, params) do
 
+  end
+
+  defp read_search_params(params) do
+    errors = []
+    meters =
+    page = params["page"]
+    limit = params["limit"]
+
+    # verify lat
+    lat = case params["lat"] do
+      nil ->
+        errors = errors ++ [lat: "Must be supplied"]
+        nil
+      temp ->
+        {lat, _} = Float.parse(temp)
+        if lat > 90 or lat < -90 do
+          errors = errors ++ [lat: "Must be between +-90"]
+        end
+        lat
+    end
+
+    # verify lon
+    lon = case params["lon"] do
+      nil ->
+        errors = errors ++ [lon: "Must be supplied"]
+        nil
+      temp ->
+        {lon, _} = Float.parse(temp)
+        if lon > 180 or lat < -180 do
+          errors = errors ++ [lon: "Must be between +-189"]
+        end
+        lon
+    end
+
+    # set page
+    page = case params["page"] do
+      nil ->
+        page = 1
+      temp ->
+        {page, _} = Integer.parse(temp)
+        if page < 1 do
+          errors = errors ++ [page: "Must be a positive integer"]
+        end
+    end
+
+    meters = case params["meters"] do
+      nil ->
+        meters = 80467
+      temp ->
+        {meters, _} = Float.parse(temp)
+        if meters <= 0 do
+          errors = errors ++ [meters: "Must be a real number greater than 0"]
+        end
+        meters
+    end
+
+    limit = case params["limit"] do
+      nil ->
+        limit = 100
+      temp ->
+        {limit, _} = Integer.parse(temp)
+        if limit < 1 do
+          errors = errors ++ [limit: "Must be at integer greater than 0"]
+        end
+        limit
+    end
+
+    resp = cond do
+      length(errors) > 0 ->
+        {:error, errors}
+      true ->
+        {:ok, %{lat: lat, lon: lon, meters: meters, page: page, limit: limit}}
+    end
   end
 end
