@@ -69,7 +69,9 @@ config :thegm, Thegm.Repo,
   username: System.get_env("RFG_API_DB_USER"),
   password: System.get_env("RFG_API_DB_PASS"),
   database: System.get_env("RFG_API_DB_NAME"),
-  pool_size: 15
+  pool_size: 15,
+  adapter: Ecto.Adapters.Postgres,
+  types: Thegm.PostgresTypes
 
 # In your config/config.exs file
 config :thegm, Thegm.Mailer,

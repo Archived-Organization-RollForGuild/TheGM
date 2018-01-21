@@ -20,6 +20,7 @@ defmodule Thegm.GroupsController do
 
         case Repo.transaction(multi) do
           {:ok, result} ->
+            IO.inspect result.groups
             conn
             |> put_status(:created)
             |> render("memberof.json", group: result.groups)

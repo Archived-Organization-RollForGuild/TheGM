@@ -47,7 +47,8 @@ defmodule Thegm.Mixfile do
       {:secure_random, "~> 0.5"},
       {:bamboo, "~> 0.8"},
       {:google_maps, "~> 0.8"},
-      {:distillery, "~> 1.5", runtime: false}
+      {:distillery, "~> 1.5", runtime: false},
+      {:geo_postgis, "~> 1.0"}
     ]
   end
 

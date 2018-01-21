@@ -18,6 +18,7 @@ defmodule Thegm.Groups do
     field :email, :string
     field :phone, :string
     field :games, {:array, :string}
+    field :geog, Geo.Geometry
     has_many :group_members, Thegm.GroupMembers
 
     timestamps()
@@ -51,8 +52,7 @@ defmodule Thegm.Groups do
         lat = List.first(result["results"])["geometry"]["location"]["lat"]
         lon = List.first(result["results"])["geometry"]["location"]["lng"]
         model
-        |> put_change(:lat, lat)
-        |> put_change(:lon, lon)
+        |> put_change(:geog, %Geo.Point{coordinates: {lon, lat}, srid: 4326})
     end
   end
 end
