@@ -41,7 +41,7 @@ defmodule Thegm.Groups do
 
   def lat_lon(model) do
     address = model.changes.street1
-    address = if model.changes.street2 != nil do
+    address = if May.has_key?(model.changes, :street2) do
       address = address <> ", " <> model.changes.street2
     end
     address = address <> ", " <> model.changes.city <> ", " <> model.changes.state <> ", " <> model.changes.country <> ", " <> model.changes.zip
