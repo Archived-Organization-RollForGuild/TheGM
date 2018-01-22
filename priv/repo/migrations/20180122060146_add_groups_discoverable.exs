@@ -3,7 +3,7 @@ defmodule Thegm.Repo.Migrations.AddGroupsDiscoverable do
 
   def change do
     alter table("groups") do
-      add :discoverable, :boolean, null: false
+      add :discoverable, :boolean, null: false, default: true
     end
   end
 end

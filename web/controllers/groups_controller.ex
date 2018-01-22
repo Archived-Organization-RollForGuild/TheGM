@@ -80,7 +80,6 @@ defmodule Thegm.GroupsController do
         user_id = conn.assigns[:current_user].id
         # Get user's current groups so we can properly exclude them
         memberships = Repo.all(from m in Thegm.GroupMembers, where: m.users_id == ^user_id, select: m.groups_id)
-        IO.inspect memberships
         # Group search params
         offset = (settings.page - 1) * settings.limit
         geom = %Geo.Point{coordinates: {settings.lon, settings.lat}, srid: 4326}
@@ -89,7 +88,6 @@ defmodule Thegm.GroupsController do
         total = Repo.one(from g in Groups,
         select: count(g.id),
         where: st_distancesphere(g.geom, ^geom) <= ^settings.meters and not g.id in ^memberships and g.discoverable == true)
-        IO.inspect total
 
         # Do the search
         cond do
