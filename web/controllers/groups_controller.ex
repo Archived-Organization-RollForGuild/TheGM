@@ -88,7 +88,7 @@ defmodule Thegm.GroupsController do
         # Get total in search
         total = Repo.one(from g in Groups,
         select: count(g.id),
-        where: st_distancesphere(g.geom, ^geom) <= ^settings.meters and not g.id in ^memberships)
+        where: st_distancesphere(g.geom, ^geom) <= ^settings.meters and not g.id in ^memberships and g.discoverable == true)
         IO.inspect total
 
         # Do the search
@@ -97,7 +97,7 @@ defmodule Thegm.GroupsController do
             groups = Repo.all(
               from g in Groups,
               select: %{g | distance: st_distancesphere(g.geom, ^geom)},
-              where: st_distancesphere(g.geom, ^geom) <= ^settings.meters and not g.id in ^memberships,
+              where: st_distancesphere(g.geom, ^geom) <= ^settings.meters and not g.id in ^memberships and g.discoverable == true,
               order_by: [asc: st_distancesphere(g.geom, ^geom)],
               limit: ^settings.limit,
               offset: ^offset) |> Repo.preload(:group_members)

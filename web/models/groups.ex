@@ -17,6 +17,7 @@ defmodule Thegm.Groups do
     field :games, {:array, :string}
     field :distance, :float, virtual: true
     field :geom, Geo.Geometry
+    field :discoverable, :boolean
     has_many :group_members, Thegm.GroupMembers
 
     timestamps()
@@ -25,7 +26,7 @@ defmodule Thegm.Groups do
   def changeset(model, params \\ :empty) do
     model
     |> cast(params, [:name, :description, :street1, :street2, :city, :state, :country, :zip, :games])
-    |> validate_required([:name, :street1, :city, :state, :country, :zip], message: "Are required")
+    |> validate_required([:name, :street1, :city, :state, :country, :zip, :discoverable], message: "Are required")
     |> unique_constraint(:name, message: "Group name must be unique")
     |> validate_length(:street1, min: 1, message: "Group street1 cannot be empty")
     |> validate_length(:city, min: 1, message: "Group city cannot be empty")
