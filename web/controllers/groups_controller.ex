@@ -176,7 +176,7 @@ defmodule Thegm.GroupsController do
                   {:error, changeset} ->
                     conn
                     |> put_status(:unprocessable_entity)
-                    |> render(Thegm.ErrorView, "error.json", errors: Enum.map(changeset.errors, fn {k, v} -> Atom.to_string(k) <> ": " <> elem(v, 0) end)
+                    |> render(Thegm.ErrorView, "error.json", errors: Enum.map(changeset.errors, fn {k, v} -> Atom.to_string(k) <> ": " <> elem(v, 0) end))
                 end
               true ->
                 conn
