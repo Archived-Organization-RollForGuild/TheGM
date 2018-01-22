@@ -14,7 +14,7 @@ defmodule Thegm.GroupsView do
   end
 
   def full_json(group) do
-    %{type: "group", attributes: %{name: group.name, address: %{street1: group.street1, street2: group.street2, city: group.city, state: group.state, country: group.country, zip: group.zip}, geo: %{lat: elem(group.geom.coordinates, 1), lon: elem(group.geom.coordinates, 0)}, contact: %{phone: group.phone}, games: group.games}, relationships: relationships(group.id)}
+    %{type: "group", id: group.id, attributes: %{name: group.name, address: %{street1: group.street1, street2: group.street2, city: group.city, state: group.state, country: group.country, zip: group.zip}, geo: %{lat: elem(group.geom.coordinates, 1), lon: elem(group.geom.coordinates, 0)}, contact: %{phone: group.phone}, games: group.games}, relationships: relationships(group.id)}
   end
 
   def relationships(group_id) do
