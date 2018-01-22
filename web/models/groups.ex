@@ -25,7 +25,7 @@ defmodule Thegm.Groups do
 
   def changeset(model, params \\ :empty) do
     model
-    |> cast(params, [:name, :description, :street1, :street2, :city, :state, :country, :zip, :games])
+    |> cast(params, [:name, :description, :street1, :street2, :city, :state, :country, :zip, :games, :discoverable])
     |> validate_required([:name, :street1, :city, :state, :country, :zip, :discoverable], message: "Are required")
     |> unique_constraint(:name, message: "Group name must be unique")
     |> validate_length(:street1, min: 1, message: "Group street1 cannot be empty")
