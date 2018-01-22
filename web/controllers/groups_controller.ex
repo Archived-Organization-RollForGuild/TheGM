@@ -63,7 +63,7 @@ defmodule Thegm.GroupsController do
               member.role == "admin" ->
                 case Repo.delete(group) do
                   {:ok, _} ->
-                    send_resp(conn, :no_contnent, "")
+                    send_resp(conn, :no_content, "")
                   {:error, changeset} ->
                     conn
                     |> put_status(:internal_server_error)
