@@ -149,15 +149,50 @@ defmodule Thegm.GroupsController do
     end
   end
 
-  def update(conn, params) do
-
+  def update(conn, %{"id" => group_id, "data" => %{"attributes" => params, "type" => type}}) do
+    user_id = conn.assigns[:current_user].id
+    cond do
+      type == "group" ->
+        case Repo.one(from m in Thegm.GroupMembers, where: m.groups_id == ^group_id and m.users_id == ^user_id) |> Repo.preload(:groups) do
+          nil ->
+            conn
+            |> put_status(:forbidden)
+            |> render(Thegm.ErrorView, "error.json", errors: ["membership: You must be a member", "role: You must be an admin"])
+          member ->
+            cond do
+              member.role == "admin" ->
+                group = Groups.changeset(member.groups, params)
+                group = cond do
+                  Map.has_key?(group.changes, :street1) or Map.has_key?(group.changes, :street2) or Map.has_key?(group.changes, :city) or Map.has_key?(group.changes, :state) or Map.has_key?(group.changes, :zip) or Map.has_key?(group.changes, :country) ->
+                    Groups.lat_lon(group)
+                  true ->
+                    group
+                end
+                case Repo.update(group) do
+                  {:ok, result} ->
+                    conn
+                    |> put_status(:ok)
+                    |> render("memberof.json", group: result.groups)
+                  {:error, changeset} ->
+                    conn
+                    |> put_status(:unprocessable_entity)
+                    |> render(Thegm.ErrorView, "error.json", errors: Enum.map(changeset.errors, fn {k, v} -> Atom.to_string(k) <> ": " <> elem(v, 0) end)
+                end
+              true ->
+                conn
+                |> put_status(:forbidden)
+                |> render(Thegm.ErrorView, "error.json", errors: ["role: You must be an admin"])
+            end
+        end
+      true ->
+        conn
+        |> put_status(:bad_request)
+        |> render(Thegm.ErrorView, "error.json", errors: ["Posted a non `group` data type"])
+    end
   end
 
   defp read_search_params(params) do
     errors = []
-    meters =
-    page = params["page"]
-    limit = params["limit"]
 
     # verify lat
     lat = case params["lat"] do
@@ -224,5 +259,6 @@ defmodule Thegm.GroupsController do
       true ->
         {:ok, %{lat: lat, lon: lon, meters: meters, page: page, limit: limit}}
     end
+    resp
   end
 end
