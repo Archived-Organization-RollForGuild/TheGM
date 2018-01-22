@@ -41,8 +41,10 @@ defmodule Thegm.Groups do
 
   def lat_lon(model) do
     address = model.changes.street1
-    address = if Map.has_key?(model.changes, :street2) do
-      address = address <> ", " <> model.changes.street2
+    address = cond do
+      Map.has_key?(model.changes, :street2) ->
+        address <> ", " <> model.changes.street2
+      true -> address
     end
     address = address <> ", " <> model.changes.city <> ", " <> model.changes.state <> ", " <> model.changes.country <> ", " <> model.changes.zip
     case GoogleMaps.geocode(address) do
