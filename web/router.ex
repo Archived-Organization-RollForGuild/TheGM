@@ -23,6 +23,7 @@ defmodule Thegm.Router do
   scope "/", Thegm do
     pipe_through :api
 
+    get "/isteapot", IsTeapotController, :index
     get "/deathcheck", DeathCheckController, :index
     post "/register", UsersController, :create
     post "/login", SessionsController, :create
