@@ -161,7 +161,7 @@ defmodule Thegm.GroupsController do
               member.role == "admin" ->
                 group = Groups.changeset(member.groups, params)
                 group = cond do
-                  Map.has_key?(group.changes, :street1) or Map.has_key?(group.changes, :street2) or Map.has_key?(group.changes, :city) or Map.has_key?(group.changes, :state) or Map.has_key?(group.changes, :zip) or Map.has_key?(group.changes, :country) ->
+                  Map.has_key?(group.changes, :address) ->
                     Groups.lat_lon(group)
                   true ->
                     group
