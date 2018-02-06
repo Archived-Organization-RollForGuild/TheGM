@@ -14,6 +14,9 @@ defmodule Thegm.Groups do
     field :geom, Geo.Geometry
     field :discoverable, :boolean
     has_many :group_members, Thegm.GroupMembers
+    has_many :join_requests, Thegm.GroupJoinRequests
+    has_many :blocked_users, Thegm.GroupBlockedUsers
+    
 
     timestamps()
   end

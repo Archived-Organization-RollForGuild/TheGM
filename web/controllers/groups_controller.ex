@@ -80,6 +80,7 @@ defmodule Thegm.GroupsController do
         user_id = conn.assigns[:current_user].id
         # Get user's current groups so we can properly exclude them
         memberships = Repo.all(from m in Thegm.GroupMembers, where: m.users_id == ^user_id, select: m.groups_id)
+        blocks = Repo.all(from b in Thegm.GroupBlockedUsers, where: b.user_id == ^user_id and b.rescinded == false, select: b.group_id)
         # Group search params
         offset = (settings.page - 1) * settings.limit
         geom = %Geo.Point{coordinates: {settings.lon, settings.lat}, srid: 4326}
@@ -95,7 +96,7 @@ defmodule Thegm.GroupsController do
             groups = Repo.all(
               from g in Groups,
               select: %{g | distance: st_distancesphere(g.geom, ^geom)},
-              where: st_distancesphere(g.geom, ^geom) <= ^settings.meters and not g.id in ^memberships and g.discoverable == true,
+              where: st_distancesphere(g.geom, ^geom) <= ^settings.meters and not g.id in ^memberships and not g.id in ^blocks and g.discoverable == true,
               order_by: [asc: st_distancesphere(g.geom, ^geom)],
               limit: ^settings.limit,
               offset: ^offset) |> Repo.preload(:group_members)
@@ -260,7 +261,7 @@ defmodule Thegm.GroupsController do
     resp
   end
 
-  def get_member([], user_id) do
+  def get_member([], _) do
     nil
   end
 
@@ -273,7 +274,7 @@ defmodule Thegm.GroupsController do
     end
   end
 
-  def get_admin([], user_id) do
+  def get_admin([], _) do
     nil
   end
 
