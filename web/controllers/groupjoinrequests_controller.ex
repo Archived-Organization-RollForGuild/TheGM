@@ -6,18 +6,19 @@ defmodule Thegm.GroupJoinRequestsController do
   # TODO: This should probably be refactored (ASAP) and being should "blocked" stored somewhere else - Quigley
   # NOTE: This is baaaad spaghetti code - Quigley
   def create(conn, %{"group_id" => group_id}) do
+    IO.inspect group_id
     user_id = conn.assigns[:current_user].id
     #
     case Repo.all(from m in Thegm.GroupMembers, where: m.groups_id == ^group_id and m.users_id == ^user_id) do
       # confirmed user is not already part of group
-      nil ->
+      [] ->
         join_changeset = GroupJoinRequests.create_changeset(%GroupJoinRequests{}, %{group_id: group_id, user_id: user_id})
-        case Repo.all(from gj in GroupJoinRequests, where: gj.groups_id == ^group_id and gj.users_id == ^user_id, order_by: [desc: gj.updated_at]) do
+        case Repo.all(from gj in GroupJoinRequests, where: gj.group_id == ^group_id and gj.user_id == ^user_id, order_by: [desc: gj.updated_at]) do
           # user has not previously requested to join the group, commit request
-          nil ->
+          [] ->
             case Repo.insert(join_changeset) do
               {:ok, _} ->
-                send_resp(conn, :created, "")
+                send_resp(conn, :ok, "")
               {:error, resp} ->
                 error_list = Enum.map(resp.errors, fn {k, v} -> Atom.to_string(k) <> ": " <> elem(v, 0) end)
                 conn
@@ -48,7 +49,7 @@ defmodule Thegm.GroupJoinRequestsController do
                   true ->
                     case Repo.insert(join_changeset) do
                       {:ok, _} ->
-                        send_resp(conn, :created, "")
+                        send_resp(conn, :ok, "")
                       {:error, resp} ->
                         error_list = Enum.map(resp.errors, fn {k, v} -> Atom.to_string(k) <> ": " <> elem(v, 0) end)
                         conn
@@ -65,7 +66,7 @@ defmodule Thegm.GroupJoinRequestsController do
               last.status == "accepted" ->
                 case Repo.insert(join_changeset) do
                   {:ok, _} ->
-                    send_resp(conn, :created, "")
+                    send_resp(conn, :ok, "")
                   {:error, resp} ->
                     error_list = Enum.map(resp.errors, fn {k, v} -> Atom.to_string(k) <> ": " <> elem(v, 0) end)
                     conn
