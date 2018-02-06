@@ -2,7 +2,26 @@ defmodule Thegm.GroupsView do
   use Thegm.Web, :view
 
   def render("memberof.json", %{group: group}) do
-    %{data: full_json(group)}
+    included = Enum.map(group.group_members, &user_hydration/1)
+
+    %{
+      data: %{
+        type: "group",
+        id: group.id,
+        attributes: %{
+          name: group.name,
+          description: group.description,
+          address: group.address,
+          geo: Thegm.GeoView.geo(group.geom),
+          games: group.games,
+          members: length(group.group_members)
+        },
+        relationships: %{
+          group_members: Thegm.GroupMembersView.groups_users(group.group_members)
+        }
+      },
+      included: included
+    }
   end
 
   def render("notmember.json", %{group: group}) do
@@ -13,24 +32,39 @@ defmodule Thegm.GroupsView do
     %{meta: search_meta(meta), data: Enum.map(groups, &non_member_json/1)}
   end
 
-  def full_json(group) do
-    %{type: "group", id: group.id, attributes: %{name: group.name, description: group.description, address: group.address, geo: Thegm.GeoView.geo(group.geom), games: group.games}, relationships: relationships(group.id)}
-  end
-
-  def relationships(group_id) do
-    base = Application.get_env(:thegm, :api_url)
-    %{members: %{links: %{related: base <> "/groups/" <> group_id <> "/members"}}}
+  def user_hydration(member) do
+    group_member = %{
+      type: "users",
+      id: member.users_id,
+      attributes: Thegm.UsersView.users_private(member.users)
+    }
+    Map.put(group_member.attributes, :role, member.role)
+    group_member
   end
 
   def non_member_json(group) do
-    %{type: "group", id: group.id, attributes: non_member_attributes(group)}
-  end
-
-  def non_member_attributes(group) do
-    %{name: group.name, description: group.description, games: group.games, members: length(group.group_members)}
+    %{
+      data: %{
+        type: "group",
+        id: group.id,
+        attributes: %{
+          name: group.name,
+          description: group.description,
+          games: group.games,
+          members: length(group.group_members)
+        }
+      }
+    }
   end
 
   def search_meta(meta) do
     %{total: meta.total, count: meta.count, limit: meta.limit, offset: meta.offset}
+  end
+
+  def relationship_data(group) do
+    %{
+      id: group.id,
+      type: "groups"
+    }
   end
 end

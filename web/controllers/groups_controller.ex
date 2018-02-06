@@ -21,10 +21,10 @@ defmodule Thegm.GroupsController do
 
         case Repo.transaction(multi) do
           {:ok, result} ->
-            IO.inspect result.groups
+            group = Repo.preload(result.groups, [{:group_members, :users}])
             conn
             |> put_status(:created)
-            |> render("memberof.json", group: result.groups)
+            |> render("memberof.json", group: group)
           {:error, :groups, changeset, %{}} ->
             conn
             |> put_status(:unprocessable_entity)
@@ -120,13 +120,13 @@ defmodule Thegm.GroupsController do
 
   def show(conn, %{"id" => group_id}) do
     user_id = conn.assigns[:current_user].id
-    case Repo.get(Groups, group_id) do
+    case Repo.get(Groups, group_id) |> Repo.preload([{:group_members, :users}]) do
       nil ->
         conn
         |> put_status(:not_found)
         |> render(Thegm.ErrorView, "error.json", errors: ["A group with the specified `id` was not found"])
       group ->
-        case Repo.one(from m in Thegm.GroupMembers, where: m.users_id == ^user_id and m.groups_id == ^group_id) do
+        case get_member(group.group_members, user_id) do
           nil ->
             conn
             |> put_status(:ok)
@@ -258,5 +258,31 @@ defmodule Thegm.GroupsController do
         {:ok, %{lat: lat, lon: lon, meters: meters, page: page, limit: limit}}
     end
     resp
+  end
+
+  def get_member([], user_id) do
+    nil
+  end
+
+  def get_member([head | tail], user_id) do
+    cond do
+      head.users_id == user_id ->
+        head
+      true ->
+        get_member(tail, user_id)
+    end
+  end
+
+  def get_admin([], user_id) do
+    nil
+  end
+
+  def get_admin([head | tail], user_id) do
+    cond do
+      head.users_id == user_id and head.role == "admin" ->
+        head
+      true ->
+        get_admin(tail, user_id)
+    end
   end
 end

@@ -29,4 +29,17 @@ defmodule Thegm.GroupMembersView do
       }
     }
   end
+
+  def groups_users(members) do
+    base = Application.get_env(:thegm, :api_url)
+    %{
+      data: Enum.map(members, &Thegm.UsersView.relationship_data/1)
+    }
+  end
+
+  def users_groups(members) do
+    %{
+      data: Enum.map(members, &Thegm.GroupsView.relationship_data/1)
+    }
+  end
 end
