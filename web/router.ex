@@ -18,6 +18,7 @@ defmodule Thegm.Router do
     post "/logout", SessionsController, :delete
     resources "/groups", GroupsController, except: [:edit, :new]
     get "/groups/:group_id/members", GroupMembersController, :index
+    resources "/groups/:group_id/join-requests", GroupJoinRequestsController, only: [:create, :update, :index]
   end
 
   scope "/", Thegm do
