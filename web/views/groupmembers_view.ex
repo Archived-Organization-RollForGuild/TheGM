@@ -33,7 +33,7 @@ defmodule Thegm.GroupMembersView do
   def groups_users(members) do
     base = Application.get_env(:thegm, :api_url)
     %{
-      data: Enum.map(members, &Thegm.UsersView.relationship_data/1)
+      data: Enum.map(members, fn(x) -> Thegm.UsersView.relationship_data(x.users) end)
     }
   end
 
