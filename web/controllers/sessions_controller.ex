@@ -12,6 +12,7 @@ defmodule Thegm.SessionsController do
         user = Repo.get_by(Users, email: user_params["email"])
         cond do
           !user ->
+            dummy_checkpw()
             conn
             |> put_status(:unauthorized)
             |> render(Thegm.ErrorView, "error.json", errors: ["Invalid Email/Password combination"])
