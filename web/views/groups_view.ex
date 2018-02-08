@@ -57,13 +57,9 @@ defmodule Thegm.GroupsView do
 
   def users_groupmembers_groups(group) do
     %{
-      type: "group",
-      id: group.id,
-      attributes: %{
-        name: group.name,
-        description: group.description,
-        games: group.games
-      }
+      name: group.name,
+      description: group.description,
+      games: group.games
     }
   end
 
