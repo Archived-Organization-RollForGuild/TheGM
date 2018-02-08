@@ -44,15 +44,25 @@ defmodule Thegm.GroupsView do
 
   def non_member_json(group) do
     %{
-      data: %{
-        type: "group",
-        id: group.id,
-        attributes: %{
-          name: group.name,
-          description: group.description,
-          games: group.games,
-          members: length(group.group_members)
-        }
+      type: "group",
+      id: group.id,
+      attributes: %{
+        name: group.name,
+        description: group.description,
+        games: group.games,
+        members: length(group.group_members)
+      }
+    }
+  end
+
+  def users_groupmembers_groups(group) do
+    %{
+      type: "group",
+      id: group.id,
+      attributes: %{
+        name: group.name,
+        description: group.description,
+        games: group.games
       }
     }
   end
