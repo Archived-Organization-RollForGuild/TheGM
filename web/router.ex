@@ -29,5 +29,9 @@ defmodule Thegm.Router do
     post "/register", UsersController, :create
     post "/login", SessionsController, :create
     post "/confirmation/:id", ConfirmationCodesController, :create
+
+
+    post "/resets", PasswordResetsController, :create
+    put "/resets/:id", PasswordResetsController, :update
   end
 end
