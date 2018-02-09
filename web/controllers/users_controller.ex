@@ -30,4 +30,21 @@ defmodule Thegm.UsersController do
         |> render(Thegm.ErrorView, "error.json", errors: ["Posted a non `user` data type"])
     end
   end
+
+  def show(conn, %{"user_id" => user_id}) do
+    current_user_id = conn.assigns[:current_user].id
+    case Repo.get(Users, user_id) |> Repo.preload([{:group_members, :groups}]) do
+      nil ->
+        conn
+        |> put_status(:not_found)
+        |> render(Thegm.ErrorView, "error.json", errors: ["A user with the specified `id` was not found"])
+      user ->
+      cond do
+        current_user_id == user_id ->
+          render conn, "private.json", user: user
+        true ->
+          render conn, "public.json", user: user
+      end
+    end
+  end
 end

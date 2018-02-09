@@ -1,6 +1,47 @@
 defmodule Thegm.UsersView do
   use Thegm.Web, :view
 
+  def render("public.json", %{user: user}) do
+    included = Enum.map(user.group_members, &group_hydration/1)
+
+    %{
+      data: %{
+        type: "user",
+        id: user.id,
+        attributes: users_public(user),
+        relationships: %{
+          groups: Thegm.GroupMembersView.users_groups(user.group_members)
+        }
+      },
+      included: included
+    }
+  end
+
+  def render("private.json", %{user: user}) do
+    included = Enum.map(user.group_members, &group_hydration/1)
+
+    %{
+      data: %{
+        type: "user",
+        id: user.id,
+        attributes: users_private(user),
+        relationships: %{
+          groups: Thegm.GroupMembersView.users_groups(user.group_members)
+        }
+      },
+      included: included
+    }
+  end
+
+
+  def group_hydration(membership) do
+    group_membership = %{
+      type: "groups",
+      id: membership.groups_id,
+      attributes: Thegm.GroupsView.users_groupmembers_groups(membership.groups)
+    }
+  end
+
   #show multiple users
   def render("index.json", %{users: users}) do
     %{
