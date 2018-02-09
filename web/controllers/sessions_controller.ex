@@ -11,6 +11,12 @@ defmodule Thegm.SessionsController do
       {"auth", user_params} ->
         user = Repo.get_by(Users, email: user_params["email"])
         cond do
+          !user ->
+            dummy_checkpw()
+            conn
+            |> put_status(:unauthorized)
+            |> render(Thegm.ErrorView, "error.json", errors: ["Invalid Email/Password combination"])
+
           !user.active ->
             conn
             |> put_status(:bad_request)
@@ -21,11 +27,7 @@ defmodule Thegm.SessionsController do
             conn
             |> put_status(:created)
             |> render("show.json", session: session)
-          user ->
-            conn
-            |> put_status(:unauthorized)
-            |> render(Thegm.ErrorView, "error.json", errors: ["Invalid Email/Password combination"])
-          true ->
+          user || true ->
             dummy_checkpw()
             conn
             |> put_status(:unauthorized)
