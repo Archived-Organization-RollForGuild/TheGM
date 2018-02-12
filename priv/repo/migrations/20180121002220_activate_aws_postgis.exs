@@ -9,13 +9,13 @@ defmodule Thegm.Repo.Migrations.ActivateAwsPostgis do
     execute "create extension postgis_topology"
 
     # schema permissions
-#    execute "alter schema tiger owner to rds_superuser"
-#    execute "alter schema tiger_data owner to rds_superuser"
-#    execute "alter schema topology owner to rds_superuser"
+    execute "alter schema tiger owner to rds_superuser"
+    execute "alter schema tiger_data owner to rds_superuser"
+    execute "alter schema topology owner to rds_superuser"
 
     #functions
     execute "CREATE FUNCTION exec(text) returns text language plpgsql volatile AS $f$ BEGIN EXECUTE $1; RETURN $1; END; $f$;"
-    execute "SELECT exec('ALTER TABLE ' || quote_ident(s.nspname) || '.' || quote_ident(s.relname) || ' OWNER TO alex;')
+    execute "SELECT exec('ALTER TABLE ' || quote_ident(s.nspname) || '.' || quote_ident(s.relname) || ' OWNER TO rds_superuser;')
   FROM (
     SELECT nspname, relname
     FROM pg_class c JOIN pg_namespace n ON (c.relnamespace = n.oid)
