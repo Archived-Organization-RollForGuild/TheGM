@@ -28,6 +28,7 @@ defmodule Thegm.Router do
     get "/deathcheck", DeathCheckController, :index
     post "/register", UsersController, :create
     post "/login", SessionsController, :create
+    get "/sessions/:id", SessionsController, :show
     post "/confirmation/:id", ConfirmationCodesController, :create
   end
 end
