@@ -11,11 +11,12 @@ defmodule Thegm.PasswordResetsController do
 
         cond do
           user ->
+            Repo.delete_all(PasswordResets, [user_id: user.id, used: false])
             changeset = PasswordResets.changeset(%PasswordResets{},%{"used" => false, "user_id" => user.id})
 
             case Repo.insert(changeset) do
-              {:ok, params} ->
-                Thegm.Mailgun.email_password_reset(params["email"], params["id"])
+              {:ok, reset} ->
+                Thegm.Mailgun.email_password_reset(params["email"], reset.id)
                 |> Thegm.Mailer.deliver_now
                 send_resp(conn, :created, "")
             end
@@ -32,7 +33,7 @@ defmodule Thegm.PasswordResetsController do
     end
   end
 
-  def update(conn, %{"id" => id, "data" => %{"attributes" => params, "type" => type}}) do
+  def update(conn, %{"id" => id, "data" => %{"attributes" => params}}) do
     case Repo.get(PasswordResets, id) do
       nil ->
         conn
@@ -40,7 +41,7 @@ defmodule Thegm.PasswordResetsController do
         |> render(Thegm.ErrorView, "error.json", errors: ["Invalid password reset"])
       resp ->
         cond do
-          resp.used == false && NaiveDateTime.diff(NaiveDateTime.utc_now(), resp.created_at) ->
+          resp.used == false && NaiveDateTime.diff(NaiveDateTime.utc_now(), resp.inserted_at) ->
             code = PasswordResets.changeset(resp, %{used: true})
             case Repo.update(code) do
               {:ok, updated_code} ->
@@ -52,7 +53,7 @@ defmodule Thegm.PasswordResetsController do
                   user ->
                     user = Thegm.Users.changeset(user, %{password: params["password"]})
                     case Repo.update(user) do
-                      {:ok} ->
+                      {:ok, _} ->
                         send_resp(conn, :ok, "")
                       {:error, user} ->
                         conn
