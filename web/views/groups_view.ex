@@ -6,7 +6,7 @@ defmodule Thegm.GroupsView do
 
     %{
       data: %{
-        type: "group",
+        type: "groups",
         id: group.id,
         attributes: %{
           name: group.name,
@@ -45,7 +45,7 @@ defmodule Thegm.GroupsView do
 
   def non_member_json(group) do
     %{
-      type: "group",
+      type: "groups",
       id: group.id,
       attributes: %{
         name: group.name,

@@ -10,7 +10,7 @@ defmodule Thegm.UsersController do
 
   def create(conn, %{"data" => %{"attributes" => params, "type" => type}}) do
     case {type, params} do
-      {"user", params} ->
+      {"users", params} ->
         changeset = Users.create_changeset(%Users{}, params)
 
         case Repo.insert(changeset) do

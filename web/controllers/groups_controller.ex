@@ -7,7 +7,7 @@ defmodule Thegm.GroupsController do
 
   def create(conn, %{"data" => %{"attributes" => params, "type" => type}}) do
     case {type, params} do
-      {"group", params} ->
+      {"groups", params} ->
         group_changeset = Groups.create_changeset(%Groups{}, params)
         multi =
           Multi.new
@@ -153,7 +153,7 @@ defmodule Thegm.GroupsController do
   def update(conn, %{"id" => group_id, "data" => %{"attributes" => params, "type" => type}}) do
     user_id = conn.assigns[:current_user].id
     cond do
-      type == "group" ->
+      type == "groups" ->
         case Repo.one(from m in Thegm.GroupMembers, where: m.groups_id == ^group_id and m.users_id == ^user_id) |> Repo.preload(:groups) do
           nil ->
             conn

@@ -6,7 +6,7 @@ defmodule Thegm.PasswordResetsController do
 
   def create(conn, %{"data" => %{"attributes" => params, "type" => type}}) do
     case {type, params} do
-      {"reset", params} ->
+      {"resets", params} ->
         user = Repo.get_by(Users, email: params["email"])
 
         cond do
