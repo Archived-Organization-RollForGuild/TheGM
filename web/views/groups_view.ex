@@ -14,7 +14,8 @@ defmodule Thegm.GroupsView do
           address: group.address,
           geo: Thegm.GeoView.geo(group.geom),
           games: group.games,
-          members: length(group.group_members)
+          members: length(group.group_members),
+          slug: group.slug
         },
         relationships: %{
           group_members: Thegm.GroupMembersView.groups_users(group.group_members)
@@ -50,7 +51,8 @@ defmodule Thegm.GroupsView do
         name: group.name,
         description: group.description,
         games: group.games,
-        members: length(group.group_members)
+        members: length(group.group_members),
+        slug: group.slug
       }
     }
   end
@@ -59,7 +61,8 @@ defmodule Thegm.GroupsView do
     %{
       name: group.name,
       description: group.description,
-      games: group.games
+      games: group.games,
+      slug: group.slug
     }
   end
 
