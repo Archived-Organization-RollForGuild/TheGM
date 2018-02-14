@@ -6,7 +6,7 @@ defmodule Thegm.Repo.Migrations.AddGroupsSlug do
       add :slug, :string, null: false
     end
 
-    drop unique_index(:groups, [:slug])
+    drop unique_index(:groups, [:name])
     create unique_index(:groups, [:slug])
   end
 end
