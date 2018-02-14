@@ -29,7 +29,12 @@ defmodule Thegm.GroupsView do
   end
 
   def render("search.json", %{groups: groups, meta: meta}) do
-    %{meta: search_meta(meta), data: Enum.map(groups, &non_member_json/1)}
+    %{meta: search_meta(meta), data: Enum.map(groups, &search/1)}
+  end
+
+  def search(group) do
+    group_json = non_member_json(group)
+    Map.put(group_json.attributes, :distance, group.distance)
   end
 
   def user_hydration(member) do
