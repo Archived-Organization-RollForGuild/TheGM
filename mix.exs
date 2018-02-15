@@ -48,7 +48,8 @@ defmodule Thegm.Mixfile do
       {:bamboo, "~> 0.8"},
       {:google_maps, "~> 0.8"},
       {:distillery, "~> 1.5", runtime: false},
-      {:geo_postgis, "~> 1.0"}
+      {:geo_postgis, "~> 1.0"},
+      {:uuid, "~> 1.1"}
     ]
   end
 

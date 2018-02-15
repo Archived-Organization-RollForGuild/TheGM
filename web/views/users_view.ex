@@ -6,7 +6,7 @@ defmodule Thegm.UsersView do
 
     %{
       data: %{
-        type: "user",
+        type: "users",
         id: user.id,
         attributes: users_public(user),
         relationships: %{
@@ -22,7 +22,7 @@ defmodule Thegm.UsersView do
 
     %{
       data: %{
-        type: "user",
+        type: "users",
         id: user.id,
         attributes: users_private(user),
         relationships: %{

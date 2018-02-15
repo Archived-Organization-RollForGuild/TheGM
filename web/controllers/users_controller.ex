@@ -10,7 +10,7 @@ defmodule Thegm.UsersController do
 
   def create(conn, %{"data" => %{"attributes" => params, "type" => type}}) do
     case {type, params} do
-      {"user", params} ->
+      {"users", params} ->
         changeset = Users.create_changeset(%Users{}, params)
 
         case Repo.insert(changeset) do
@@ -31,8 +31,10 @@ defmodule Thegm.UsersController do
     end
   end
 
-  def show(conn, %{"user_id" => user_id}) do
+  def show(conn, %{"username" => username}) do
+    user_id = Users.generate_uuid(username)
     current_user_id = conn.assigns[:current_user].id
+
     case Repo.get(Users, user_id) |> Repo.preload([{:group_members, :groups}]) do
       nil ->
         conn

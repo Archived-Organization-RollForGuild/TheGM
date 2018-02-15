@@ -6,6 +6,6 @@ defmodule Thegm.SessionsView do
   end
 
   def session_json(session) do
-    %{type: "session", attributes: %{token: session.token, user_id: session.user_id}}
+    %{type: "sessions", attributes: %{token: session.token, user_id: session.user_id}}
   end
 end
