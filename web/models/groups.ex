@@ -46,13 +46,13 @@ defmodule Thegm.Groups do
     |> cast(%{id: generate_uuid(params["slug"])}, [:id])
   end
 
-  def lat_lon(model) do
+  def lat_lng(model) do
     case GoogleMaps.geocode(model.changes.address) do
       {:ok, result} ->
         lat = List.first(result["results"])["geometry"]["location"]["lat"]
-        lon = List.first(result["results"])["geometry"]["location"]["lng"]
+        lng = List.first(result["results"])["geometry"]["location"]["lng"]
         model
-        |> put_change(:geom, %Geo.Point{coordinates: {lon, lat}, srid: 4326})
+        |> put_change(:geom, %Geo.Point{coordinates: {lng, lat}, srid: 4326})
     end
   end
 end

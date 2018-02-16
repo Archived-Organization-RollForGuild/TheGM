@@ -83,7 +83,7 @@ defmodule Thegm.GroupsController do
         blocks = Repo.all(from b in Thegm.GroupBlockedUsers, where: b.user_id == ^user_id and b.rescinded == false, select: b.group_id)
         # Group search params
         offset = (settings.page - 1) * settings.limit
-        geom = %Geo.Point{coordinates: {settings.lon, settings.lat}, srid: 4326}
+        geom = %Geo.Point{coordinates: {settings.lng, settings.lat}, srid: 4326}
 
         # Get total in search
         total = Repo.one(from g in Groups,
@@ -165,7 +165,7 @@ defmodule Thegm.GroupsController do
                 group = Groups.changeset(member.groups, params)
                 group = cond do
                   Map.has_key?(group.changes, :address) ->
-                    Groups.lat_lon(group)
+                    Groups.lat_lng(group)
                   true ->
                     group
                 end
@@ -208,17 +208,17 @@ defmodule Thegm.GroupsController do
         lat
     end
 
-    # verify lon
-    lon = case params["lon"] do
+    # verify lng
+    lng = case params["lng"] do
       nil ->
-        errors = errors ++ [lon: "Must be supplied"]
+        errors = errors ++ [lng: "Must be supplied"]
         nil
       temp ->
-        {lon, _} = Float.parse(temp)
-        if lon > 180 or lat < -180 do
-          errors = errors ++ [lon: "Must be between +-189"]
+        {lng, _} = Float.parse(temp)
+        if lng > 180 or lat < -180 do
+          errors = errors ++ [lng: "Must be between +-189"]
         end
-        lon
+        lng
     end
 
     # set page
@@ -258,7 +258,7 @@ defmodule Thegm.GroupsController do
       length(errors) > 0 ->
         {:error, errors}
       true ->
-        {:ok, %{lat: lat, lon: lon, meters: meters, page: page, limit: limit}}
+        {:ok, %{lat: lat, lng: lng, meters: meters, page: page, limit: limit}}
     end
     resp
   end
