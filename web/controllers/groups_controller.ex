@@ -196,62 +196,79 @@ defmodule Thegm.GroupsController do
     errors = []
 
     # verify lat
-    lat = case params["lat"] do
+    {lat, errors} = case params["lat"] do
       nil ->
         errors = errors ++ [lat: "Must be supplied"]
-        nil
+        {nil, errors}
       temp ->
         {lat, _} = Float.parse(temp)
-        if lat > 90 or lat < -90 do
-          errors = errors ++ [lat: "Must be between +-90"]
+        errors = cond do
+          lat > 90 or lat < -90 ->
+            errors ++ [lat: "Must be between +-90"]
+          true ->
+            errors
         end
-        lat
+        {lat, errors}
     end
 
     # verify lng
-    lng = case params["lng"] do
+    {lng, errors} = case params["lng"] do
       nil ->
         errors = errors ++ [lng: "Must be supplied"]
-        nil
+        {nil, errors}
       temp ->
         {lng, _} = Float.parse(temp)
-        if lng > 180 or lat < -180 do
-          errors = errors ++ [lng: "Must be between +-189"]
+        errors = cond do
+          lng > 180 or lat < -180 ->
+            errors ++ [lng: "Must be between +-189"]
+          true ->
+            errors
         end
-        lng
+        {lng, errors}
     end
 
     # set page
-    page = case params["page"] do
+    {page, errors} = case params["page"] do
       nil ->
-        page = 1
+        {1, errors}
       temp ->
         {page, _} = Integer.parse(temp)
-        if page < 1 do
-          errors = errors ++ [page: "Must be a positive integer"]
+        errors = cond do
+          page < 1 ->
+            errors ++ [page: "Must be a positive integer"]
+          true ->
+            errors
         end
+        {page, errors}
     end
 
-    meters = case params["meters"] do
+    {meters, errors} = case params["meters"] do
       nil ->
-        meters = 80467
+        {80467, errors}
       temp ->
         {meters, _} = Float.parse(temp)
-        if meters <= 0 do
-          errors = errors ++ [meters: "Must be a real number greater than 0"]
+        errors = cond do
+          meters <= 0 ->
+            errors ++ [meters: "Must be a real number greater than 0"]
+          true ->
+            errors
         end
-        meters
+        {meters, errors}
     end
 
-    limit = case params["limit"] do
+    {limit, errors} = case params["limit"] do
       nil ->
-        limit = 100
+        {100, errors}
       temp ->
         {limit, _} = Integer.parse(temp)
-        if limit < 1 do
-          errors = errors ++ [limit: "Must be at integer greater than 0"]
+        errors = cond do
+
+          limit < 1 ->
+            errors ++ [limit: "Must be at integer greater than 0"]
+          true ->
+            errors
         end
-        limit
+        {limit, errors}
     end
 
     resp = cond do
