@@ -36,6 +36,7 @@ defmodule Thegm.GroupsView do
   def search(group) do
     group_json = non_member_json(group)
     Map.put(group_json.attributes, :distance, group.distance)
+    group_json
   end
 
   def user_hydration(member) do
