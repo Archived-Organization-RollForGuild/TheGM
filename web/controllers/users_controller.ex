@@ -31,8 +31,7 @@ defmodule Thegm.UsersController do
     end
   end
 
-  def show(conn, %{"username" => username}) do
-    user_id = Users.generate_uuid(username)
+  def show(conn, %{"id" => user_id}) do
     current_user_id = conn.assigns[:current_user].id
 
     case Repo.get(Users, user_id) |> Repo.preload([{:group_members, :groups}]) do
