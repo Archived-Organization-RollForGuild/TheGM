@@ -18,7 +18,7 @@ defmodule Thegm.Groups do
     has_many :group_members, Thegm.GroupMembers
     has_many :join_requests, Thegm.GroupJoinRequests
     has_many :blocked_users, Thegm.GroupBlockedUsers
-    
+
 
     timestamps()
   end
@@ -42,7 +42,7 @@ defmodule Thegm.Groups do
   def create_changeset(model, params \\ :empty) do
     model
     |> changeset(params)
-    |> lat_lon
+    |> lat_lng
     |> cast(%{id: generate_uuid(params["slug"])}, [:id])
   end
 
