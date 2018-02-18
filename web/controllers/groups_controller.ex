@@ -121,7 +121,7 @@ defmodule Thegm.GroupsController do
 
   def show(conn, %{"id" => group_id}) do
     user_id = conn.assigns[:current_user].id
-    
+
     case Repo.get(Groups, group_id) |> Repo.preload([{:group_members, :users}]) do
       nil ->
         conn
@@ -130,9 +130,43 @@ defmodule Thegm.GroupsController do
       group ->
         case get_member(group.group_members, user_id) do
           nil ->
-            conn
-            |> put_status(:ok)
-            |> render("notmember.json", group: group)
+            case Repo.all(from gj in Thegm.GroupJoinRequests, where: gj.group_id == ^group_id and gj.user_id == ^user_id, order_by: [desc: gj.inserted_at]) do
+              # user has not previously requested to join the group
+              [] ->
+                conn
+                |> put_status(:ok)
+                |> render("notmember.json", group: group)
+              # user has previously requested to join the group
+              resp ->
+                # Because we ordered by updated descending, get the most recent request
+                last = hd(resp)
+                cond do
+                  # Last request is still open, error
+                  last.status == nil ->
+                    conn
+                    |> put_status(:ok)
+                    |> render("pendingmember.json", group: group)
+                  # Last request was ignored, check how old it is
+                  last.status == "ignored" ->
+                    # Calculated how long it has been since they last requested
+                    inserted_at = last.inserted_at |> DateTime.from_naive!("Etc/UTC")
+                    diff = DateTime.diff(DateTime.utc_now, inserted_at, :second)
+                    # if it has been less than 60 days since they last requested
+                    if (diff / 60 / 60 / 24) < 60  do
+                      conn
+                      |> put_status(:ok)
+                      |> render("pendingnotmember.json", group: group)
+                    else
+                      conn
+                      |> put_status(:ok)
+                      |> render("notmember.json", group: group)
+                    end
+                  true ->
+                    conn
+                    |> put_status(:ok)
+                    |> render("notmember.json", group: group)
+                end
+            end
           member ->
             cond do
               member.role == "member" ->
@@ -143,7 +177,7 @@ defmodule Thegm.GroupsController do
                 #todo things for admins
                 conn
                 |> put_status(:ok)
-                |> render("memberof.json", group: group)
+                |> render("adminof.json", group: group)
             end
         end
     end
