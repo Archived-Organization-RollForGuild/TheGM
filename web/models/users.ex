@@ -12,6 +12,8 @@ defmodule Thegm.Users do
     field :password_hash, :string
     field :password, :string, virtual: true
     field :active, :boolean
+    field :avatar, :boolean
+    field :bio, :string
     has_many :group_members, Thegm.GroupMembers
 
     timestamps()
@@ -23,7 +25,7 @@ defmodule Thegm.Users do
 
   def changeset(model, params \\ :empty) do
     model
-    |> cast(params, [:username, :email, :password, :active])
+    |> cast(params, [:username, :email, :password, :active, :bio])
   end
 
   def create_changeset(model, params \\ :empty) do
@@ -35,6 +37,7 @@ defmodule Thegm.Users do
     |> unique_constraint(:email, message: "Email is already taken")
     |> validate_format(:email, ~r/@/, message: "Invalid email address")
     |> validate_length(:email, min: 4, max: 255)
+    |> validate_length(:bio, max: 500)
     |> validate_format(:username, ~r/^[a-zA-Z0-9\s'_-]+$/, message: "Username must be alpha numeric")
     |> validate_length(:username, min: 1, max: 200)
     |> validate_length(:password, min: 4)
