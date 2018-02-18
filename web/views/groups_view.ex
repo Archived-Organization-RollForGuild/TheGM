@@ -30,13 +30,7 @@ defmodule Thegm.GroupsView do
   end
 
   def render("search.json", %{groups: groups, meta: meta}) do
-    %{meta: search_meta(meta), data: Enum.map(groups, &search/1)}
-  end
-
-  def search(group) do
-    group_json = search(group)
-    Map.put(group_json.attributes, :distance, group.distance)
-    group_json
+    %{meta: search_meta(meta), data: Enum.map(groups, &search_json/1)}
   end
 
   def member_json(group, status) do
@@ -75,7 +69,7 @@ defmodule Thegm.GroupsView do
   end
 
   def search_json(group) do
-    %{
+     %{
       type: "groups",
       id: group.id,
       attributes: %{
@@ -83,7 +77,8 @@ defmodule Thegm.GroupsView do
         description: group.description,
         games: group.games,
         members: length(group.group_members),
-        slug: group.slug
+        slug: group.slug,
+        distance: group.distance
       }
     }
   end
