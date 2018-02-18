@@ -52,7 +52,7 @@ defmodule Thegm.Mixfile do
       {:uuid, "~> 1.1"},
       {:ex_aws, "~> 2.0"},
       {:ex_aws_s3, "~> 2.0"},
-      {:hackney, "~> 1.9"},
+      {:hackney, "~> 1.11"},
       {:mogrify, "~> 0.5.6"}
     ]
   end
