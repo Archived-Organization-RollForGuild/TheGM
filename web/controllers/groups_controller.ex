@@ -83,7 +83,7 @@ defmodule Thegm.GroupsController do
         blocks = Repo.all(from b in Thegm.GroupBlockedUsers, where: b.user_id == ^user_id and b.rescinded == false, select: b.group_id)
         # Group search params
         offset = (settings.page - 1) * settings.limit
-        geom = %Geo.Point{coordinates: {settings.lon, settings.lat}, srid: 4326}
+        geom = %Geo.Point{coordinates: {settings.lng, settings.lat}, srid: 4326}
 
         # Get total in search
         total = Repo.one(from g in Groups,
@@ -119,10 +119,9 @@ defmodule Thegm.GroupsController do
     end
   end
 
-  def show(conn, %{"id" => group_slug}) do
-    group_id = Groups.generate_uuid(group_slug)
-
+  def show(conn, %{"id" => group_id}) do
     user_id = conn.assigns[:current_user].id
+
     case Repo.get(Groups, group_id) |> Repo.preload([{:group_members, :users}]) do
       nil ->
         conn
@@ -131,9 +130,43 @@ defmodule Thegm.GroupsController do
       group ->
         case get_member(group.group_members, user_id) do
           nil ->
-            conn
-            |> put_status(:ok)
-            |> render("notmember.json", group: group)
+            case Repo.all(from gj in Thegm.GroupJoinRequests, where: gj.group_id == ^group_id and gj.user_id == ^user_id, order_by: [desc: gj.inserted_at]) do
+              # user has not previously requested to join the group
+              [] ->
+                conn
+                |> put_status(:ok)
+                |> render("notmember.json", group: group)
+              # user has previously requested to join the group
+              resp ->
+                # Because we ordered by updated descending, get the most recent request
+                last = hd(resp)
+                cond do
+                  # Last request is still open, error
+                  last.status == nil ->
+                    conn
+                    |> put_status(:ok)
+                    |> render("pendingmember.json", group: group)
+                  # Last request was ignored, check how old it is
+                  last.status == "ignored" ->
+                    # Calculated how long it has been since they last requested
+                    inserted_at = last.inserted_at |> DateTime.from_naive!("Etc/UTC")
+                    diff = DateTime.diff(DateTime.utc_now, inserted_at, :second)
+                    # if it has been less than 60 days since they last requested
+                    if (diff / 60 / 60 / 24) < 60  do
+                      conn
+                      |> put_status(:ok)
+                      |> render("pendingnotmember.json", group: group)
+                    else
+                      conn
+                      |> put_status(:ok)
+                      |> render("notmember.json", group: group)
+                    end
+                  true ->
+                    conn
+                    |> put_status(:ok)
+                    |> render("notmember.json", group: group)
+                end
+            end
           member ->
             cond do
               member.role == "member" ->
@@ -144,7 +177,7 @@ defmodule Thegm.GroupsController do
                 #todo things for admins
                 conn
                 |> put_status(:ok)
-                |> render("memberof.json", group: group)
+                |> render("adminof.json", group: group)
             end
         end
     end
@@ -165,7 +198,7 @@ defmodule Thegm.GroupsController do
                 group = Groups.changeset(member.groups, params)
                 group = cond do
                   Map.has_key?(group.changes, :address) ->
-                    Groups.lat_lon(group)
+                    Groups.lat_lng(group)
                   true ->
                     group
                 end
@@ -196,69 +229,86 @@ defmodule Thegm.GroupsController do
     errors = []
 
     # verify lat
-    lat = case params["lat"] do
+    {lat, errors} = case params["lat"] do
       nil ->
         errors = errors ++ [lat: "Must be supplied"]
-        nil
+        {nil, errors}
       temp ->
         {lat, _} = Float.parse(temp)
-        if lat > 90 or lat < -90 do
-          errors = errors ++ [lat: "Must be between +-90"]
+        errors = cond do
+          lat > 90 or lat < -90 ->
+            errors ++ [lat: "Must be between +-90"]
+          true ->
+            errors
         end
-        lat
+        {lat, errors}
     end
 
-    # verify lon
-    lon = case params["lon"] do
+    # verify lng
+    {lng, errors} = case params["lng"] do
       nil ->
-        errors = errors ++ [lon: "Must be supplied"]
-        nil
+        errors = errors ++ [lng: "Must be supplied"]
+        {nil, errors}
       temp ->
-        {lon, _} = Float.parse(temp)
-        if lon > 180 or lat < -180 do
-          errors = errors ++ [lon: "Must be between +-189"]
+        {lng, _} = Float.parse(temp)
+        errors = cond do
+          lng > 180 or lat < -180 ->
+            errors ++ [lng: "Must be between +-189"]
+          true ->
+            errors
         end
-        lon
+        {lng, errors}
     end
 
     # set page
-    page = case params["page"] do
+    {page, errors} = case params["page"] do
       nil ->
-        page = 1
+        {1, errors}
       temp ->
         {page, _} = Integer.parse(temp)
-        if page < 1 do
-          errors = errors ++ [page: "Must be a positive integer"]
+        errors = cond do
+          page < 1 ->
+            errors ++ [page: "Must be a positive integer"]
+          true ->
+            errors
         end
+        {page, errors}
     end
 
-    meters = case params["meters"] do
+    {meters, errors} = case params["meters"] do
       nil ->
-        meters = 80467
+        {80467, errors}
       temp ->
         {meters, _} = Float.parse(temp)
-        if meters <= 0 do
-          errors = errors ++ [meters: "Must be a real number greater than 0"]
+        errors = cond do
+          meters <= 0 ->
+            errors ++ [meters: "Must be a real number greater than 0"]
+          true ->
+            errors
         end
-        meters
+        {meters, errors}
     end
 
-    limit = case params["limit"] do
+    {limit, errors} = case params["limit"] do
       nil ->
-        limit = 100
+        {100, errors}
       temp ->
         {limit, _} = Integer.parse(temp)
-        if limit < 1 do
-          errors = errors ++ [limit: "Must be at integer greater than 0"]
+        errors = cond do
+
+          limit < 1 ->
+            errors ++ [limit: "Must be at integer greater than 0"]
+          true ->
+            errors
         end
-        limit
+        {limit, errors}
     end
 
     resp = cond do
       length(errors) > 0 ->
         {:error, errors}
       true ->
-        {:ok, %{lat: lat, lon: lon, meters: meters, page: page, limit: limit}}
+        {:ok, %{lat: lat, lng: lng, meters: meters, page: page, limit: limit}}
     end
     resp
   end
