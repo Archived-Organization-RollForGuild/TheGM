@@ -7,9 +7,8 @@ defmodule Thegm.UserAvatarsController do
 
   import Mogrify
 
-  def create(conn, %{"username" => username, "file" => image_params}) do
+  def create(conn, %{"id" => user_id, "file" => image_params}) do
     current_user_id = conn.assigns[:current_user].id
-    user_id = Users.generate_uuid(username)
 
     case Repo.get(Users, user_id) do
       nil ->

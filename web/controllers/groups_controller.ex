@@ -119,9 +119,7 @@ defmodule Thegm.GroupsController do
     end
   end
 
-  def show(conn, %{"id" => group_slug}) do
-    group_id = Groups.generate_uuid(group_slug)
-
+  def show(conn, %{"id" => group_id}) do
     user_id = conn.assigns[:current_user].id
     case Repo.get(Groups, group_id) |> Repo.preload([{:group_members, :users}]) do
       nil ->

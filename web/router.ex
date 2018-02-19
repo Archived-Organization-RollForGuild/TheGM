@@ -13,10 +13,10 @@ defmodule Thegm.Router do
     pipe_through [:api, :auth]
 
     get "/rolldice", RollDiceController, :index
-    get "/users/:username", UsersController, :show
-    put "/users/:username", UsersController, :update
+    get "/users/:id", UsersController, :show
+    put "/users/:id", UsersController, :update
     get "/users", UsersController, :index
-    resources "/users/:username/avatar", UserAvatarsController, only: [:create]
+    resources "/users/:id/avatar", UserAvatarsController, only: [:create]
     post "/logout", SessionsController, :delete
     resources "/groups", GroupsController, except: [:edit, :new]
     get "/groups/:group_id/members", GroupMembersController, :index
