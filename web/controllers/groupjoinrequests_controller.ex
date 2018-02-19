@@ -5,7 +5,6 @@ defmodule Thegm.GroupJoinRequestsController do
 
   # NOTE: This can probably be made prettier somehow, it isn't very readable currently - Quigley
   def create(conn, %{"group_id" => group_id}) do
-    IO.inspect group_id
     user_id = conn.assigns[:current_user].id
     case Repo.one(from b in Thegm.GroupBlockedUsers, where: b.group_id == ^group_id and b.user_id == ^user_id and b.rescinded == false) do
       nil ->
@@ -13,7 +12,7 @@ defmodule Thegm.GroupJoinRequestsController do
           # confirmed user is not already part of group
           [] ->
             join_changeset = GroupJoinRequests.create_changeset(%GroupJoinRequests{}, %{group_id: group_id, user_id: user_id})
-            case Repo.all(from gj in GroupJoinRequests, where: gj.group_id == ^group_id and gj.user_id == ^user_id, order_by: [desc: gj.updated_at]) do
+            case Repo.all(from gj in GroupJoinRequests, where: gj.group_id == ^group_id and gj.user_id == ^user_id, order_by: [desc: gj.inserted_at]) do
               # user has not previously requested to join the group, commit request
               [] ->
                 case Repo.insert(join_changeset) do
@@ -68,6 +67,10 @@ defmodule Thegm.GroupJoinRequestsController do
                         |> put_status(:bad_request)
                         |> render(Thegm.ErrorView, "error.json", errors: error_list)
                     end
+                  true ->
+                    conn
+                    |> put_status(:internal_server_error)
+                    |> render(Thegm.ErrorView, "error.json", errors: ["Previous request is in an unrecognized state"])
                 end
             end
           # User is already part of the group
