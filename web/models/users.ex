@@ -23,23 +23,29 @@ defmodule Thegm.Users do
     UUID.uuid5(@uuid_namespace, resource_identifier)
   end
 
+  # Parameters of the user that may be changed without special requirements like re-authentication or email validation
+  def unrestricted_changeset(model, params \\ :empty) do
+    model
+    |> cast(params, [:bio])
+    |> validate_length(:bio, max: 500)
+  end
+
   def changeset(model, params \\ :empty) do
     model
-    |> cast(params, [:username, :email, :password, :active, :bio])
+    |> cast(params, [:username, :email, :active, :bio])
+    |> unique_constraint(:email, message: "Email is already taken")
+    |> validate_format(:email, ~r/@/, message: "Invalid email address")
+    |> validate_length(:email, min: 4, max: 255)
+    |> validate_format(:username, ~r/^[a-zA-Z0-9\s'_-]+$/, message: "Username must be alpha numeric")
+    |> validate_length(:username, min: 1, max: 200)
   end
 
   def create_changeset(model, params \\ :empty) do
     model
     |> changeset(params)
     |> unique_constraint(:username, message: "Username is already taken")
-    |> cast(%{id: generate_uuid(params["username"])}, [:id])
+    |> cast(%{id: generate_uuid(params["username"]), password: params["password"] }, [:id, :password])
     |> validate_required([:username, :password, :email], message: "Are required")
-    |> unique_constraint(:email, message: "Email is already taken")
-    |> validate_format(:email, ~r/@/, message: "Invalid email address")
-    |> validate_length(:email, min: 4, max: 255)
-    |> validate_length(:bio, max: 500)
-    |> validate_format(:username, ~r/^[a-zA-Z0-9\s'_-]+$/, message: "Username must be alpha numeric")
-    |> validate_length(:username, min: 1, max: 200)
     |> validate_length(:password, min: 4)
     |> put_password_hash
 
