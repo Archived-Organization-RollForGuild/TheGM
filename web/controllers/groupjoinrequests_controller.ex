@@ -91,32 +91,40 @@ defmodule Thegm.GroupJoinRequestsController do
   end
 
   def index(conn, params) do
+    user_id = conn.assigns[:current_user].id
     case read_params(params) do
       {:ok, settings} ->
-        # Get total in search
-        total = Repo.one(from gjr in GroupJoinRequests,
-        select: count(gjr.id),
-        where: gjr.group_id == ^settings.group_id and is_nil(gjr.status))
+        case Repo.one(from gm in Thegm.GroupMembers, where: gm.groups_id == ^settings.group_id and gm.users_id == ^user_id and gm.role == "admin") do
+          nil ->
+            conn
+            |> put_status(:forbidden)
+            |> render(Thegm.ErrorView, "error.json", errors: ["role: Must be an admin of the group to view join requests"])
+          _ ->
+            # Get total in search
+            total = Repo.one(from gjr in GroupJoinRequests,
+            select: count(gjr.id),
+            where: gjr.group_id == ^settings.group_id and is_nil(gjr.status))
 
-        offset = (settings.page - 1) * settings.limit
-        gjrs = Repo.all(
-          from gjr in GroupJoinRequests,
-          where: gjr.group_id == ^settings.group_id and is_nil(gjr.status),
-          order_by: [desc: gjr.inserted_at],
-          limit: ^settings.limit,
-          offset: ^offset) |> Repo.preload(:users)
+            offset = (settings.page - 1) * settings.limit
+            gjrs = Repo.all(
+              from gjr in GroupJoinRequests,
+              where: gjr.group_id == ^settings.group_id and is_nil(gjr.status),
+              order_by: [desc: gjr.inserted_at],
+              limit: ^settings.limit,
+              offset: ^offset) |> Repo.preload(:user)
+            IO.inspect gjrs
+            meta = %{total: total, limit: settings.limit, offset: offset, count: length(gjrs)}
 
-        meta = %{total: total, limit: settings.limit, offset: offset, count: length(gjrs)}
-
-        conn
-        |> put_status(:ok)
-        |> render("show.json", requests: gjrs, meta: meta)
+            conn
+            |> put_status(:ok)
+            |> render("show.json", requests: gjrs, meta: meta)
+        end
       {:error, errors} ->
         conn
         |> put_status(:bad_request)
         |> render(Thegm.ErrorView,
           "error.json",
-          errors: Enum.map(errors, fn {k, v} -> Atom.to_string(k) <> ": " <> elem(v, 0) end))
+          errors: Enum.map(errors, fn {k, v} -> Atom.to_string(k) <> ": " <> v end))
     end
   end
 
@@ -124,9 +132,9 @@ defmodule Thegm.GroupJoinRequestsController do
     errors = []
 
     # set page
-    {group_id, errors} = case params["group-id"] do
+    {group_id, errors} = case params["group_id"] do
       nil ->
-        errors = errors ++ ["group-id": "must be supplied"]
+        errors = errors ++ ["group_id": "must be supplied"]
         {nil, errors}
       temp ->
         {temp, errors}
