@@ -14,7 +14,9 @@ defmodule Thegm.Router do
 
     get "/rolldice", RollDiceController, :index
     get "/users/:id", UsersController, :show
+    put "/users/:id", UsersController, :update
     get "/users", UsersController, :index
+    resources "/users/:id/avatar", UserAvatarsController, only: [:create]
     post "/logout", SessionsController, :delete
     resources "/groups", GroupsController, except: [:edit, :new]
     get "/groups/:group_id/members", GroupMembersController, :index

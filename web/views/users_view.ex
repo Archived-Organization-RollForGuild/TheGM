@@ -51,14 +51,18 @@ defmodule Thegm.UsersView do
 
   def users_public(user) do
     %{
-      username: user.username
+      username: user.username,
+      bio: user.bio,
+      avatar: user.avatar
     }
   end
 
   def users_private(user) do
     %{
       username: user.username,
-      email: user.email
+      email: user.email,
+      bio: user.bio,
+      avatar: user.avatar
     }
   end
 

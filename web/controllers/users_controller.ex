@@ -31,6 +31,43 @@ defmodule Thegm.UsersController do
     end
   end
 
+  def update(conn, %{"id" => user_id, "data" => %{"attributes" => params, "type" => type}}) do
+    current_user_id = conn.assigns[:current_user].id
+
+    cond do
+      type == "users" ->
+        case Repo.get(Users, user_id) |> Repo.preload([{:group_members, :groups}]) do
+          nil ->
+            conn
+            |> put_status(:not_found)
+            |> render(Thegm.ErrorView, "error.json", errors: ["A user with the specified `username` was not found"])
+          user ->
+            cond do
+              current_user_id == user_id ->
+                user = Users.unrestricted_changeset(user, params)
+                case Repo.update(user) do
+                  {:ok, result} ->
+                    conn
+                    |> put_status(:ok)
+                    |> render("private.json", user: result)
+                  {:error, changeset} ->
+                    conn
+                    |> put_status(:unprocessable_entity)
+                    |> render(Thegm.ErrorView, "error.json", errors: Enum.map(changeset.errors, fn {k, v} -> Atom.to_string(k) <> ": " <> elem(v, 0) end))
+                end
+              true ->
+                conn
+                |> put_status(:forbidden)
+                |> render(Thegm.ErrorView, "error.json", errors: ["You do not have privileges to edit this account"])
+            end
+        end
+      true ->
+        conn
+        |> put_status(:bad_request)
+        |> render(Thegm.ErrorView, "error.json", errors: ["Posted a non `user` data type"])
+    end
+  end
+
   def show(conn, %{"id" => user_id}) do
     current_user_id = conn.assigns[:current_user].id
 
@@ -38,7 +75,7 @@ defmodule Thegm.UsersController do
       nil ->
         conn
         |> put_status(:not_found)
-        |> render(Thegm.ErrorView, "error.json", errors: ["A user with the specified `id` was not found"])
+        |> render(Thegm.ErrorView, "error.json", errors: ["A user with the specified `username` was not found"])
       user ->
       cond do
         current_user_id == user_id ->
