@@ -204,9 +204,10 @@ defmodule Thegm.GroupsController do
                 end
                 case Repo.update(group) do
                   {:ok, result} ->
+                    group = Repo.get(Groups, group_id) |> Repo.preload([{:group_members, :users}])
                     conn
                     |> put_status(:ok)
-                    |> render("memberof.json", group: result.groups)
+                    |> render("adminof.json", group: group)
                   {:error, changeset} ->
                     conn
                     |> put_status(:unprocessable_entity)
