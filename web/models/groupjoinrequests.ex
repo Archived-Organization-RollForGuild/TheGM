@@ -7,6 +7,7 @@ defmodule Thegm.GroupJoinRequests do
 
   schema "group_join_requests" do
     field :status, :string
+    field :pending, :bool
     belongs_to :user, Thegm.Users
     belongs_to :group, Thegm.Groups
 
@@ -21,6 +22,7 @@ defmodule Thegm.GroupJoinRequests do
 
   def update_changeset(model, params \\ :empty) do
     model
+    |> put_change(:pending, nil)
     |> cast(params, [:status])
     |> validate_required([:status])
   end
