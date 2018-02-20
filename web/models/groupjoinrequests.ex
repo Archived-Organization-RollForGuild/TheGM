@@ -23,8 +23,8 @@ defmodule Thegm.GroupJoinRequests do
 
   def update_changeset(model, params \\ :empty) do
     model
-    |> put_change(:pending, nil)
     |> cast(params, [:status])
     |> validate_required([:status])
+    |> put_change(:pending, nil)
   end
 end

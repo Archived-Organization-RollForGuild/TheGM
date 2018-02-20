@@ -100,33 +100,41 @@ defmodule Thegm.GroupJoinRequestsController do
                 |> put_status(:gone)
                 |> render(Thegm.ErrorView, "error.json", errors: ["gone: That join request is gone"])
               join_request ->
+                IO.inspect params
                 cond do
-                  params.status == "accepted" ->
-                    request_changeset = GroupJoinRequests.update_changeset(join_request, params)
-                    member_changeset = Thegm.GroupMembers.create_changeset(%Thegm.GroupMembers{}, %{:groups_id => group_id, :users_id => request_user_id, :role => "member"})
-                    multi =
-                      Multi.new
-                      |> Multi.update(:group_join_requests, request_changeset)
-                      |> Multi.insert(:group_members, member_changeset)
+                  Map.has_key?(params, "status") ->
+                    cond do
+                      params["status"] == "accepted" ->
+                        request_changeset = GroupJoinRequests.update_changeset(join_request, params)
+                        member_changeset = Thegm.GroupMembers.create_changeset(%Thegm.GroupMembers{}, %{:groups_id => group_id, :users_id => request_user_id, :role => "member"})
+                        multi =
+                          Multi.new
+                          |> Multi.update(:group_join_requests, request_changeset)
+                          |> Multi.insert(:group_members, member_changeset)
 
-                    case Repo.transaction(multi) do
-                      {:ok, _} ->
-                        send_resp(conn, :no_content, "")
-                      {:error, :group_join_request, changeset, %{}} ->
-                        conn
-                        |> put_status(:unprocessable_entity)
-                        |> render(Thegm.ErrorView, "error.json", errors: Enum.map(changeset.errors, fn {k, v} -> Atom.to_string(k) <> ": " <> elem(v, 0) end))
-                      {:error, :group_members, changeset, %{}} ->
-                        conn
-                        |> put_status(:unprocessable_entity)
-                        |> render(Thegm.ErrorView, "error.json", errors: Enum.map(changeset.errors, fn {k, v} -> Atom.to_string(k) <> ": " <> elem(v, 0) end))
+                        case Repo.transaction(multi) do
+                          {:ok, _} ->
+                            send_resp(conn, :no_content, "")
+                          {:error, :group_join_request, changeset, %{}} ->
+                            conn
+                            |> put_status(:unprocessable_entity)
+                            |> render(Thegm.ErrorView, "error.json", errors: Enum.map(changeset.errors, fn {k, v} -> Atom.to_string(k) <> ": " <> elem(v, 0) end))
+                          {:error, :group_members, changeset, %{}} ->
+                            conn
+                            |> put_status(:unprocessable_entity)
+                            |> render(Thegm.ErrorView, "error.json", errors: Enum.map(changeset.errors, fn {k, v} -> Atom.to_string(k) <> ": " <> elem(v, 0) end))
+                        end
+                      params["status"] == "ingored" ->
+                        # TODO
+                        IO.puts :todo
+                      params["status"] == "blocked" ->
+                        # TODO
+                        IO.puts :todo
                     end
-                  params.status == "ingored" ->
-                    # TODO
-                    IO.puts :todo
-                  params.status == "blocked" ->
-                    # TODO
-                    IO.puts :todo
+                  true ->
+                    conn
+                    |> put_status(:bad_request)
+                    |> render(Thegm.ErrorView, "error.json", errors: ["body.data.attributes: The key 'status' is required"])
                 end
             end
           _ ->
