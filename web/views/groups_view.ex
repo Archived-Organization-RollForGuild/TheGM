@@ -106,9 +106,9 @@ defmodule Thegm.GroupsView do
     %{total: meta.total, count: meta.count, limit: meta.limit, offset: meta.offset}
   end
 
-  def relationship_data(group) do
+  def relationship_data(groupmember) do
     %{
-      id: group.id,
+      id: groupmember.groups_id,
       type: "groups"
     }
   end
