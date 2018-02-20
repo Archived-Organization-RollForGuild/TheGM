@@ -7,7 +7,7 @@ defmodule Thegm.GroupJoinRequests do
 
   schema "group_join_requests" do
     field :status, :string
-    field :pending, :bool
+    field :pending, :boolean
     belongs_to :user, Thegm.Users
     belongs_to :group, Thegm.Groups
 
