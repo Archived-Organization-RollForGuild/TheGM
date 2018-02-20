@@ -103,9 +103,9 @@ defmodule Thegm.GroupJoinRequestsController do
                 IO.inspect params
                 cond do
                   Map.has_key?(params, "status") ->
+                    request_changeset = GroupJoinRequests.update_changeset(join_request, params)
                     cond do
                       params["status"] == "accepted" ->
-                        request_changeset = GroupJoinRequests.update_changeset(join_request, params)
                         member_changeset = Thegm.GroupMembers.create_changeset(%Thegm.GroupMembers{}, %{:groups_id => group_id, :users_id => request_user_id, :role => "member"})
                         multi =
                           Multi.new
@@ -125,11 +125,24 @@ defmodule Thegm.GroupJoinRequestsController do
                             |> render(Thegm.ErrorView, "error.json", errors: Enum.map(changeset.errors, fn {k, v} -> Atom.to_string(k) <> ": " <> elem(v, 0) end))
                         end
                       params["status"] == "ingored" ->
-                        # TODO
-                        IO.puts :todo
+                        case Repo.update(request_changeset) do
+                          {:ok, _} ->
+                            send_resp(conn, :no_content, "")
+                          {:error, error} ->
+                            conn
+                            |> put_status(:internal_server_error)
+                            |> render(Thegm.ErrorView, "error.json", errors: Enum.map(error.errors, fn {k, v} -> Atom.to_string(k) <> ": " <> elem(v, 0) end))
+                        end
                       params["status"] == "blocked" ->
-                        # TODO
-                        IO.puts :todo
+                        case Repo.update(request_changeset) do
+                          {:ok, _} ->
+                            send_resp(conn, :no_content, "")
+                          {:error, error} ->
+                            conn
+                            |> put_status(:internal_server_error)
+                            |> render(Thegm.ErrorView, "error.json", errors: Enum.map(error.errors, fn {k, v} -> Atom.to_string(k) <> ": " <> elem(v, 0) end))
+                        end
+                        # TODO the blocking part, probably should be a multi
                     end
                   true ->
                     conn
