@@ -48,7 +48,7 @@ defmodule Thegm.Users do
 
   def changeset(model, params \\ :empty) do
     model
-    |> cast(params, [:username, :email, :active, :bio])
+    |> cast(params, [:username, :email, :active, :bio, :avatar])
     |> unique_constraint(:email, message: "Email is already taken")
     |> validate_format(:email, ~r/@/, message: "Invalid email address")
     |> validate_length(:email, min: 4, max: 255)

@@ -6,7 +6,7 @@ defmodule Thegm.UserEmailsController do
   import Comeonin.Argon2, only: [checkpw: 2, dummy_checkpw: 0]
 
 
-  def update(conn, %{"id" => user_id, "data" => %{"attributes" => params, "type" => type}}) do
+  def update(conn, %{"users_id" => user_id, "data" => %{"attributes" => params, "type" => type}}) do
     current_user_id = conn.assigns[:current_user].id
 
     case Repo.get(Users, user_id) |> Repo.preload([{:group_members, :groups}]) do

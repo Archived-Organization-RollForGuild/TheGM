@@ -14,12 +14,11 @@ defmodule Thegm.Router do
 
     get "/rolldice", RollDiceController, :index
 
-    get "/users/:id", UsersController, :show
-    put "/users/:id", UsersController, :update
-    get "/users", UsersController, :index
-    put "/users/:id/password", UserPasswordsController, :update
-    put "/users/:id/email", UserEmailsController, :update
-    resources "/users/:id/avatar", UserAvatarsController, only: [:create]
+    resources "/users", UsersController do
+      resources "/avatar", UserAvatarsController, only: [:create, :delete], singleton: true
+      resources "/password", UserPasswordsController, only: [:update], singleton: true
+      resources "/email", UserEmailsController, only: [:update], singleton: true
+    end
 
     post "/logout", SessionsController, :delete
     resources "/groups", GroupsController, except: [:edit, :new]
@@ -36,7 +35,7 @@ defmodule Thegm.Router do
     post "/login", SessionsController, :create
     get "/sessions/:id", SessionsController, :show
     post "/confirmation/:id", ConfirmationCodesController, :create
-
+    get "/users/:id/avatar", UserAvatarsController, :show
 
     post "/resets", PasswordResetsController, :create
     put "/resets/:id", PasswordResetsController, :update
