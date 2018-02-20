@@ -30,6 +30,22 @@ defmodule Thegm.Users do
     |> validate_length(:bio, max: 500)
   end
 
+  def update_password(model, params) do
+    model
+    |> changeset(params)
+    |> cast(%{password: params["password"] }, [:password])
+    |> validate_required([:password], message: "Are required")
+    |> validate_length(:password, min: 4)
+    |> put_password_hash
+  end
+
+  def update_email(model, params) do
+    model
+    |> changeset(params)
+    |> cast(%{active: false}, [:active])
+
+  end
+
   def changeset(model, params \\ :empty) do
     model
     |> cast(params, [:username, :email, :active, :bio])
