@@ -49,7 +49,11 @@ defmodule Thegm.Mixfile do
       {:google_maps, "~> 0.8"},
       {:distillery, "~> 1.5", runtime: false},
       {:geo_postgis, "~> 1.0"},
-      {:uuid, "~> 1.1"}
+      {:uuid, "~> 1.1"},
+      {:ex_aws, "~> 2.0"},
+      {:ex_aws_s3, "~> 2.0"},
+      {:hackney, "~> 1.11"},
+      {:mogrify, "~> 0.5.6"}
     ]
   end
 
