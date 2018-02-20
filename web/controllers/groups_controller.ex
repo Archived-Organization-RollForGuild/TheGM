@@ -15,7 +15,7 @@ defmodule Thegm.GroupsController do
           |> Multi.run(:group_members, fn %{groups: group} ->
             member_changeset =
               %Thegm.GroupMembers{groups_id: group.id}
-              |> Thegm.GroupMembers.changeset(%{role: "admin", users_id: conn.assigns[:current_user].id})
+              |> Thegm.GroupMembers.create_changeset(%{role: "admin", users_id: conn.assigns[:current_user].id})
             Repo.insert(member_changeset)
           end)
 

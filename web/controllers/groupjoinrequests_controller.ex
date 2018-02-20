@@ -2,6 +2,7 @@ defmodule Thegm.GroupJoinRequestsController do
   use Thegm.Web, :controller
 
   alias Thegm.GroupJoinRequests
+  alias Ecto.Multi
 
   # NOTE: This can probably be made prettier somehow, it isn't very readable currently - Quigley
   def create(conn, %{"group_id" => group_id}) do
@@ -86,8 +87,58 @@ defmodule Thegm.GroupJoinRequestsController do
     end
   end
 
-  def update(conn, %{"group_id" => group_id, "status" => status}) do
+  def update(conn, %{"group_id" => group_id, "id" => request_user_id, "data" => %{"attributes" => params, "type" => type}}) do
+    admin_user_id = conn.assigns[:current_user].id
+    member = Repo.one(from gm in Thegm.GroupMembers, where: gm.groups_id == ^group_id and gm.users_id == ^admin_user_id)
+    cond do
+      member.role == "admin" ->
+        case type do
+          "join-requests" ->
+            case Repo.one(from gjr in GroupJoinRequests, where: gjr.user_id == ^request_user_id and gjr.group_id == ^group_id and gjr.pending == true) do
+              nil ->
+                conn
+                |> put_status(:gone)
+                |> render(Thegm.ErrorView, "error.json", errors: ["gone: That join request is gone"])
+              join_request ->
+                cond do
+                  params.status == "accepted" ->
+                    request_changeset = GroupJoinRequests.update_changeset(join_request, params)
+                    member_changeset = Thegm.GroupMembers.create_changeset(%Thegm.GroupMembers{}, %{:groups_id => group_id, :users_id => request_user_id, :role => "member"})
+                    multi =
+                      Multi.new
+                      |> Multi.update(:group_join_requests, request_changeset)
+                      |> Multi.insert(:group_members, member_changeset)
 
+                    case Repo.transaction(multi) do
+                      {:ok, _} ->
+                        send_resp(conn, :no_content, "")
+                      {:error, :group_join_request, changeset, %{}} ->
+                        conn
+                        |> put_status(:unprocessable_entity)
+                        |> render(Thegm.ErrorView, "error.json", errors: Enum.map(changeset.errors, fn {k, v} -> Atom.to_string(k) <> ": " <> elem(v, 0) end))
+                      {:error, :group_members, changeset, %{}} ->
+                        conn
+                        |> put_status(:unprocessable_entity)
+                        |> render(Thegm.ErrorView, "error.json", errors: Enum.map(changeset.errors, fn {k, v} -> Atom.to_string(k) <> ": " <> elem(v, 0) end))
+                    end
+                  params.status == "ingored" ->
+                    # TODO
+                    IO.puts :todo
+                  params.status == "blocked" ->
+                    # TODO
+                    IO.puts :todo
+                end
+            end
+          _ ->
+            conn
+            |> put_status(:bad_request)
+            |> render(Thegm.ErrorView, "error.json", errors: ["type: Expected 'join-requests', received '" <> type <>"'"])
+        end
+      true ->
+        conn
+        |> put_status(:forbidden)
+        |> render(Thegm.ErrorView, "error.json", erros: ["role: You must be an admin of the group to take this action"])
+    end
   end
 
   def index(conn, params) do
