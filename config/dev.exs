@@ -60,7 +60,7 @@ config :google_maps,
 config :ex_aws, :s3,
   access_key_id: System.get_env("RFG_AWS_ACCESS_KEY_ID"),
   secret_access_key: System.get_env("RFG_AWS_SECRET_ACCESS_KEY"),
-  region: "us-east-2"
+  region: System.get_env("RFG_API_AWS_REGION")
 
 config :thegm,
   api_url: "http://dev.api.rollforguild.com",
