@@ -18,6 +18,7 @@ defmodule Thegm.Router do
     put "/users/:id", UsersController, :update
     get "/users", UsersController, :index
     put "/users/:id/password", UserPasswordsController, :update
+    put "/users/:id/email", UserEmailsController, :update
     resources "/users/:id/avatar", UserAvatarsController, only: [:create]
 
     post "/logout", SessionsController, :delete
