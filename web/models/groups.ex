@@ -15,6 +15,7 @@ defmodule Thegm.Groups do
     field :distance, :float, virtual: true
     field :geom, Geo.Geometry
     field :discoverable, :boolean
+    field :member_status, :string, virtual: true
     has_many :group_members, Thegm.GroupMembers
     has_many :join_requests, Thegm.GroupJoinRequests
     has_many :blocked_users, Thegm.GroupBlockedUsers
@@ -25,6 +26,11 @@ defmodule Thegm.Groups do
 
   def generate_uuid(resource) do
     UUID.uuid5(@uuid_namespace, resource)
+  end
+
+  def set_member_status(model, status) do
+    model
+    |> cast(%{member_status: status}, [:member_status])
   end
 
   def changeset(model, params \\ :empty) do
