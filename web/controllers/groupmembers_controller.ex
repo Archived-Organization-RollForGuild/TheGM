@@ -1,4 +1,5 @@
 defmodule Thegm.GroupMembersController do
+  @moduledoc "Controller responsible for handling group members"
   use Thegm.Web, :controller
 
   alias Thegm.GroupMembers

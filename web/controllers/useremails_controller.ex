@@ -1,4 +1,6 @@
 defmodule Thegm.UserEmailsController do
+  @moduledoc "Controller responsible for handling user emails"
+
   use Thegm.Web, :controller
 
   alias Thegm.Users

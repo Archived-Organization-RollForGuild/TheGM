@@ -1,4 +1,6 @@
 defmodule Thegm.GroupJoinRequests do
+  @moduledoc "Database model for requests to join a group"
+
   use Thegm.Web, :model
 
   @primary_key {:id, :binary_id, autogenerate: true}

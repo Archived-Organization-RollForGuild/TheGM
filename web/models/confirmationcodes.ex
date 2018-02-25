@@ -1,4 +1,6 @@
 defmodule Thegm.ConfirmationCodes do
+  @moduledoc "Database model for email confirmation codes"
+
   use Thegm.Web, :model
 
   @primary_key {:id, :binary_id, autogenerate: true}

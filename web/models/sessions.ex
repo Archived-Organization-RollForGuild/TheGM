@@ -1,4 +1,6 @@
 defmodule Thegm.Sessions do
+  @moduledoc "Database model for user sessions"
+
   use Thegm.Web, :model
 
   @foreign_key_type :binary_id

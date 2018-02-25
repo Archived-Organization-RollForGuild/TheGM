@@ -1,4 +1,6 @@
 defmodule Thegm.GroupMembers do
+  @moduledoc "Database model for group members"
+
   use Thegm.Web, :model
 
   @primary_key {:id, :binary_id, autogenerate: true}

@@ -1,4 +1,5 @@
 defmodule Thegm.DeathCheckController do
+  @moduledoc "Controller responsible for handling death checks"
   use Thegm.Web, :controller
 
   def index(conn, _) do

@@ -1,4 +1,6 @@
 defmodule Thegm.UserJoinRequestsController do
+  @moduledoc "Controller responsible for handling user join requests"
+
   use Thegm.Web, :controller
 
   alias Thegm.UserJoinRequests

@@ -1,4 +1,6 @@
 defmodule Thegm.Users do
+  @moduledoc "Database model for users"
+
   @uuid_namespace UUID.uuid5(:url, "https://rollforguild.com/users/")
 
   use Thegm.Web, :model
@@ -33,7 +35,7 @@ defmodule Thegm.Users do
   def update_password(model, params) do
     model
     |> changeset(params)
-    |> cast(%{password: params["password"] }, [:password])
+    |> cast(%{password: params["password"]}, [:password])
     |> validate_required([:password], message: "Are required")
     |> validate_length(:password, min: 4)
     |> put_password_hash
@@ -60,7 +62,7 @@ defmodule Thegm.Users do
     model
     |> changeset(params)
     |> unique_constraint(:username, message: "Username is already taken")
-    |> cast(%{id: generate_uuid(params["username"]), password: params["password"] }, [:id, :password])
+    |> cast(%{id: generate_uuid(params["username"]), password: params["password"]}, [:id, :password])
     |> validate_required([:username, :password, :email], message: "Are required")
     |> validate_length(:password, min: 4)
     |> put_password_hash

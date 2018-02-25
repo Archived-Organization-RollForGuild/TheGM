@@ -1,4 +1,6 @@
 defmodule Thegm.GeoView do
+  @moduledoc "View for geo coordinates"
+
   use Thegm.Web, :view
 
   def geo(geo) do

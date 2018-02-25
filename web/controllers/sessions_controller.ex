@@ -1,4 +1,6 @@
 defmodule Thegm.SessionsController do
+  @moduledoc "Controller responsible for handling user sessions"
+
   use Thegm.Web, :controller
 
   alias Thegm.Sessions
@@ -8,15 +10,14 @@ defmodule Thegm.SessionsController do
 
   def show(conn, %{"id" => token}) do
     session = Repo.one(from s in Sessions, where: s.token == ^token)
-    cond do
-      session ->
-        conn
-        |> render("show.json", session: session)
+    if session do
+      conn
+      |> render("show.json", session: session)
 
-      true ->
-        conn
-        |> put_status(:not_found)
-        |> render(Thegm.ErrorView, "error.json", errors: ["Unable to locate session"])
+    else
+      conn
+      |> put_status(:not_found)
+      |> render(Thegm.ErrorView, "error.json", errors: ["Unable to locate session"])
     end
   end
 

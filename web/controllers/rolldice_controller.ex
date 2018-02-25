@@ -1,4 +1,6 @@
 defmodule Thegm.RollDiceController do
+  @moduledoc "Controller responsible for handling dice rolls"
+
   use Thegm.Web, :controller
 
   def index(conn, %{"dice" => dice}) do

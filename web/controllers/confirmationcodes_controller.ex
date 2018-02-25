@@ -1,11 +1,12 @@
 defmodule Thegm.ConfirmationCodesController do
+  @moduledoc "Controller responsible for handling confirmation of email addresses"
+
   use Thegm.Web, :controller
 
   alias Thegm.ConfirmationCodes
 
-  # TODO: Once logging is implemented, add case for errors
   def new(user_id, email) do
-    changeset = ConfirmationCodes.changeset(%ConfirmationCodes{},%{"used" => false, "user_id" => user_id})
+    changeset = ConfirmationCodes.changeset(%ConfirmationCodes{}, %{"used" => false, "user_id" => user_id})
     case Repo.insert(changeset) do
       {:ok, params} ->
         Thegm.Mailgun.email_confirmation_email(email, params.id)

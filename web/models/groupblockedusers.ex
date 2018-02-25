@@ -1,4 +1,6 @@
 defmodule Thegm.GroupBlockedUsers do
+  @moduledoc "Database model for lists of users that have been blocked from a group"
+
   use Thegm.Web, :model
 
   @primary_key {:id, :binary_id, autogenerate: true}

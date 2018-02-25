@@ -1,4 +1,6 @@
 defmodule Thegm.AuthenticateUser do
+  @moduledoc "Phoenix plug for handling user authentication"
+
   import Plug.Conn
   alias Thegm.{Repo, Users, Sessions}
   import Ecto.Query, only: [from: 2]

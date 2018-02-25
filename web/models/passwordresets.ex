@@ -1,4 +1,6 @@
 defmodule Thegm.PasswordResets do
+  @moduledoc "Database model for password reset requests"
+
   use Thegm.Web, :model
 
   @primary_key {:id, :binary_id, autogenerate: true}

@@ -1,4 +1,6 @@
 defmodule Thegm.AWS do
+  @moduledoc "Modulefor handling Amazon AWS operations"
+
   @s3_options Application.get_env(:ex_aws, :s3)
   @bucket_name System.get_env("RFG_API_AWS_BUCKET")
   @aws_region System.get_env("RFG_API_AWS_REGION")

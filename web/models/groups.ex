@@ -1,4 +1,6 @@
 defmodule Thegm.Groups do
+  @moduledoc "Database model for groups"
+
   use Thegm.Web, :model
   @uuid_namespace UUID.uuid5(:url, "https://rollforguild.com/groups/")
 

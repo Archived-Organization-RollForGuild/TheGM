@@ -1,4 +1,5 @@
 defmodule Thegm.ErrorView do
+  @moduledoc "View for API errors"
   use Thegm.Web, :view
 
   def render("404.json", _assigns) do

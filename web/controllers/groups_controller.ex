@@ -1,4 +1,6 @@
 defmodule Thegm.GroupsController do
+  @moduledoc "Controller responsible for handling Groups"
+
   use Thegm.Web, :controller
 
   alias Thegm.Groups
@@ -174,7 +176,6 @@ defmodule Thegm.GroupsController do
                 |> put_status(:ok)
                 |> render("memberof.json", group: group)
               member.role == "admin" ->
-                #todo things for admins
                 conn
                 |> put_status(:ok)
                 |> render("adminof.json", group: group)
@@ -230,80 +231,19 @@ defmodule Thegm.GroupsController do
     errors = []
 
     # verify lat
-    {lat, errors} = case params["lat"] do
-      nil ->
-        errors = errors ++ [lat: "Must be supplied"]
-        {nil, errors}
-      temp ->
-        {lat, _} = Float.parse(temp)
-        errors = cond do
-          lat > 90 or lat < -90 ->
-            errors ++ [lat: "Must be between +-90"]
-          true ->
-            errors
-        end
-        {lat, errors}
-    end
+    {lat, errors} = parse_lat_param(params["lat"])
 
     # verify lng
-    {lng, errors} = case params["lng"] do
-      nil ->
-        errors = errors ++ [lng: "Must be supplied"]
-        {nil, errors}
-      temp ->
-        {lng, _} = Float.parse(temp)
-        errors = cond do
-          lng > 180 or lat < -180 ->
-            errors ++ [lng: "Must be between +-189"]
-          true ->
-            errors
-        end
-        {lng, errors}
-    end
+    {lng, errors} = parse_lng_param(params["lng"])
 
     # set page
-    {page, errors} = case params["page"] do
-      nil ->
-        {1, errors}
-      temp ->
-        {page, _} = Integer.parse(temp)
-        errors = cond do
-          page < 1 ->
-            errors ++ [page: "Must be a positive integer"]
-          true ->
-            errors
-        end
-        {page, errors}
-    end
+    {page, errors} = parse_page_param(params["page"])
 
-    {meters, errors} = case params["meters"] do
-      nil ->
-        {80467, errors}
-      temp ->
-        {meters, _} = Float.parse(temp)
-        errors = cond do
-          meters <= 0 ->
-            errors ++ [meters: "Must be a real number greater than 0"]
-          true ->
-            errors
-        end
-        {meters, errors}
-    end
+    # set distance
+    {meters, errors} = parse_distance_param(params["meters"])
 
-    {limit, errors} = case params["limit"] do
-      nil ->
-        {100, errors}
-      temp ->
-        {limit, _} = Integer.parse(temp)
-        errors = cond do
-
-          limit < 1 ->
-            errors ++ [limit: "Must be at integer greater than 0"]
-          true ->
-            errors
-        end
-        {limit, errors}
-    end
+    # set limit
+    {limit, errors} = parse_limit_param(params["limit"])
 
     resp = cond do
       length(errors) > 0 ->
@@ -312,6 +252,79 @@ defmodule Thegm.GroupsController do
         {:ok, %{lat: lat, lng: lng, meters: meters, page: page, limit: limit}}
     end
     resp
+  end
+
+  def parse_lat_param(temp) do
+    nil ->
+      errors = errors ++ [lat: "Must be supplied"]
+      {nil, errors}
+    temp ->
+      {lat, _} = Float.parse(temp)
+      errors = cond do
+        lat > 90 or lat < -90 ->
+          errors ++ [lat: "Must be between +-90"]
+        true ->
+          errors
+      end
+      {lat, errors}
+  end
+
+  def parse_lng_param(temp) do
+    nil ->
+      errors = errors ++ [lng: "Must be supplied"]
+      {nil, errors}
+    temp ->
+      {lng, _} = Float.parse(temp)
+      errors = cond do
+        lng > 180 or lat < -180 ->
+          errors ++ [lng: "Must be between +-189"]
+        true ->
+          errors
+      end
+      {lng, errors}
+  end
+
+  def parse_page_param(temp) do
+    nil ->
+      {1, errors}
+    temp ->
+      {page, _} = Integer.parse(temp)
+      errors = cond do
+        page < 1 ->
+          errors ++ [page: "Must be a positive integer"]
+        true ->
+          errors
+      end
+      {page, errors}
+  end
+
+  def parse_distance_param(temp) do
+    nil ->
+      {80467, errors}
+    temp ->
+      {meters, _} = Float.parse(temp)
+      errors = cond do
+        meters <= 0 ->
+          errors ++ [meters: "Must be a real number greater than 0"]
+        true ->
+          errors
+      end
+      {meters, errors}
+  end
+
+  def parse_limit_param(temp) do
+    nil ->
+      {100, errors}
+    temp ->
+      {limit, _} = Integer.parse(temp)
+      errors = cond do
+
+        limit < 1 ->
+          errors ++ [limit: "Must be at integer greater than 0"]
+        true ->
+          errors
+      end
+      {limit, errors}
   end
 
   def get_member([], _) do

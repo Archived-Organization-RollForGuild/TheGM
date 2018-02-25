@@ -1,4 +1,6 @@
 defmodule Thegm.Router do
+  @moduledoc "Module for routing requests to the right controller"
+
   use Thegm.Web, :router
 
   pipeline :api do

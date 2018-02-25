@@ -1,4 +1,6 @@
 defmodule Thegm.SessionsView do
+  @moduledoc "View for user sessions"
+
   use Thegm.Web, :view
 
   def render("show.json", %{session: session}) do

@@ -1,4 +1,6 @@
 defmodule Thegm.GroupJoinRequestsController do
+  @moduledoc "Controller responsible for handling requests to join a group"
+
   use Thegm.Web, :controller
 
   alias Thegm.GroupJoinRequests
@@ -165,4 +167,6 @@ defmodule Thegm.GroupJoinRequestsController do
     end
     resp
   end
+
+
 end

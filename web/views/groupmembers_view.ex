@@ -1,4 +1,6 @@
 defmodule Thegm.GroupMembersView do
+  @moduledoc "Views for group members"
+
   use Thegm.Web, :view
 
   def render("members.json", %{members: members}) do

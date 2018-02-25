@@ -1,4 +1,6 @@
 defmodule Thegm.GroupJoinRequestsView do
+  @moduledoc "View for requests to join a group"
+
   use Thegm.Web, :view
 
   def render("show.json", %{requests: requests, meta: meta}) do
@@ -9,7 +11,6 @@ defmodule Thegm.GroupJoinRequestsView do
   end
 
   def hydrate_user(request) do
-    IO.inspect request
     %{}
   end
 

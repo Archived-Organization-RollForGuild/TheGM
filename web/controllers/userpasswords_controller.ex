@@ -1,4 +1,6 @@
 defmodule Thegm.UserPasswordsController do
+  @moduledoc "Controller responsible for handling changing user passwords"
+
   use Thegm.Web, :controller
 
   alias Thegm.Users

@@ -1,4 +1,6 @@
 defmodule Thegm.UserAvatarsController do
+  @moduledoc "Controller responsible for handling user avatars"
+
   @uuid_namespace UUID.uuid5(:url, "https://rollforguild.com/users/avatar")
   use Thegm.Web, :controller
 
@@ -18,7 +20,8 @@ defmodule Thegm.UserAvatarsController do
       user ->
         cond do
           current_user_id == user_id ->
-            open(image_params.path)
+            image_params.path
+            |> open
             |> resize("512x512")
             |> format("jpg")
             |> save(in_place: true)
@@ -49,18 +52,17 @@ defmodule Thegm.UserAvatarsController do
         |> put_status(:not_found)
         |> render(Thegm.ErrorView, "error.json", errors: ["A user with the specified `id` was not found"])
       user ->
-        cond do
-          user.avatar == true ->
-            avatar_identifier = generate_uuid(user.username)
-            conn
-            |> put_status(:see_other)
-            |> redirect(external: AWS.get_avatar_location(avatar_identifier))
+        if user.avatar == true do
+          avatar_identifier = generate_uuid(user.username)
+          conn
+          |> put_status(:see_other)
+          |> redirect(external: AWS.get_avatar_location(avatar_identifier))
 
-          true ->
-            conn
-            |> put_status(:not_found)
-            |> render(Thegm.ErrorView, "error.json", errors: ["This user has no avatar"])
-        end
+        else
+          conn
+          |> put_status(:not_found)
+          |> render(Thegm.ErrorView, "error.json", errors: ["This user has no avatar"])
+      end
     end
   end
 

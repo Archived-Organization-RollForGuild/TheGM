@@ -1,4 +1,6 @@
 defmodule Thegm.RollDiceView do
+  @moduledoc "View for dice rolls"
+
   use Thegm.Web, :view
 
   # show dice

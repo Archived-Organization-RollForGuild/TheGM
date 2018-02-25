@@ -1,4 +1,6 @@
 defmodule Thegm.UsersView do
+  @moduledoc "View for users"
+
   use Thegm.Web, :view
 
   def render("public.json", %{user: user}) do
