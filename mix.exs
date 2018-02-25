@@ -54,7 +54,8 @@ defmodule Thegm.Mixfile do
       {:ex_aws_s3, "~> 2.0"},
       {:hackney, "~> 1.11"},
       {:mogrify, "~> 0.5.6"},
-      {:sweet_xml, "~> 0.6"}
+      {:sweet_xml, "~> 0.6"},
+      {:credo, "~> 0.3", only: [:dev, :test]}
     ]
   end
 
