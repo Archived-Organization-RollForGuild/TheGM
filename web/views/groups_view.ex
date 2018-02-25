@@ -5,7 +5,7 @@ defmodule Thegm.GroupsView do
 
   def render("memberof.json", %{group: group}) do
     included = Enum.map(group.group_members, &user_hydration/1)
-    data = member_json(group, "member")
+    data = member_json(group)
     %{
       data: data,
       included: included
@@ -14,7 +14,7 @@ defmodule Thegm.GroupsView do
 
   def render("adminof.json", %{group: group}) do
     included = Enum.map(group.group_members, &user_hydration/1)
-    data = member_json(group, "admin")
+    data = member_json(group)
     %{
       data: data,
       included: included
@@ -22,12 +22,12 @@ defmodule Thegm.GroupsView do
   end
 
   def render("notmember.json", %{group: group}) do
-    data = non_member_json(group, nil)
+    data = non_member_json(group)
     %{data: data}
   end
 
   def render("pendingmember.json", %{group: group}) do
-    data = non_member_json(group, "pending")
+    data = non_member_json(group)
     %{data: data}
   end
 
@@ -35,7 +35,7 @@ defmodule Thegm.GroupsView do
     %{meta: search_meta(meta), data: Enum.map(groups, &search_json/1)}
   end
 
-  def member_json(group, status) do
+  def member_json(group) do
     %{
       type: "groups",
       id: group.id,
@@ -47,7 +47,7 @@ defmodule Thegm.GroupsView do
         games: group.games,
         members: length(group.group_members),
         slug: group.slug,
-        member_status: status
+        member_status: group.member_status
       },
       relationships: %{
         group_members: Thegm.GroupMembersView.groups_users(group.group_members)
@@ -55,7 +55,7 @@ defmodule Thegm.GroupsView do
     }
   end
 
-  def non_member_json(group, status) do
+  def non_member_json(group) do
     %{
       type: "groups",
       id: group.id,
@@ -65,7 +65,7 @@ defmodule Thegm.GroupsView do
         games: group.games,
         members: length(group.group_members),
         slug: group.slug,
-        member_status: status
+        member_status: group.member_status
       }
     }
   end
@@ -80,7 +80,8 @@ defmodule Thegm.GroupsView do
         games: group.games,
         members: length(group.group_members),
         slug: group.slug,
-        distance: group.distance
+        distance: group.distance,
+        member_status: group.member_status
       }
     }
   end
