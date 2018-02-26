@@ -23,10 +23,9 @@ defmodule Thegm.GroupsController do
         case Repo.transaction(multi) do
           {:ok, result} ->
             group = Repo.preload(result.groups, [{:group_members, :users}])
-
             conn
             |> put_status(:created)
-            |> render("memberof.json", group: group, user: conn.assigns[:current_user])
+            |> render("memberof.json", group: group)
           {:error, :groups, changeset, %{}} ->
             conn
             |> put_status(:unprocessable_entity)
@@ -111,9 +110,11 @@ defmodule Thegm.GroupsController do
 
             meta = %{total: total, limit: settings.limit, offset: offset, count: length(groups)}
 
+            Enum.map(groups, fn g -> Groups.set_member_status(g, group_member_status(user_id, g)) end)
+
             conn
             |> put_status(:ok)
-            |> render("search.json", groups: groups, meta: meta, user: conn.assigns[:current_user])
+            |> render("search.json", groups: groups, meta: meta)
           true ->
             meta = %{total: total, limit: settings.limit, offset: offset, count: 0}
             conn
@@ -136,9 +137,11 @@ defmodule Thegm.GroupsController do
         |> put_status(:not_found)
         |> render(Thegm.ErrorView, "error.json", errors: ["A group with the specified `id` was not found"])
       group ->
+        group
+        |> Groups.set_member_status(group_member_status(user_id, group))
         conn
         |> put_status(:ok)
-        |> render("adminof.json", group: group, user: conn.assigns[:current_user])
+        |> render("adminof.json", group: group)
     end
   end
 
@@ -164,10 +167,12 @@ defmodule Thegm.GroupsController do
                 case Repo.update(group) do
                   {:ok, _} ->
                     group_response = Repo.one(groups_query(group_id, user_id))
+                    group_response
+                    |> Groups.set_member_status(group_member_status(user_id, group_response))
 
                     conn
                     |> put_status(:ok)
-                    |> render("adminof.json", group: group_response, user: conn.assigns[:current_user])
+                    |> render("adminof.json", group: group_response)
                   {:error, changeset} ->
                     conn
                     |> put_status(:unprocessable_entity)
@@ -274,6 +279,19 @@ defmodule Thegm.GroupsController do
     resp
   end
 
+  def get_member([], _) do
+    nil
+  end
+
+  def get_member([head | tail], user_id) do
+    cond do
+      head.users_id == user_id ->
+        head
+      true ->
+        get_member(tail, user_id)
+    end
+  end
+
   def get_admin([], _) do
     nil
   end
@@ -294,5 +312,40 @@ defmodule Thegm.GroupsController do
          left_join: gjr in GroupJoinRequests, on: gjr.group_id == g.id and gjr.user_id == ^user_id,
          where: (g.id == ^group_id),
          preload: [group_members: {gm, users: u}, join_requests: gjr]
+  end
+
+  def group_member_status(user_id, group) do
+    case get_member(group.group_members, user_id) do
+      nil ->
+        case group.join_requests do
+          # user has not previously requested to join the group
+          [] ->
+            false
+          # user has previously requested to join the group
+          join_requests ->
+            # Because we ordered by updated descending, get the most recent request
+            last = hd(join_requests)
+            cond do
+              # Last request is still open, error
+              last.status == nil ->
+                "pending"
+              # Last request was ignored, check how old it is
+              last.status == "ignored" ->
+                # Calculated how long it has been since they last requested
+                inserted_at = last.inserted_at |> DateTime.from_naive!("Etc/UTC")
+                diff = DateTime.diff(DateTime.utc_now, inserted_at, :second)
+                # if it has been less than 60 days since they last requested
+                if (diff / 60 / 60 / 24) < 60  do
+                  "pending"
+                else
+                  nil
+                end
+              true ->
+                nil
+            end
+        end
+      member ->
+        member.role
+    end
   end
 end
