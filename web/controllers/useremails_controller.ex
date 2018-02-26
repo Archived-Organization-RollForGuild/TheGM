@@ -17,26 +17,25 @@ defmodule Thegm.UserEmailsController do
         |> put_status(:not_found)
         |> render(Thegm.ErrorView, "error.json", errors: ["A user with the specified `username` was not found"])
       user ->
-        cond do
-          current_user_id == user_id  ->
-            user = Users.update_email(user, params)
-            case Repo.update(user) do
-              {:ok, result} ->
-                Thegm.ConfirmationCodesController.new(result.id, result.email)
-                conn
-                |> put_status(:ok)
-                |> render(UsersView, "private.json", user: result)
-              {:error, changeset} ->
-                conn
-                |> put_status(:unprocessable_entity)
-                |> render(Thegm.ErrorView, "error.json", errors: Enum.map(changeset.errors, fn {k, v} -> Atom.to_string(k) <> ": " <> elem(v, 0) end))
-            end
-          true ->
-            dummy_checkpw()
-            conn
-            |> put_status(:unauthorized)
-            |> render(Thegm.ErrorView, "error.json", errors: ["Invalid password or user"])
-        end
+        if current_user_id == user_id  do
+          user = Users.update_email(user, params)
+          case Repo.update(user) do
+            {:ok, result} ->
+              Thegm.ConfirmationCodesController.new(result.id, result.email)
+              conn
+              |> put_status(:ok)
+              |> render(UsersView, "private.json", user: result)
+            {:error, changeset} ->
+              conn
+              |> put_status(:unprocessable_entity)
+              |> render(Thegm.ErrorView, "error.json", errors: Enum.map(changeset.errors, fn {k, v} -> Atom.to_string(k) <> ": " <> elem(v, 0) end))
+          end
+        else
+          dummy_checkpw()
+          conn
+          |> put_status(:unauthorized)
+          |> render(Thegm.ErrorView, "error.json", errors: ["Invalid password or user"])
+      end
     end
   end
 end

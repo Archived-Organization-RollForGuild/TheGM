@@ -8,6 +8,8 @@ defmodule Thegm.GroupsController do
   alias Ecto.Multi
   import Geo.PostGIS
 
+  defstruct search
+
   def create(conn, %{"data" => %{"attributes" => params, "type" => type}}) do
     case {type, params} do
       {"groups", params} ->
@@ -159,27 +161,7 @@ defmodule Thegm.GroupsController do
           member ->
             cond do
               member.role == "admin" ->
-                group = Groups.changeset(member.groups, params)
-                group = cond do
-                  Map.has_key?(group.changes, :address) ->
-                    Groups.lat_lng(group)
-                  true ->
-                    group
-                end
-                case Repo.update(group) do
-                  {:ok, _} ->
-                    group_response = Repo.one(groups_query(group_id, user_id))
-                    group_response
-                    |> Groups.set_member_status(group_member_status(user_id, group_response))
-
-                    conn
-                    |> put_status(:ok)
-                    |> render("adminof.json", group: group_response)
-                  {:error, changeset} ->
-                    conn
-                    |> put_status(:unprocessable_entity)
-                    |> render(Thegm.ErrorView, "error.json", errors: Enum.map(changeset.errors, fn {k, v} -> Atom.to_string(k) <> ": " <> elem(v, 0) end))
-                end
+                update_group(conn, member.groups, params)
               true ->
                 conn
                 |> put_status(:forbidden)
@@ -226,10 +208,9 @@ defmodule Thegm.GroupsController do
       {nil, errors}
     temp ->
       {lat, _} = Float.parse(temp)
-      errors = cond do
-        lat > 90 or lat < -90 ->
+      errors = if lat > 90 or lat < -90 do
           errors ++ [lat: "Must be between +-90"]
-        true ->
+        else
           errors
       end
       {lat, errors}
@@ -241,10 +222,9 @@ defmodule Thegm.GroupsController do
       {nil, errors}
     temp ->
       {lng, _} = Float.parse(temp)
-      errors = cond do
-        lng > 180 or lat < -180 ->
+      errors = if lng > 180 or lat < -180 do
           errors ++ [lng: "Must be between +-189"]
-        true ->
+        else
           errors
       end
       {lng, errors}
@@ -255,10 +235,9 @@ defmodule Thegm.GroupsController do
       {1, errors}
     temp ->
       {page, _} = Integer.parse(temp)
-      errors = cond do
-        page < 1 ->
+      errors = if page < 1 do
           errors ++ [page: "Must be a positive integer"]
-        true ->
+        else
           errors
       end
       {page, errors}
@@ -269,10 +248,9 @@ defmodule Thegm.GroupsController do
       {80467, errors}
     temp ->
       {meters, _} = Float.parse(temp)
-      errors = cond do
-        meters <= 0 ->
+      errors = if meters <= 0 do
           errors ++ [meters: "Must be a real number greater than 0"]
-        true ->
+        else
           errors
       end
       {meters, errors}
@@ -283,11 +261,9 @@ defmodule Thegm.GroupsController do
       {100, errors}
     temp ->
       {limit, _} = Integer.parse(temp)
-      errors = cond do
-
-        limit < 1 ->
+      errors = if limit < 1 do
           errors ++ [limit: "Must be at integer greater than 0"]
-        true ->
+        else
           errors
       end
       {limit, errors}
@@ -298,11 +274,10 @@ defmodule Thegm.GroupsController do
   end
 
   def get_member([head | tail], user_id) do
-    cond do
-      head.users_id == user_id ->
-        head
-      true ->
-        get_member(tail, user_id)
+    if head.users_id == user_id do
+      head
+    else
+      get_member(tail, user_id)
     end
   end
 
@@ -311,12 +286,11 @@ defmodule Thegm.GroupsController do
   end
 
   def get_admin([head | tail], user_id) do
-    cond do
-      head.users_id == user_id and head.role == "admin" ->
-        head
-      true ->
-        get_admin(tail, user_id)
-    end
+    if head.users_id == user_id and head.role == "admin" do
+      head
+    else
+      get_admin(tail, user_id)
+  end
   end
 
   def groups_query(group_id, user_id) do
@@ -326,6 +300,25 @@ defmodule Thegm.GroupsController do
          left_join: gjr in GroupJoinRequests, on: gjr.group_id == g.id and gjr.user_id == ^user_id,
          where: (g.id == ^group_id),
          preload: [group_members: {gm, users: u}, join_requests: gjr]
+  end
+
+  def groups_search() do
+    Repo.all(
+      from g in Groups,
+      select: %{g | distance: st_distancesphere(g.geom, ^geom)},
+      where: st_distancesphere(g.geom, ^geom) <= ^settings.meters and not g.id in ^memberships and not g.id in ^blocks and g.discoverable == true,
+      left_join: gm in assoc(g, :group_members),
+      left_join: u in assoc(gm, :users),
+      left_join: gjr in GroupJoinRequests, on: gjr.group_id == g.id and gjr.user_id == ^user_id,
+      preload: [group_members: {gm, users: u}, join_requests: gjr],
+      order_by: [asc: st_distancesphere(g.geom, ^geom)],
+      limit: ^settings.limit,
+      offset: ^offset,
+      preload: [group_members: {gm, users: u}, join_requests: gjr])
+
+    meta = %{total: total, limit: settings.limit, offset: offset, count: length(groups)}
+
+    Enum.map(groups, fn g -> Groups.set_member_status(g, group_member_status(user_id, g)) end)
   end
 
   def group_member_status(user_id, group) do
@@ -343,23 +336,54 @@ defmodule Thegm.GroupsController do
               # Last request is still open, error
               last.status == nil ->
                 "pending"
+
               # Last request was ignored, check how old it is
               last.status == "ignored" ->
-                # Calculated how long it has been since they last requested
-                inserted_at = last.inserted_at |> DateTime.from_naive!("Etc/UTC")
-                diff = DateTime.diff(DateTime.utc_now, inserted_at, :second)
-                # if it has been less than 60 days since they last requested
-                if (diff / 60 / 60 / 24) < 60  do
-                  "pending"
-                else
-                  nil
-                end
+                calculate_ignored_request_status(last)
+
               true ->
                 nil
             end
         end
       member ->
         member.role
+    end
+  end
+
+  def calculate_ignored_request_status(last) do
+    # Calculated how long it has been since they last requested
+    inserted_at = last.inserted_at |> DateTime.from_naive!("Etc/UTC")
+    diff = DateTime.diff(DateTime.utc_now, inserted_at, :second)
+    # if it has been less than 60 days since they last requested
+    if (diff / 60 / 60 / 24) < 60  do
+      "pending"
+    else
+      nil
+    end
+  end
+
+  def update_group(conn, group, params) do
+    conn.assigns[:current_user].id
+
+    group = Groups.changeset(group, params)
+    group = if Map.has_key?(group.changes, :address) do
+        Groups.lat_lng(group)
+      else
+        group
+    end
+    case Repo.update(group) do
+      {:ok, _} ->
+        group_response = Repo.one(groups_query(group.id, user_id))
+        group_response
+        |> Groups.set_member_status(group_member_status(user_id, group_response))
+
+        conn
+        |> put_status(:ok)
+        |> render("adminof.json", group: group_response)
+      {:error, changeset} ->
+        conn
+        |> put_status(:unprocessable_entity)
+        |> render(Thegm.ErrorView, "error.json", errors: Enum.map(changeset.errors, fn {k, v} -> Atom.to_string(k) <> ": " <> elem(v, 0) end))
     end
   end
 end

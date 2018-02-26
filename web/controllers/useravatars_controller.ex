@@ -18,30 +18,29 @@ defmodule Thegm.UserAvatarsController do
         |> put_status(:not_found)
         |> render(Thegm.ErrorView, "error.json", errors: ["A user with the specified `id` was not found"])
       user ->
-        cond do
-          current_user_id == user_id ->
-            image_params.path
-            |> open
-            |> resize("512x512")
-            |> format("jpg")
-            |> save(in_place: true)
+        if current_user_id == user_id do
+          image_params.path
+          |> open
+          |> resize("512x512")
+          |> format("jpg")
+          |> save(in_place: true)
 
-            AWS.upload_avatar(image_params.path, generate_uuid(user.username))
+          AWS.upload_avatar(image_params.path, generate_uuid(user.username))
 
-            user = Users.changeset(user, %{avatar: true})
-            case Repo.update(user) do
-              {:ok, user} ->
-                send_resp(conn, :created, "")
-              {:error, user} ->
-                conn
-                |> put_status(:bad_request)
-                |> render(Thegm.ErrorView, "error.json", errors: Enum.map(user.errors, fn {k, v} -> Atom.to_string(k) <> ": " <> elem(v, 0) end))
-            end
-          true ->
-            conn
-            |> put_status(:not_found)
-            |> render(Thegm.ErrorView, "error.json", errors: ["A user with the specified `id` was not found"])
-        end
+          user = Users.changeset(user, %{avatar: true})
+          case Repo.update(user) do
+            {:ok, user} ->
+              send_resp(conn, :created, "")
+            {:error, user} ->
+              conn
+              |> put_status(:bad_request)
+              |> render(Thegm.ErrorView, "error.json", errors: Enum.map(user.errors, fn {k, v} -> Atom.to_string(k) <> ": " <> elem(v, 0) end))
+          end
+        else
+          conn
+          |> put_status(:not_found)
+          |> render(Thegm.ErrorView, "error.json", errors: ["A user with the specified `id` was not found"])
+      end
     end
   end
 
@@ -75,25 +74,24 @@ defmodule Thegm.UserAvatarsController do
         |> put_status(:not_found)
         |> render(Thegm.ErrorView, "error.json", errors: ["A user with the specified `id` was not found"])
       user ->
-        cond do
-          current_user_id == user_id ->
-            avatar_identifier = generate_uuid(user.username)
-            AWS.remove_avatar(avatar_identifier)
+        if current_user_id == user_id do
+          avatar_identifier = generate_uuid(user.username)
+          AWS.remove_avatar(avatar_identifier)
 
-            user = Users.changeset(user, %{avatar: false})
-            case Repo.update(user) do
-              {:ok, user} ->
-                send_resp(conn, :gone, "")
-              {:error, user} ->
-                conn
-                |> put_status(:bad_request)
-                |> render(Thegm.ErrorView, "error.json", errors: Enum.map(user.errors, fn {k, v} -> Atom.to_string(k) <> ": " <> elem(v, 0) end))
-            end
-          true ->
-            conn
-            |> put_status(:not_found)
-            |> render(Thegm.ErrorView, "error.json", errors: ["A user with the specified `id` was not found"])
-        end
+          user = Users.changeset(user, %{avatar: false})
+          case Repo.update(user) do
+            {:ok, user} ->
+              send_resp(conn, :gone, "")
+            {:error, user} ->
+              conn
+              |> put_status(:bad_request)
+              |> render(Thegm.ErrorView, "error.json", errors: Enum.map(user.errors, fn {k, v} -> Atom.to_string(k) <> ": " <> elem(v, 0) end))
+          end
+        else
+          conn
+          |> put_status(:not_found)
+          |> render(Thegm.ErrorView, "error.json", errors: ["A user with the specified `id` was not found"])
+      end
     end
   end
 
