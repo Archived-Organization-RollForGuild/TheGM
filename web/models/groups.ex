@@ -30,7 +30,7 @@ defmodule Thegm.Groups do
 
   def set_member_status(model, status) do
     model
-    |> cast(%{member_status: status}, [:member_status])
+    |> put_change(:member_status, status)
   end
 
   def changeset(model, params \\ :empty) do
