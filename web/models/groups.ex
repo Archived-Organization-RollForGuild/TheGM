@@ -30,15 +30,14 @@ defmodule Thegm.Groups do
 
   def set_member_status(model, status) do
     model
-    |> cast(%{member_status: status}, [:member_status])
+    |> put_change(:member_status, status)
   end
 
   def changeset(model, params \\ :empty) do
     model
     |> cast(params, [:name, :description, :address, :games, :discoverable])
-    |> validate_required([:name, :slug, :address, :discoverable], message: "Are required")
+    |> validate_required([:name, :address, :discoverable], message: "Are required")
     |> validate_length(:address, min: 1, message: "Group address can not be empty")
-    |> unique_constraint(:slug, message: "Group slug must be unique")
     |> validate_length(:description, max: 1000, message: "Group description can be no more than 1000 characters.")
     |> validate_format(:name, ~r/^[a-zA-Z0-9\s'_-]+$/, message: "Group name must be alpha numeric (and may include  -, ')")
     |> validate_length(:name, min: 1, max: 200)
@@ -50,6 +49,8 @@ defmodule Thegm.Groups do
     |> lat_lng
     |> cast(%{id: generate_uuid(params["slug"])}, [:id])
     |> cast(params, [:slug])
+    |> unique_constraint(:slug, message: "Group slug must be unique")
+    |> validate_required([:slug], message: "Are required")
     |> validate_format(:slug, ~r/^[a-zA-Z0-9\s'-]+$/, message: "Group slug must be alpha numeric (and may include  -)")
   end
 
