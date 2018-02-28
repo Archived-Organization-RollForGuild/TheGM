@@ -2,6 +2,7 @@ defmodule Thegm.GroupsController do
   use Thegm.Web, :controller
 
   alias Thegm.Groups
+  alias Thegm.GroupJoinRequests
   alias Ecto.Multi
   import Geo.PostGIS
 
@@ -22,9 +23,10 @@ defmodule Thegm.GroupsController do
         case Repo.transaction(multi) do
           {:ok, result} ->
             group = Repo.preload(result.groups, [{:group_members, :users}])
+
             conn
             |> put_status(:created)
-            |> render("memberof.json", group: group)
+            |> render("memberof.json", group: group, user: conn.assigns[:current_user])
           {:error, :groups, changeset, %{}} ->
             conn
             |> put_status(:unprocessable_entity)
@@ -75,6 +77,7 @@ defmodule Thegm.GroupsController do
   end
 
   def index(conn, params) do
+    user_id = conn.assigns[:current_user].id
     case read_search_params(params) do
       {:ok, settings} ->
         user_id = conn.assigns[:current_user].id
@@ -97,15 +100,20 @@ defmodule Thegm.GroupsController do
               from g in Groups,
               select: %{g | distance: st_distancesphere(g.geom, ^geom)},
               where: st_distancesphere(g.geom, ^geom) <= ^settings.meters and not g.id in ^memberships and not g.id in ^blocks and g.discoverable == true,
+              left_join: gm in assoc(g, :group_members),
+              left_join: u in assoc(gm, :users),
+              left_join: gjr in GroupJoinRequests, on: gjr.group_id == g.id and gjr.user_id == ^user_id,
+              preload: [group_members: {gm, users: u}, join_requests: gjr],
               order_by: [asc: st_distancesphere(g.geom, ^geom)],
               limit: ^settings.limit,
-              offset: ^offset) |> Repo.preload(:group_members)
+              offset: ^offset,
+              preload: [group_members: {gm, users: u}, join_requests: gjr])
 
             meta = %{total: total, limit: settings.limit, offset: offset, count: length(groups)}
 
             conn
             |> put_status(:ok)
-            |> render("search.json", groups: groups, meta: meta)
+            |> render("search.json", groups: groups, meta: meta, user: conn.assigns[:current_user])
           true ->
             meta = %{total: total, limit: settings.limit, offset: offset, count: 0}
             conn
@@ -122,64 +130,15 @@ defmodule Thegm.GroupsController do
   def show(conn, %{"id" => group_id}) do
     user_id = conn.assigns[:current_user].id
 
-    case Repo.get(Groups, group_id) |> Repo.preload([{:group_members, :users}]) do
+    case Repo.one(groups_query(group_id, user_id)) do
       nil ->
         conn
         |> put_status(:not_found)
         |> render(Thegm.ErrorView, "error.json", errors: ["A group with the specified `id` was not found"])
       group ->
-        case get_member(group.group_members, user_id) do
-          nil ->
-            case Repo.all(from gj in Thegm.GroupJoinRequests, where: gj.group_id == ^group_id and gj.user_id == ^user_id, order_by: [desc: gj.inserted_at]) do
-              # user has not previously requested to join the group
-              [] ->
-                conn
-                |> put_status(:ok)
-                |> render("notmember.json", group: group)
-              # user has previously requested to join the group
-              resp ->
-                # Because we ordered by updated descending, get the most recent request
-                last = hd(resp)
-                cond do
-                  # Last request is still open, error
-                  last.status == nil ->
-                    conn
-                    |> put_status(:ok)
-                    |> render("pendingmember.json", group: group)
-                  # Last request was ignored, check how old it is
-                  last.status == "ignored" ->
-                    # Calculated how long it has been since they last requested
-                    inserted_at = last.inserted_at |> DateTime.from_naive!("Etc/UTC")
-                    diff = DateTime.diff(DateTime.utc_now, inserted_at, :second)
-                    # if it has been less than 60 days since they last requested
-                    if (diff / 60 / 60 / 24) < 60  do
-                      conn
-                      |> put_status(:ok)
-                      |> render("pendingnotmember.json", group: group)
-                    else
-                      conn
-                      |> put_status(:ok)
-                      |> render("notmember.json", group: group)
-                    end
-                  true ->
-                    conn
-                    |> put_status(:ok)
-                    |> render("notmember.json", group: group)
-                end
-            end
-          member ->
-            cond do
-              member.role == "member" ->
-                conn
-                |> put_status(:ok)
-                |> render("memberof.json", group: group)
-              member.role == "admin" ->
-                #todo things for admins
-                conn
-                |> put_status(:ok)
-                |> render("adminof.json", group: group)
-            end
-        end
+        conn
+        |> put_status(:ok)
+        |> render("adminof.json", group: group, user: conn.assigns[:current_user])
     end
   end
 
@@ -203,11 +162,12 @@ defmodule Thegm.GroupsController do
                     group
                 end
                 case Repo.update(group) do
-                  {:ok, result} ->
-                    group = Repo.get(Groups, group_id) |> Repo.preload([{:group_members, :users}])
+                  {:ok, _} ->
+                    group_response = Repo.one(groups_query(group_id, user_id))
+
                     conn
                     |> put_status(:ok)
-                    |> render("adminof.json", group: group)
+                    |> render("adminof.json", group: group_response, user: conn.assigns[:current_user])
                   {:error, changeset} ->
                     conn
                     |> put_status(:unprocessable_entity)
@@ -314,19 +274,6 @@ defmodule Thegm.GroupsController do
     resp
   end
 
-  def get_member([], _) do
-    nil
-  end
-
-  def get_member([head | tail], user_id) do
-    cond do
-      head.users_id == user_id ->
-        head
-      true ->
-        get_member(tail, user_id)
-    end
-  end
-
   def get_admin([], _) do
     nil
   end
@@ -338,5 +285,14 @@ defmodule Thegm.GroupsController do
       true ->
         get_admin(tail, user_id)
     end
+  end
+
+  def groups_query(group_id, user_id) do
+    from g in Groups,
+         left_join: gm in assoc(g, :group_members),
+         left_join: u in assoc(gm, :users),
+         left_join: gjr in GroupJoinRequests, on: gjr.group_id == g.id and gjr.user_id == ^user_id,
+         where: (g.id == ^group_id),
+         preload: [group_members: {gm, users: u}, join_requests: gjr]
   end
 end
