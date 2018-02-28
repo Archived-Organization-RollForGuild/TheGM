@@ -5,7 +5,7 @@ defmodule Thegm.GroupJoinRequestsController do
   alias Ecto.Multi
 
   # NOTE: This can probably be made prettier somehow, it isn't very readable currently - Quigley
-  def create(conn, %{"group_id" => group_id}) do
+  def create(conn, %{"groups_id" => group_id}) do
     user_id = conn.assigns[:current_user].id
     case Repo.one(from b in Thegm.GroupBlockedUsers, where: b.group_id == ^group_id and b.user_id == ^user_id and b.rescinded == false) do
       nil ->
@@ -87,7 +87,7 @@ defmodule Thegm.GroupJoinRequestsController do
     end
   end
 
-  def update(conn, %{"group_id" => group_id, "id" => request_user_id, "data" => %{"attributes" => params, "type" => type}}) do
+  def update(conn, %{"groups_id" => group_id, "id" => request_user_id, "data" => %{"attributes" => params, "type" => type}}) do
     admin_user_id = conn.assigns[:current_user].id
     member = Repo.one(from gm in Thegm.GroupMembers, where: gm.groups_id == ^group_id and gm.users_id == ^admin_user_id)
     cond do

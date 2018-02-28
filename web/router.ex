@@ -20,10 +20,14 @@ defmodule Thegm.Router do
       resources "/email", UserEmailsController, only: [:update], singleton: true
     end
 
+
+    resources "/groups", GroupsController, except: [:edit, :new] do
+      resources "/members", GroupMembersController, only: [:index, :delete]
+      resources "/join-requests", GroupJoinRequestsController, only: [:create, :update, :index]
+    end
+
+
     post "/logout", SessionsController, :delete
-    resources "/groups", GroupsController, except: [:edit, :new]
-    get "/groups/:group_id/members", GroupMembersController, :index
-    resources "/groups/:group_id/join-requests", GroupJoinRequestsController, only: [:create, :update, :index]
   end
 
   scope "/", Thegm do
