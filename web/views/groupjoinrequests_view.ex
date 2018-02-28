@@ -4,13 +4,18 @@ defmodule Thegm.GroupJoinRequestsView do
   def render("show.json", %{requests: requests, meta: meta}) do
     %{
       meta: Thegm.MetaView.meta(meta),
-      data: Enum.map(requests, &hydrate_user/1)
+      data: Enum.map(requests, &hydrate_pending_user/1)
     }
   end
 
-  def hydrate_user(request) do
-    IO.inspect request
-    %{}
+  def hydrate_pending_user(request) do
+    join_request = %{
+      type: "join-requests",
+      id: request.user_id,
+      attributes: Thegm.UsersView.users_private(request.user)
+    }
+    join_request = put_in(join_request, [:attributes, :status], "pending")
+    put_in(join_request, [:attributes, :requested_at], request.inserted_at)
   end
 
 
