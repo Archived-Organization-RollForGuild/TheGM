@@ -87,7 +87,7 @@ defmodule Thegm.GroupJoinRequestsController do
     end
   end
 
-  def update(conn, %{"group_id" => group_id, "id" => request_user_id, "data" => %{"attributes" => params, "type" => type}}) do
+  def update(conn, %{"groups_id" => group_id, "id" => request_user_id, "data" => %{"attributes" => params, "type" => type}}) do
     admin_user_id = conn.assigns[:current_user].id
     member = Repo.one(from gm in Thegm.GroupMembers, where: gm.groups_id == ^group_id and gm.users_id == ^admin_user_id)
     cond do
