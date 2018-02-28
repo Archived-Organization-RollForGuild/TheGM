@@ -47,7 +47,14 @@ defmodule Thegm.Mixfile do
       {:secure_random, "~> 0.5"},
       {:bamboo, "~> 0.8"},
       {:google_maps, "~> 0.8"},
-      {:distillery, "~> 1.5", runtime: false}
+      {:distillery, "~> 1.5", runtime: false},
+      {:geo_postgis, "~> 1.0"},
+      {:uuid, "~> 1.1"},
+      {:ex_aws, "~> 2.0"},
+      {:ex_aws_s3, "~> 2.0"},
+      {:hackney, "~> 1.11"},
+      {:mogrify, "~> 0.5.6"},
+      {:sweet_xml, "~> 0.6"}
     ]
   end
 

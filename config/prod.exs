@@ -69,7 +69,9 @@ config :thegm, Thegm.Repo,
   username: System.get_env("RFG_API_DB_USER"),
   password: System.get_env("RFG_API_DB_PASS"),
   database: System.get_env("RFG_API_DB_NAME"),
-  pool_size: 15
+  pool_size: 15,
+  adapter: Ecto.Adapters.Postgres,
+  types: Thegm.PostgresTypes
 
 # In your config/config.exs file
 config :thegm, Thegm.Mailer,
@@ -82,6 +84,11 @@ config :mailchimp,
 
 config :google_maps,
   api_key: System.get_env("RFG_API_GOOGLE_API_KEY")
+
+config :ex_aws, :s3,
+  access_key_id: System.get_env("RFG_AWS_ACCESS_KEY_ID"),
+  secret_access_key: System.get_env("RFG_AWS_SECRET_ACCESS_KEY"),
+  region: System.get_env("RFG_API_AWS_REGION")
 
 config :thegm,
   api_url: "http://api.rollforguild.com",

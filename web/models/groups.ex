@@ -1,58 +1,66 @@
 defmodule Thegm.Groups do
   use Thegm.Web, :model
+  @uuid_namespace UUID.uuid5(:url, "https://rollforguild.com/groups/")
 
-  @primary_key {:id, :binary_id, autogenerate: true}
+  @primary_key {:id, :binary_id, autogenerate: false}
   @derive {Phoenix.Param, key: :id}
   @foreign_key_type :binary_id
 
   schema "groups" do
     field :name, :string
-    field :street1, :string
-    field :street2, :string
-    field :city, :string
-    field :state, :string
-    field :country, :string
-    field :zip, :string
-    field :lat, :float
-    field :lon, :float
-    field :email, :string
-    field :phone, :string
+    field :slug, :string, null: false
+    field :description, :string
+    field :address, :string, null: false
     field :games, {:array, :string}
+    field :distance, :float, virtual: true
+    field :geom, Geo.Geometry
+    field :discoverable, :boolean
+    field :member_status, :string, virtual: true
     has_many :group_members, Thegm.GroupMembers
+    has_many :join_requests, Thegm.GroupJoinRequests
+    has_many :blocked_users, Thegm.GroupBlockedUsers
+
 
     timestamps()
   end
 
+  def generate_uuid(resource) do
+    UUID.uuid5(@uuid_namespace, resource)
+  end
+
+  def set_member_status(model, status) do
+    model
+    |> put_change(:member_status, status)
+  end
+
   def changeset(model, params \\ :empty) do
     model
-    |> cast(params, [:name, :street1, :street2, :city, :state, :country, :zip, :email, :phone, :games])
+    |> cast(params, [:name, :description, :address, :games, :discoverable])
+    |> validate_required([:name, :address, :discoverable], message: "Are required")
+    |> validate_length(:address, min: 1, message: "Group address can not be empty")
+    |> validate_length(:description, max: 1000, message: "Group description can be no more than 1000 characters.")
+    |> validate_format(:name, ~r/^[a-zA-Z0-9\s'_-]+$/, message: "Group name must be alpha numeric (and may include  -, ')")
+    |> validate_length(:name, min: 1, max: 200)
   end
 
   def create_changeset(model, params \\ :empty) do
     model
     |> changeset(params)
-    |> validate_required([:name, :street1, :city, :state, :country, :zip, :email, :phone], message: "Are required")
-    |> unique_constraint(:name, message: "Group name must be unique")
-    |> validate_format(:email, ~r/@/, message: "Invalid email address")
-    |> validate_length(:email, min: 4, max: 255)
-    |> validate_format(:name, ~r/^[a-zA-Z0-9\s'_-]+$/, message: "Group name must be alpha numeric (and may include  -, ')")
-    |> validate_length(:name, min: 1, max: 200)
-    |> lat_lon
+    |> lat_lng
+    |> cast(%{id: generate_uuid(params["slug"])}, [:id])
+    |> cast(params, [:slug])
+    |> unique_constraint(:slug, message: "Group slug must be unique")
+    |> validate_required([:slug], message: "Are required")
+    |> validate_format(:slug, ~r/^[a-zA-Z0-9\s'-]+$/, message: "Group slug must be alpha numeric (and may include  -)")
   end
 
-  def lat_lon(model) do
-    address = model.changes.street1
-    if model.changes.street2 != nil do
-      address = address <> ", " <> model.changes.street2
-    end
-    address = address <> ", " <> model.changes.city <> ", " <> model.changes.state <> ", " <> model.changes.country <> ", " <> model.changes.zip
-    case GoogleMaps.geocode(address) do
+  def lat_lng(model) do
+    case GoogleMaps.geocode(model.changes.address) do
       {:ok, result} ->
         lat = List.first(result["results"])["geometry"]["location"]["lat"]
-        lon = List.first(result["results"])["geometry"]["location"]["lng"]
+        lng = List.first(result["results"])["geometry"]["location"]["lng"]
         model
-        |> put_change(:lat, lat)
-        |> put_change(:lon, lon)
+        |> put_change(:geom, %Geo.Point{coordinates: {lng, lat}, srid: 4326})
     end
   end
 end
