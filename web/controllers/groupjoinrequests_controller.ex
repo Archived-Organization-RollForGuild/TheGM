@@ -205,9 +205,9 @@ defmodule Thegm.GroupJoinRequestsController do
     errors = []
 
     # set page
-    {group_id, errors} = case params["group_id"] do
+    {group_id, errors} = case params["groups_id"] do
       nil ->
-        errors = errors ++ ["group_id": "must be supplied"]
+        errors = errors ++ ["groups_id": "must be supplied"]
         {nil, errors}
       temp ->
         {temp, errors}
