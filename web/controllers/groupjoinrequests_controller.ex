@@ -123,7 +123,7 @@ defmodule Thegm.GroupJoinRequestsController do
                             |> put_status(:unprocessable_entity)
                             |> render(Thegm.ErrorView, "error.json", errors: Enum.map(changeset.errors, fn {k, v} -> Atom.to_string(k) <> ": " <> elem(v, 0) end))
                         end
-                      params["status"] == "ingored" ->
+                      params["status"] == "ignored" ->
                         request_changeset = GroupJoinRequests.update_changeset(join_request, params)
                         case Repo.update(request_changeset) do
                           {:ok, _} ->
