@@ -51,7 +51,7 @@ defmodule Thegm.Groups do
     |> cast(params, [:slug])
     |> unique_constraint(:slug, message: "Group slug must be unique")
     |> validate_required([:slug], message: "Are required")
-    |> validate_format(:slug, ~r/^[a-zA-Z0-9\s'-]+$/, message: "Group slug must be alpha numeric (and may include  -)")
+    |> validate_format(:slug, ~r/^[a-zA-Z0-9\s-]+$/, message: "Group slug must be alpha numeric (and may include  -)")
   end
 
   def lat_lng(model) do
