@@ -39,7 +39,6 @@ defmodule Thegm.Groups do
     |> validate_required([:name, :address, :discoverable], message: "Are required")
     |> validate_length(:address, min: 1, message: "Group address can not be empty")
     |> validate_length(:description, max: 1000, message: "Group description can be no more than 1000 characters.")
-    |> validate_format(:name, ~r/^[a-zA-Z0-9\s'_-]+$/, message: "Group name must be alpha numeric (and may include  -, ')")
     |> validate_length(:name, min: 1, max: 200)
   end
 
