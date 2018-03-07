@@ -3,11 +3,11 @@ defmodule Thegm.UserJoinRequestsController do
 
   alias Thegm.UserJoinRequests
 
-  def index(conn, %{"user_id" => user_id}) do
-    
+  def index(conn, %{"users_id" => users_id}) do
+
   end
 
-  def delete(conn, %{"user_id" => user_id, "request_id" => request_id}) do
+  def delete(conn, %{"users_id" => users_id, "requests_id" => requests_id}) do
 
   end
 end

@@ -156,12 +156,12 @@ defmodule Thegm.GroupsView do
     nil
   end
 
-  def get_member([head | tail], user_id) do
+  def get_member([head | tail], users_id) do
     cond do
-      head.users_id == user_id ->
+      head.users_id == users_id ->
         head
       true ->
-        get_member(tail, user_id)
+        get_member(tail, users_id)
     end
   end
 end

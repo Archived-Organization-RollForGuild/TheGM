@@ -33,7 +33,7 @@ defmodule Thegm.AuthenticateUser do
   end
 
   defp find_user_by_session(session) do
-    case Repo.get(Users, session.user_id) do
+    case Repo.get(Users, session.users_id) do
       nil -> :error
       user -> {:ok, user}
     end
