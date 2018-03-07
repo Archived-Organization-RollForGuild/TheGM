@@ -93,20 +93,17 @@ defmodule Thegm.GroupsController do
         where: st_distancesphere(g.geom, ^geom) <= ^settings.meters and not g.id in ^memberships and g.discoverable == true)
 
         # Do the search
+        join_requests_query = from gjr in Thegm.GroupJoinRequests, where: gjr.users_id == ^users_id, order_by: [desc: gjr.inserted_at]
         cond do
           total > 0 ->
             groups = Repo.all(
               from g in Groups,
               select: %{g | distance: st_distancesphere(g.geom, ^geom)},
               where: st_distancesphere(g.geom, ^geom) <= ^settings.meters and not g.id in ^memberships and not g.id in ^blocks and g.discoverable == true,
-              left_join: gm in assoc(g, :group_members),
-              left_join: u in assoc(gm, :users),
-              left_join: gjr in GroupJoinRequests, on: gjr.groups_id == g.id and gjr.users_id == ^users_id,
-              preload: [group_members: {gm, users: u}, join_requests: gjr],
               order_by: [asc: st_distancesphere(g.geom, ^geom)],
               limit: ^settings.limit,
-              offset: ^offset,
-              preload: [group_members: {gm, users: u}, join_requests: gjr])
+              offset: ^offset
+            ) |> Repo.preload([join_requests: join_requests_query]) |> Repo.preload(:group_members)
 
             meta = %{total: total, limit: settings.limit, offset: offset, count: length(groups)}
 
