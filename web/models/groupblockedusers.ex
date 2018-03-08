@@ -7,7 +7,7 @@ defmodule Thegm.GroupBlockedUsers do
 
   schema "group_blocked_users" do
     field :rescinded, :boolean
-    belongs_to :user, Thegm.Users
-    belongs_to :group, Thegm.Groups
+    belongs_to :users, Thegm.Users
+    belongs_to :groups, Thegm.Groups
   end
 end

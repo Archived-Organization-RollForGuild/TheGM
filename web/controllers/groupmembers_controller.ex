@@ -4,15 +4,15 @@ defmodule Thegm.GroupMembersController do
   alias Thegm.GroupMembers
   alias Thegm.Groups
 
-  def index(conn, %{"groups_id" => group_id}) do
-    user_id = conn.assigns[:current_user].id
-    case Repo.all(from m in GroupMembers, where: m.groups_id == ^group_id) |> Repo.preload(:users) do
+  def index(conn, %{"groups_id" => groups_id}) do
+    users_id = conn.assigns[:current_user].id
+    case Repo.all(from m in GroupMembers, where: m.groups_id == ^groups_id) |> Repo.preload(:users) do
       nil ->
         conn
         |> put_status(:not_found)
         |> render(Thegm.ErrorView, "error.json", errors: ["Group members could not be located"])
       resp ->
-        case Enum.any?(resp, fn x -> x.users_id == user_id end) do
+        case Enum.any?(resp, fn x -> x.users_id == users_id end) do
           true ->
             conn
             |> put_status(:ok)
@@ -25,10 +25,10 @@ defmodule Thegm.GroupMembersController do
     end
   end
 
-  def delete(conn, %{"groups_id" => group_id, "id" => user_id}) do
+  def delete(conn, %{"groups_id" => groups_id, "id" => users_id}) do
     current_user_id = conn.assigns[:current_user].id
 
-    case Repo.get(Groups, group_id) |> Repo.preload(:group_members) do
+    case Repo.get(Groups, groups_id) |> Repo.preload(:group_members) do
       nil ->
         conn
         |> put_status(:not_found)
@@ -36,7 +36,7 @@ defmodule Thegm.GroupMembersController do
       group ->
 
         current_user_member = Enum.find(group.group_members, fn x -> x.users_id == current_user_id end)
-        target_member = Enum.find(group.group_members, fn x -> x.users_id == user_id end)
+        target_member = Enum.find(group.group_members, fn x -> x.users_id == users_id end)
 
         cond do
           target_member == nil ->
@@ -49,11 +49,10 @@ defmodule Thegm.GroupMembersController do
             |> put_status(:not_found)
             |> render(Thegm.ErrorView, "error.json", errors: ["members: You are not a member of the group"])
 
-          current_user_member.role != "admin" && current_user_id != user_id ->
+          current_user_member.role != "admin" && current_user_id != users_id ->
             conn
             |> put_status(:forbidden)
             |> render(Thegm.ErrorView, "error.json", errors: ["You do not have permission to remove this user"])
-
 
           target_member.role == "admin" ->
             conn

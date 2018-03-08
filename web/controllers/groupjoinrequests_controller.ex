@@ -5,15 +5,15 @@ defmodule Thegm.GroupJoinRequestsController do
   alias Ecto.Multi
 
   # NOTE: This can probably be made prettier somehow, it isn't very readable currently - Quigley
-  def create(conn, %{"groups_id" => group_id}) do
-    user_id = conn.assigns[:current_user].id
-    case Repo.one(from b in Thegm.GroupBlockedUsers, where: b.group_id == ^group_id and b.user_id == ^user_id and b.rescinded == false) do
+  def create(conn, %{"groups_id" => groups_id}) do
+    users_id = conn.assigns[:current_user].id
+    case Repo.one(from b in Thegm.GroupBlockedUsers, where: b.groups_id == ^groups_id and b.users_id == ^users_id and b.rescinded == false) do
       nil ->
-        case Repo.all(from m in Thegm.GroupMembers, where: m.groups_id == ^group_id and m.users_id == ^user_id) do
+        case Repo.all(from m in Thegm.GroupMembers, where: m.groups_id == ^groups_id and m.users_id == ^users_id) do
           # confirmed user is not already part of group
           [] ->
-            join_changeset = GroupJoinRequests.create_changeset(%GroupJoinRequests{}, %{group_id: group_id, user_id: user_id})
-            case Repo.all(from gj in GroupJoinRequests, where: gj.group_id == ^group_id and gj.user_id == ^user_id, order_by: [desc: gj.inserted_at]) do
+            join_changeset = GroupJoinRequests.create_changeset(%GroupJoinRequests{}, %{groups_id: groups_id, users_id: users_id})
+            case Repo.all(from gj in GroupJoinRequests, where: gj.groups_id == ^groups_id and gj.users_id == ^users_id, order_by: [desc: gj.inserted_at]) do
               # user has not previously requested to join the group, commit request
               [] ->
                 case Repo.insert(join_changeset) do
@@ -87,14 +87,14 @@ defmodule Thegm.GroupJoinRequestsController do
     end
   end
 
-  def update(conn, %{"groups_id" => group_id, "id" => request_user_id, "data" => %{"attributes" => params, "type" => type}}) do
+  def update(conn, %{"groups_id" => groups_id, "id" => request_user_id, "data" => %{"attributes" => params, "type" => type}}) do
     admin_user_id = conn.assigns[:current_user].id
-    member = Repo.one(from gm in Thegm.GroupMembers, where: gm.groups_id == ^group_id and gm.users_id == ^admin_user_id)
+    member = Repo.one(from gm in Thegm.GroupMembers, where: gm.groups_id == ^groups_id and gm.users_id == ^admin_user_id)
     cond do
       member.role == "admin" ->
         case type do
           "join-requests" ->
-            case Repo.one(from gjr in GroupJoinRequests, where: gjr.user_id == ^request_user_id and gjr.group_id == ^group_id and gjr.pending == true) do
+            case Repo.one(from gjr in GroupJoinRequests, where: gjr.users_id == ^request_user_id and gjr.groups_id == ^groups_id and gjr.pending == true) do
               nil ->
                 conn
                 |> put_status(:gone)
@@ -105,7 +105,7 @@ defmodule Thegm.GroupJoinRequestsController do
                     cond do
                       params["status"] == "accepted" ->
                         request_changeset = GroupJoinRequests.update_changeset(join_request, params)
-                        member_changeset = Thegm.GroupMembers.create_changeset(%Thegm.GroupMembers{}, %{:groups_id => group_id, :users_id => request_user_id, :role => "member"})
+                        member_changeset = Thegm.GroupMembers.create_changeset(%Thegm.GroupMembers{}, %{:groups_id => groups_id, :users_id => request_user_id, :role => "member"})
                         multi =
                           Multi.new
                           |> Multi.update(:group_join_requests, request_changeset)
@@ -164,10 +164,10 @@ defmodule Thegm.GroupJoinRequestsController do
   end
 
   def index(conn, params) do
-    user_id = conn.assigns[:current_user].id
+    users_id = conn.assigns[:current_user].id
     case read_params(params) do
       {:ok, settings} ->
-        case Repo.one(from gm in Thegm.GroupMembers, where: gm.groups_id == ^settings.group_id and gm.users_id == ^user_id and gm.role == "admin") do
+        case Repo.one(from gm in Thegm.GroupMembers, where: gm.groups_id == ^settings.groups_id and gm.users_id == ^users_id and gm.role == "admin") do
           nil ->
             conn
             |> put_status(:forbidden)
@@ -176,12 +176,12 @@ defmodule Thegm.GroupJoinRequestsController do
             # Get total in search
             total = Repo.one(from gjr in GroupJoinRequests,
             select: count(gjr.id),
-            where: gjr.group_id == ^settings.group_id and is_nil(gjr.status))
+            where: gjr.groups_id == ^settings.groups_id and is_nil(gjr.status))
 
             offset = (settings.page - 1) * settings.limit
             gjrs = Repo.all(
               from gjr in GroupJoinRequests,
-              where: gjr.group_id == ^settings.group_id and is_nil(gjr.status),
+              where: gjr.groups_id == ^settings.groups_id and is_nil(gjr.status),
               order_by: [desc: gjr.inserted_at],
               limit: ^settings.limit,
               offset: ^offset) |> Repo.preload(:user)
@@ -205,7 +205,7 @@ defmodule Thegm.GroupJoinRequestsController do
     errors = []
 
     # set page
-    {group_id, errors} = case params["groups_id"] do
+    {groups_id, errors} = case params["groups_id"] do
       nil ->
         errors = errors ++ ["groups_id": "must be supplied"]
         {nil, errors}
@@ -242,7 +242,7 @@ defmodule Thegm.GroupJoinRequestsController do
       length(errors) > 0 ->
         {:error, errors}
       true ->
-        {:ok, %{group_id: group_id, page: page, limit: limit}}
+        {:ok, %{groups_id: groups_id, page: page, limit: limit}}
     end
     resp
   end

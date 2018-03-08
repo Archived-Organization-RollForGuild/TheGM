@@ -7,17 +7,17 @@ defmodule Thegm.UserAvatarsController do
 
   import Mogrify
 
-  def create(conn, %{"users_id" => user_id, "file" => image_params}) do
+  def create(conn, %{"users_id" => users_id, "file" => image_params}) do
     current_user_id = conn.assigns[:current_user].id
 
-    case Repo.get(Users, user_id) do
+    case Repo.get(Users, users_id) do
       nil ->
         conn
         |> put_status(:not_found)
         |> render(Thegm.ErrorView, "error.json", errors: ["A user with the specified `id` was not found"])
       user ->
         cond do
-          current_user_id == user_id ->
+          current_user_id == users_id ->
             open(image_params.path)
             |> resize("512x512")
             |> format("jpg")
@@ -42,8 +42,8 @@ defmodule Thegm.UserAvatarsController do
     end
   end
 
-  def show(conn, %{"id" => user_id}) do
-    case Repo.get(Users, user_id) do
+  def show(conn, %{"id" => users_id}) do
+    case Repo.get(Users, users_id) do
       nil ->
         conn
         |> put_status(:not_found)
@@ -64,17 +64,17 @@ defmodule Thegm.UserAvatarsController do
     end
   end
 
-  def delete(conn, %{"users_id" => user_id}) do
+  def delete(conn, %{"users_id" => users_id}) do
     current_user_id = conn.assigns[:current_user].id
 
-    case Repo.get(Users, user_id) do
+    case Repo.get(Users, users_id) do
       nil ->
         conn
         |> put_status(:not_found)
         |> render(Thegm.ErrorView, "error.json", errors: ["A user with the specified `id` was not found"])
       user ->
         cond do
-          current_user_id == user_id ->
+          current_user_id == users_id ->
             avatar_identifier = generate_uuid(user.username)
             AWS.remove_avatar(avatar_identifier)
 

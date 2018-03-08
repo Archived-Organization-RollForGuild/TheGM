@@ -4,8 +4,8 @@ defmodule Thegm.ConfirmationCodesController do
   alias Thegm.ConfirmationCodes
 
   # TODO: Once logging is implemented, add case for errors
-  def new(user_id, email) do
-    changeset = ConfirmationCodes.changeset(%ConfirmationCodes{},%{"used" => false, "user_id" => user_id})
+  def new(users_id, email) do
+    changeset = ConfirmationCodes.changeset(%ConfirmationCodes{},%{"used" => false, "users_id" => users_id})
     case Repo.insert(changeset) do
       {:ok, params} ->
         Thegm.Mailgun.email_confirmation_email(email, params.id)
@@ -29,7 +29,7 @@ defmodule Thegm.ConfirmationCodesController do
           code = ConfirmationCodes.changeset(resp, %{used: true})
           case Repo.update(code) do
             {:ok, resp2} ->
-              case Repo.get(Thegm.Users, resp2.user_id) do
+              case Repo.get(Thegm.Users, resp2.users_id) do
                 nil ->
                   conn
                   |> put_status(:not_found)
@@ -38,7 +38,7 @@ defmodule Thegm.ConfirmationCodesController do
                   user = Thegm.Users.changeset(resp3, %{active: true})
                   case Repo.update(user) do
                     {:ok, resp4} ->
-                      session_changeset = Thegm.Sessions.create_changeset(%Thegm.Sessions{}, %{user_id: resp4.id})
+                      session_changeset = Thegm.Sessions.create_changeset(%Thegm.Sessions{}, %{users_id: resp4.id})
                       case Repo.insert(session_changeset) do
                         {:ok, session} ->
                           conn

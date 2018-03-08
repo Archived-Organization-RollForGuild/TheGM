@@ -7,17 +7,17 @@ defmodule Thegm.ConfirmationCodes do
 
   schema "confirmation_codes" do
     field :used, :boolean
-    belongs_to :user, Thegm.Users
+    belongs_to :users, Thegm.Users
 
     timestamps()
   end
 
   @doc """
-  Builds a changeset based on the `struct` and `user_id`.
+  Builds a changeset based on the `struct` and `users_id`.
   """
 
   def changeset(model, params \\ :empty) do
     model
-    |> cast(params, [:used, :user_id])
+    |> cast(params, [:used, :users_id])
   end
 end
