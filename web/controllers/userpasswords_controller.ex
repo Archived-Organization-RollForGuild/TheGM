@@ -17,7 +17,7 @@ defmodule Thegm.UserPasswordsController do
       user ->
         cond do
           current_user_id == users_id && checkpw(params["current_password"], user.password_hash) ->
-            user = Users.update_password(user, params)
+            user = Users.update_password_changeset(user, params)
             case Repo.update(user) do
               {:ok, result} ->
                 conn

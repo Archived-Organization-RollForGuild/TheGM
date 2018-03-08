@@ -51,8 +51,8 @@ defmodule Thegm.PasswordResetsController do
                     |> put_status(:not_found)
                     |> render(Thegm.ErrorView, "error.json", errors: ["Unable to locate user"])
                   user ->
-                    user = Thegm.Users.changeset(user, %{password: params["password"]})
-                    case Repo.update(user) do
+                    user_changeset = Thegm.Users.update_password_changeset(user, %{password: params["password"]})
+                    case Repo.update(user_changeset) do
                       {:ok, _} ->
                         send_resp(conn, :ok, "")
                       {:error, user} ->
