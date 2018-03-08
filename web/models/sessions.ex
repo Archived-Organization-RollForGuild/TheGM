@@ -4,7 +4,7 @@ defmodule Thegm.Sessions do
   @foreign_key_type :binary_id
   schema "sessions" do
     field :token, :string
-    belongs_to :user, Thegm.Users
+    belongs_to :users, Thegm.Users
 
     timestamps()
   end
@@ -14,8 +14,8 @@ defmodule Thegm.Sessions do
   """
   def changeset(model, params \\ :empty) do
     model
-    |> cast(params, [:token, :user_id])
-    |> validate_required([:user_id])
+    |> cast(params, [:token, :users_id])
+    |> validate_required([:users_id])
   end
 
   def create_changeset(model, params \\ :empty) do

@@ -11,8 +11,8 @@ defmodule Thegm.PasswordResetsController do
 
         cond do
           user ->
-            Repo.delete_all(PasswordResets, [user_id: user.id, used: false])
-            changeset = PasswordResets.changeset(%PasswordResets{},%{"used" => false, "user_id" => user.id})
+            Repo.delete_all(PasswordResets, [usesr_id: user.id, used: false])
+            changeset = PasswordResets.changeset(%PasswordResets{},%{"used" => false, "users_id" => user.id})
 
             case Repo.insert(changeset) do
               {:ok, reset} ->
@@ -45,14 +45,14 @@ defmodule Thegm.PasswordResetsController do
             code = PasswordResets.changeset(resp, %{used: true})
             case Repo.update(code) do
               {:ok, updated_code} ->
-                case Repo.get(Thegm.Users, updated_code.user_id) do
+                case Repo.get(Thegm.Users, updated_code.users_id) do
                   nil ->
                     conn
                     |> put_status(:not_found)
                     |> render(Thegm.ErrorView, "error.json", errors: ["Unable to locate user"])
                   user ->
-                    user = Thegm.Users.changeset(user, %{password: params["password"]})
-                    case Repo.update(user) do
+                    user_changeset = Thegm.Users.update_password_changeset(user, %{password: params["password"]})
+                    case Repo.update(user_changeset) do
                       {:ok, _} ->
                         send_resp(conn, :ok, "")
                       {:error, user} ->

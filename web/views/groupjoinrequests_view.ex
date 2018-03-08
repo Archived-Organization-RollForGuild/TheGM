@@ -11,7 +11,7 @@ defmodule Thegm.GroupJoinRequestsView do
   def hydrate_pending_user(request) do
     join_request = %{
       type: "join-requests",
-      id: request.user_id,
+      id: request.users_id,
       attributes: Thegm.UsersView.users_private(request.user)
     }
     join_request = put_in(join_request, [:attributes, :status], "pending")

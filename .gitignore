@@ -16,5 +16,6 @@ erl_crash.dump
 /config/*.secret.exs
 
 # Profiles for exporting environment variables
+.local_env
 .dev_env
 .prod_env

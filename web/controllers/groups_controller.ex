@@ -43,15 +43,15 @@ defmodule Thegm.GroupsController do
     end
   end
 
-  def delete(conn, %{"id" => group_id}) do
-    user_id = conn.assigns[:current_user].id
-    case Repo.get(Groups, group_id) |> Repo.preload(:group_members) do
+  def delete(conn, %{"id" => groups_id}) do
+    users_id = conn.assigns[:current_user].id
+    case Repo.get(Groups, groups_id) |> Repo.preload(:group_members) do
       nil ->
         conn
         |> put_status(:not_found)
         |> render(Thegm.ErrorView, "error.json", errors: ["Group not found, maybe you already deleted it?"])
       group ->
-        case Enum.find(group.group_members, fn x -> x.users_id == user_id end) do
+        case Enum.find(group.group_members, fn x -> x.users_id == users_id end) do
           nil ->
             conn
             |> put_status(:forbidden)
@@ -77,13 +77,12 @@ defmodule Thegm.GroupsController do
   end
 
   def index(conn, params) do
-    user_id = conn.assigns[:current_user].id
+    users_id = conn.assigns[:current_user].id
     case read_search_params(params) do
       {:ok, settings} ->
-        user_id = conn.assigns[:current_user].id
         # Get user's current groups so we can properly exclude them
-        memberships = Repo.all(from m in Thegm.GroupMembers, where: m.users_id == ^user_id, select: m.groups_id)
-        blocks = Repo.all(from b in Thegm.GroupBlockedUsers, where: b.user_id == ^user_id and b.rescinded == false, select: b.group_id)
+        memberships = Repo.all(from m in Thegm.GroupMembers, where: m.users_id == ^users_id, select: m.groups_id)
+        blocks = Repo.all(from b in Thegm.GroupBlockedUsers, where: b.users_id == ^users_id and b.rescinded == false, select: b.groups_id)
         # Group search params
         offset = (settings.page - 1) * settings.limit
         geom = %Geo.Point{coordinates: {settings.lng, settings.lat}, srid: 4326}
@@ -94,20 +93,17 @@ defmodule Thegm.GroupsController do
         where: st_distancesphere(g.geom, ^geom) <= ^settings.meters and not g.id in ^memberships and g.discoverable == true)
 
         # Do the search
+        join_requests_query = from gjr in Thegm.GroupJoinRequests, where: gjr.users_id == ^users_id, order_by: [desc: gjr.inserted_at]
         cond do
           total > 0 ->
             groups = Repo.all(
               from g in Groups,
               select: %{g | distance: st_distancesphere(g.geom, ^geom)},
               where: st_distancesphere(g.geom, ^geom) <= ^settings.meters and not g.id in ^memberships and not g.id in ^blocks and g.discoverable == true,
-              left_join: gm in assoc(g, :group_members),
-              left_join: u in assoc(gm, :users),
-              left_join: gjr in GroupJoinRequests, on: gjr.group_id == g.id and gjr.user_id == ^user_id,
-              preload: [group_members: {gm, users: u}, join_requests: gjr],
               order_by: [asc: st_distancesphere(g.geom, ^geom)],
               limit: ^settings.limit,
-              offset: ^offset,
-              preload: [group_members: {gm, users: u}, join_requests: gjr])
+              offset: ^offset
+            ) |> Repo.preload([join_requests: join_requests_query]) |> Repo.preload(:group_members)
 
             meta = %{total: total, limit: settings.limit, offset: offset, count: length(groups)}
 
@@ -127,10 +123,10 @@ defmodule Thegm.GroupsController do
     end
   end
 
-  def show(conn, %{"id" => group_id}) do
-    user_id = conn.assigns[:current_user].id
+  def show(conn, %{"id" => groups_id}) do
+    users_id = conn.assigns[:current_user].id
 
-    case Repo.one(groups_query(group_id, user_id)) do
+    case Repo.one(groups_query(groups_id, users_id)) do
       nil ->
         conn
         |> put_status(:not_found)
@@ -142,11 +138,11 @@ defmodule Thegm.GroupsController do
     end
   end
 
-  def update(conn, %{"id" => group_id, "data" => %{"attributes" => params, "type" => type}}) do
-    user_id = conn.assigns[:current_user].id
+  def update(conn, %{"id" => groups_id, "data" => %{"attributes" => params, "type" => type}}) do
+    users_id = conn.assigns[:current_user].id
     cond do
       type == "groups" ->
-        case Repo.one(from m in Thegm.GroupMembers, where: m.groups_id == ^group_id and m.users_id == ^user_id) |> Repo.preload(:groups) do
+        case Repo.one(from m in Thegm.GroupMembers, where: m.groups_id == ^groups_id and m.users_id == ^users_id) |> Repo.preload(:groups) do
           nil ->
             conn
             |> put_status(:forbidden)
@@ -163,7 +159,7 @@ defmodule Thegm.GroupsController do
                 end
                 case Repo.update(group) do
                   {:ok, _} ->
-                    group_response = Repo.one(groups_query(group_id, user_id))
+                    group_response = Repo.one(groups_query(groups_id, users_id))
 
                     conn
                     |> put_status(:ok)
@@ -278,21 +274,21 @@ defmodule Thegm.GroupsController do
     nil
   end
 
-  def get_admin([head | tail], user_id) do
+  def get_admin([head | tail], users_id) do
     cond do
-      head.users_id == user_id and head.role == "admin" ->
+      head.users_id == users_id and head.role == "admin" ->
         head
       true ->
-        get_admin(tail, user_id)
+        get_admin(tail, users_id)
     end
   end
 
-  def groups_query(group_id, user_id) do
+  def groups_query(groups_id, users_id) do
     from g in Groups,
          left_join: gm in assoc(g, :group_members),
          left_join: u in assoc(gm, :users),
-         left_join: gjr in GroupJoinRequests, on: gjr.group_id == g.id and gjr.user_id == ^user_id,
-         where: (g.id == ^group_id),
+         left_join: gjr in GroupJoinRequests, on: gjr.groups_id == g.id and gjr.users_id == ^users_id,
+         where: (g.id == ^groups_id),
          preload: [group_members: {gm, users: u}, join_requests: gjr]
   end
 end
