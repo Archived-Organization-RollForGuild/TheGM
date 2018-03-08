@@ -44,7 +44,8 @@ defmodule Thegm.GroupsView do
         games: group.games,
         members: length(group.group_members),
         slug: group.slug,
-        member_status: status
+        member_status: status,
+        discoverable: group.discoverable
       },
       relationships: %{
         group_members: Thegm.GroupMembersView.groups_users(group.group_members)
@@ -64,7 +65,8 @@ defmodule Thegm.GroupsView do
         games: group.games,
         members: length(group.group_members),
         slug: group.slug,
-        member_status: status
+        member_status: status,
+        discoverable: group.discoverable
       }
     }
   end
