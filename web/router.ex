@@ -27,6 +27,8 @@ defmodule Thegm.Router do
     end
 
 
+    resources "/threads", ThreadsController, only: [:create]
+
     post "/logout", SessionsController, :delete
   end
 
