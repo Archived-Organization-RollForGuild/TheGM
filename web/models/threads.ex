@@ -10,6 +10,7 @@ defmodule Thegm.Threads do
     field :body, :string
     field :pinned, :boolean
     belongs_to :users, Thegm.Users
+    has_many :thread_comments, Thegm.ThreadComments
 
     timestamps()
   end
