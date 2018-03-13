@@ -27,4 +27,24 @@ defmodule Thegm.ThreadsView do
       attributes: Thegm.UsersView.users_private(user)
     }
   end
+
+  def relationship_data(thread) do
+    %{
+      id: thread.id,
+      type: "threads"
+    }
+  end
+
+  def just_thread(thread) do
+    %{
+      type: "threads",
+      id: thread.id,
+      attributes: %{
+        title: thread.title,
+        body: thread.body,
+        pinned: thread.pinned,
+        inserted_at: thread.inserted_at
+      }
+    }
+  end
 end
