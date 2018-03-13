@@ -17,7 +17,7 @@ defmodule Thegm.Router do
     resources "/users", UsersController do
       resources "/avatar", UserAvatarsController, only: [:create, :delete], singleton: true
       resources "/password", UserPasswordsController, only: [:update], singleton: true
-      resources "/email", UserEmailsController, only: [:update], singleton: true
+      resources "/email", EmailChangeController, only: [:update]
     end
 
 

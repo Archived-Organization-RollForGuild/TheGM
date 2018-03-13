@@ -38,13 +38,6 @@ defmodule Thegm.Users do
     |> put_password_hash
   end
 
-  def update_email(model, params) do
-    model
-    |> changeset(params)
-    |> cast(%{active: false}, [:active])
-
-  end
-
   def changeset(model, params \\ :empty) do
     model
     |> cast(params, [:username, :email, :active, :bio, :avatar])
