@@ -2,6 +2,7 @@ defmodule Thegm.UsersController do
   use Thegm.Web, :controller
 
   alias Thegm.Users
+  alias Thegm.EmailChangeCodes
 
   def index(conn, _params) do
     users = Repo.all(Users)
@@ -32,8 +33,7 @@ defmodule Thegm.UsersController do
   end
 
   def update(conn, %{"id" => users_id, "data" => %{"attributes" => params, "type" => type}}) do
-    current_user_id = conn.assigns[:current_user].id
-
+    current_user = conn.assigns[:current_user]
     cond do
       type == "users" ->
         case Repo.get(Users, users_id) |> Repo.preload([{:group_members, :groups}]) do
@@ -43,8 +43,14 @@ defmodule Thegm.UsersController do
             |> render(Thegm.ErrorView, "error.json", errors: ["A user with the specified `username` was not found"])
           user ->
             cond do
-              current_user_id == users_id ->
+              current_user.id == users_id ->
                 user = Users.unrestricted_changeset(user, params)
+
+                case params do
+                  %{"email" => email} ->
+                    update_email(current_user, email)
+                end
+
                 case Repo.update(user) do
                   {:ok, result} ->
                     conn
@@ -83,6 +89,23 @@ defmodule Thegm.UsersController do
         true ->
           render conn, "public.json", user: user
       end
+    end
+  end
+
+  def update_email(user, email) do
+    changeset = EmailChangeCodes.changeset(%EmailChangeCodes{}, %{
+      "used" => false,
+      "users_id" => user.id,
+      "email" => email,
+      "old_email" => user.email
+    })
+    case Repo.insert(changeset) do
+      {:ok, params} ->
+        Thegm.Mailgun.email_change_email(email, params.id)
+        |> Thegm.Mailer.deliver_now
+
+        Thegm.Mailgun.email_rollback_email(user.email, user.username, params.id)
+        |> Thegm.Mailer.deliver_now
     end
   end
 end
