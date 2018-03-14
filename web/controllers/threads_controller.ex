@@ -65,6 +65,17 @@ defmodule Thegm.ThreadsController do
     end
   end
 
+  def show(conn, %{"id" => threads_id}) do
+    case Repo.get(Threads, threads_id) |> Repo.preload([:users, :thread_comments]) do
+      nil ->
+        conn
+        |> put_status(:not_found)
+        |> render(Thegm.ErrorView, "error.json", error: ["A thread with that id was not found"])
+      thread ->
+        render conn, "show.json", thread: thread
+    end
+  end
+
   defp read_search_params(params) do
     errors = []
 

@@ -27,8 +27,8 @@ defmodule Thegm.Router do
     end
 
 
-    resources "/threads", ThreadsController, only: [:create, :index] do
-      resources "/comments", ThreadCommentsController, only: [:create]
+    resources "/threads", ThreadsController, only: [:create, :index, :show] do
+      resources "/comments", ThreadCommentsController, only: [:create, :index]
     end
 
     post "/logout", SessionsController, :delete
