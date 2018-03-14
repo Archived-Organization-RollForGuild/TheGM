@@ -30,6 +30,20 @@ defmodule Thegm.GroupsView do
     %{meta: search_meta(meta), data: data}
   end
 
+  def base_json(group) do
+    %{
+      type: "groups",
+      id: group.id,
+      attributes: %{
+        name: group.name,
+        description: group.description,
+        games: group.games,
+        slug: group.slug,
+        discoverable: group.discoverable
+      }
+    }
+  end
+
   def member_json(group, user) do
     status = group_member_status(group, user)
 
@@ -112,9 +126,9 @@ defmodule Thegm.GroupsView do
     %{total: meta.total, count: meta.count, limit: meta.limit, offset: meta.offset}
   end
 
-  def relationship_data(groupmember) do
+  def relationship_data(group) do
     %{
-      id: groupmember.groups_id,
+      id: group.id,
       type: "groups"
     }
   end

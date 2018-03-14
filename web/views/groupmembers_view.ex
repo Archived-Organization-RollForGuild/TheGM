@@ -39,7 +39,7 @@ defmodule Thegm.GroupMembersView do
 
   def users_groups(members) do
     %{
-      data: Enum.map(members, &Thegm.GroupsView.relationship_data/1)
+      data: Enum.map(members, fn(x) -> Thegm.GroupsView.relationship_data(x.groups) end)
     }
   end
 end
