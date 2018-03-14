@@ -17,7 +17,7 @@ defmodule Thegm.GroupThreadsController do
             thread_changeset = GroupThreads.create_changeset(%GroupThreads{}, Map.merge(params, %{"groups_id" => groups_id, "users_id" => users_id}))
             case Repo.insert(thread_changeset) do
               {:ok, thread} ->
-                thread = thread |> Repo.preload([:users, :group_thread_comments])
+                thread = thread |> Repo.preload([:users, :groups, :group_thread_comments])
                 conn
                 |> put_status(:created)
                 |> render("show.json", thread: thread)
@@ -36,35 +36,43 @@ defmodule Thegm.GroupThreadsController do
   end
 
   def index(conn, params) do
+    users_id = conn.assigns[:current_user].id
     case read_search_params(params) do
       {:ok, settings} ->
-        # Get total in search
-        total = Repo.one(from gt in GroupThreads, where: gt.groups_id == ^settings.groups_id, select: count(gt.id))
-
-        # calculate offset
-        offset = (settings.page - 1) * settings.limit
-
-        # do the search
-        cond do
-          total > 0 ->
-            threads = Repo.all(
-              from gt in GroupThreads,
-              where: gt.groups_id == ^settings.groups_id,
-              order_by: [desc: :pinned, desc: :inserted_at],
-              limit: ^settings.limit,
-              offset: ^offset
-            ) |> Repo.preload([:users, :group_thread_comments])
-
-            meta = %{total: total, limit: settings.limit, offset: offset, count: length(threads)}
-
+        case Repo.one(from gm in Thegm.GroupMembers, where: gm.groups_id == ^settings.groups_id and gm.users_id == ^users_id) do
+          nil ->
             conn
-            |> put_status(:ok)
-            |> render("index.json", threads: threads, meta: meta)
-          true ->
-            meta = %{total: total, limit: settings.limit, offset: offset, count: 0}
-            conn
-            |> put_status(:ok)
-            |> render("index.json", threads: [], meta: meta)
+            |> put_status(:forbidden)
+            |> render(Thegm.ErrorView, "error.json", errors: ["Must be a membere of group"])
+          _ ->
+            # Get total in search
+            total = Repo.one(from gt in GroupThreads, where: gt.groups_id == ^settings.groups_id, select: count(gt.id))
+
+            # calculate offset
+            offset = (settings.page - 1) * settings.limit
+
+            # do the search
+            cond do
+              total > 0 ->
+                threads = Repo.all(
+                  from gt in GroupThreads,
+                  where: gt.groups_id == ^settings.groups_id,
+                  order_by: [desc: :pinned, desc: :inserted_at],
+                  limit: ^settings.limit,
+                  offset: ^offset
+                ) |> Repo.preload([:users, :groups, :group_thread_comments])
+
+                meta = %{total: total, limit: settings.limit, offset: offset, count: length(threads)}
+
+                conn
+                |> put_status(:ok)
+                |> render("index.json", threads: threads, meta: meta)
+              true ->
+                meta = %{total: total, limit: settings.limit, offset: offset, count: 0}
+                conn
+                |> put_status(:ok)
+                |> render("index.json", threads: [], meta: meta)
+            end
         end
       {:error, errors} ->
         conn
@@ -74,13 +82,21 @@ defmodule Thegm.GroupThreadsController do
   end
 
   def show(conn, %{"groups_id" => groups_id, "id" => threads_id}) do
-    case Repo.get(GroupThreads, threads_id) |> Repo.preload([:users, :group_thread_comments]) do
+    users_id = conn.assigns[:current_user].id
+    case Repo.one(from gm in Thegm.GroupMembers, where: gm.groups_id == ^groups_id and gm.users_id == ^users_id) do
       nil ->
         conn
-        |> put_status(:not_found)
-        |> render(Thegm.ErrorView, "error.json", error: ["A thread with that id belonging to the specified group was not found"])
-      thread ->
-        render conn, "show.json", thread: thread
+        |> put_status(:forbidden)
+        |> render(Thegm.ErrorView, "error.json", errors: ["Must be a membere of group"])
+      _ ->
+        case Repo.get(GroupThreads, threads_id) |> Repo.preload([:users, :groups, :group_thread_comments]) do
+          nil ->
+            conn
+            |> put_status(:not_found)
+            |> render(Thegm.ErrorView, "error.json", error: ["A thread with that id belonging to the specified group was not found"])
+          thread ->
+            render conn, "show.json", thread: thread
+        end
     end
   end
 

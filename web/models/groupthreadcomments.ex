@@ -5,7 +5,7 @@ defmodule Thegm.GroupThreadComments do
   @derive {Phoenix.Param, key: :id}
   @foreign_key_type :binary_id
 
-  schema "thread_comments" do
+  schema "group_thread_comments" do
     field :comment, :string
     belongs_to :group_threads, Thegm.GroupThreads
     belongs_to :groups, Thegm.Groups

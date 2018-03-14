@@ -1,4 +1,4 @@
-defmodule Thegm.GroupsThreadsView do
+defmodule Thegm.GroupThreadsView do
   use Thegm.Web, :view
 
   def render("show.json", %{thread: thread}) do
@@ -10,11 +10,17 @@ defmodule Thegm.GroupsThreadsView do
 
   def render("index.json", %{threads: threads, meta: meta}) do
     distinct_users = included_users(threads, [])
-    [head | _] = threads
+    # Hydrate only if there are things to hydrate
+    hydrated_group = case threads do
+      [] ->
+        []
+      [head | _] ->
+        [group_hydration(head.groups)]
+    end
     %{
       meta: meta,
       data: Enum.map(threads, &show/1),
-      included: Enum.map(distinct_users, &user_hydration/1) ++ [group_hydration(head.groups)]
+      included: Enum.map(distinct_users, &user_hydration/1) ++ hydrated_group
     }
   end
 
@@ -57,7 +63,7 @@ defmodule Thegm.GroupsThreadsView do
       attributes: %{
         title: thread.title,
         body: thread.body,
-        comments: length(thread.thread_comments),
+        comments: length(thread.group_thread_comments),
         pinned: thread.pinned,
         inserted_at: thread.inserted_at
       },

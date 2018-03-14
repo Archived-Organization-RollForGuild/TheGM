@@ -4,17 +4,25 @@ defmodule Thegm.GroupThreadCommentsView do
   def render("create.json", %{comment: comment}) do
     %{
       data: show(comment),
-      included: [user_hydration(comment.users), thread_hydration(comment.threads), group_hydration(comment.groups)]
+      included: [user_hydration(comment.users), thread_hydration(comment.group_threads), group_hydration(comment.groups)]
     }
   end
 
   def render("index.json", %{comments: comments, meta: meta}) do
     distinct_users = included_users(comments, [])
-    [head | _] = comments
+
+    # Hydrate only if there are things to hydrate
+    hydrated_group_and_thread = case comments do
+      [] ->
+        []
+      [head | _] ->
+        [group_hydration(head.groups), thread_hydration(head.group_threads)]
+    end
+
     %{
       meta: meta,
       data: Enum.map(comments, &show/1),
-      included: Enum.map(distinct_users, &user_hydration/1) ++ [thread_hydration(head.threads), group_hydration(head.groups)]
+      included: Enum.map(distinct_users, &user_hydration/1) ++ hydrated_group_and_thread
     }
   end
 
@@ -28,7 +36,7 @@ defmodule Thegm.GroupThreadCommentsView do
       },
       relationships: %{
         users: Thegm.UsersView.relationship_data(comment.users),
-        threads: Thegm.ThreadsView.relationship_data(comment.threads),
+        threads: Thegm.ThreadsView.relationship_data(comment.group_threads),
         groups: Thegm.GroupsView.relationship_data(comment.groups)
       }
     }

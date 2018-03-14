@@ -5,7 +5,7 @@ defmodule Thegm.GroupThreads do
   @derive {Phoenix.Param, key: :id}
   @foreign_key_type :binary_id
 
-  schema "threads" do
+  schema "group_threads" do
     field :title, :string
     field :body, :string
     field :pinned, :boolean
