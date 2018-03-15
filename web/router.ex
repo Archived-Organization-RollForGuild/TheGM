@@ -47,6 +47,7 @@ defmodule Thegm.Router do
     get "/sessions/:id", SessionsController, :show
     post "/confirmation/:id", ConfirmationCodesController, :create
     get "/users/:id/avatar", UserAvatarsController, :show
+    get "/unique", UniqueController, :show
 
     post "/resets", PasswordResetsController, :create
     put "/resets/:id", PasswordResetsController, :update
