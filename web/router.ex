@@ -24,6 +24,9 @@ defmodule Thegm.Router do
     resources "/groups", GroupsController, except: [:edit, :new] do
       resources "/members", GroupMembersController, only: [:index, :delete]
       resources "/join-requests", GroupJoinRequestsController, only: [:create, :update, :index]
+      resources "/threads", GroupThreadsController, only: [:create, :index, :show] do
+        resources "/comments", GroupThreadCommentsController, only: [:create, :index]
+      end
     end
 
 
