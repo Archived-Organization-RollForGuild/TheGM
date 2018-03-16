@@ -29,9 +29,8 @@ defmodule Thegm.Router do
       end
     end
 
-
-    resources "/threads", ThreadsController, only: [:create, :index, :show] do
-      resources "/comments", ThreadCommentsController, only: [:create, :index]
+    resources "/threads", ThreadsController, only: [:create] do
+      resources "/comments", ThreadCommentsController, only: [:create]
     end
 
     post "/logout", SessionsController, :delete
@@ -51,5 +50,9 @@ defmodule Thegm.Router do
 
     post "/resets", PasswordResetsController, :create
     put "/resets/:id", PasswordResetsController, :update
+
+    resources "/threads", ThreadsController, only: [:index, :show] do
+      resources "/comments", ThreadCommentsController, only: [:index]
+    end
   end
 end
