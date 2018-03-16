@@ -38,16 +38,37 @@ defmodule Thegm.UniqueController do
     end
   end
 
+  def show(conn, %{"slug" => slug}) do
+    cond do
+      Regex.match?(~r/^[a-zA-Z0-9\s-]+$/, slug) ->
+        case Repo.one(from g in Thegm.Groups, where: g.slug == ^slug ) do
+          nil ->
+            send_resp(conn, :no_content, "")
+          _ ->
+            slug_like = slug <> "%"
+            slugs = Repo.all(from g in Thegm.Groups, select: g.slug, where: like(g.slug, ^slug_like))
+            suggestions = get_suggestions(slugs, [], 0, 100, 0, slug)
+            conn
+            |> put_status(409)
+            |> render("suggestions.json", suggestions: suggestions)
+        end
+      true ->
+        conn
+        |> put_status(:bad_request)
+        |> render(Thegm.ErrorView, "error.json", errors: ["slug: invalid format"])
+    end
+  end
+
   # *Defintion*
   # get_suggestions recurses until there are 3 suggestions in the suggestions list
   #
   # *Variables*
-  # exist are the usernames with base_string that already exist
+  # exist is a list of names that contain base_string that already exist
   # suggestions is the list of suggestions we're gonna make
   # lower is an integer of the random lower bound
   # upper is an integer of the random upper bound
   # attempts is the number of attempts made with the given upper and lower bound
-  # base_string is the username the user is attempting to use
+  # base_string is the base of the string the user is attempting to use
   defp get_suggestions(exist, suggestions, lower, upper, attempts, base_string) do
     {attempts, lower, upper} = cond do
       # if we have attempted this upper and lower 10 times, increase upper and lower
@@ -61,7 +82,7 @@ defmodule Thegm.UniqueController do
     temp = base_string <> Integer.to_string(ending)
 
     cond do
-      # If the new username suggestion `temp` exists in neither exists or suggestions
+      # If the new string suggestion `temp` exists in neither exists or suggestions
       !Enum.member?(exist, temp) and !Enum.member?(suggestions, temp) ->
         # Append `temp` to suggestions list
         new_suggestions = suggestions ++ [temp]
