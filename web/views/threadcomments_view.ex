@@ -10,11 +10,18 @@ defmodule Thegm.ThreadCommentsView do
 
   def render("index.json", %{comments: comments, meta: meta}) do
     distinct_users = included_users(comments, [])
-    [head | _] = comments
+
+    # Hydrate only if there are things to hydrate
+    hydrated_thread = case comments do
+      [] ->
+        []
+      [head | _] ->
+        [thread_hydration(head.threads)]
+    end
     %{
       meta: meta,
       data: Enum.map(comments, &show/1),
-      included: Enum.map(distinct_users, &user_hydration/1) ++ [thread_hydration(head.threads)]
+      included: Enum.map(distinct_users, &user_hydration/1) ++ hydrated_thread
     }
   end
 
