@@ -17,7 +17,6 @@ defmodule Thegm.Router do
     resources "/users", UsersController do
       resources "/avatar", UserAvatarsController, only: [:create, :delete], singleton: true
       resources "/password", UserPasswordsController, only: [:update], singleton: true
-      resources "/email", EmailChangeController, only: [:update]
     end
 
 
@@ -50,6 +49,7 @@ defmodule Thegm.Router do
 
     post "/resets", PasswordResetsController, :create
     put "/resets/:id", PasswordResetsController, :update
+    resources "/email", EmailChangeController, only: [:update]
 
     resources "/threads", ThreadsController, only: [:index, :show] do
       resources "/comments", ThreadCommentsController, only: [:index]
