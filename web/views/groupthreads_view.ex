@@ -80,10 +80,11 @@ defmodule Thegm.GroupThreadsView do
 
   def included_users([head | tail], included) do
     included = cond do
-      length(included) == 0 ->
+      !Enum.member?(included, head.users) ->
         included ++ [head.users]
-      Enum.member?(included, head.users) ->
-        included ++ [head.users]
+      true ->
+        included
     end
+    included_users(tail, included)
   end
 end
