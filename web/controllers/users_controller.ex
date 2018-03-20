@@ -46,9 +46,8 @@ defmodule Thegm.UsersController do
               current_user.id == users_id ->
                 user = Users.unrestricted_changeset(user, params)
 
-                case params do
-                  %{"email" => email} ->
-                    update_email(current_user, email)
+                if Map.has_key?(params, "email") do
+                  update_email(current_user, params["email"])
                 end
 
                 case Repo.update(user) do
