@@ -10,7 +10,7 @@ defmodule Thegm.Groups do
     field :name, :string
     field :slug, :string, null: false
     field :description, :string
-    field :address, :string, null: false
+    field :address, :string, null: true
     field :games, {:array, :string}
     field :distance, :float, virtual: true
     field :geom, Geo.Geometry
@@ -36,7 +36,7 @@ defmodule Thegm.Groups do
   def changeset(model, params \\ :empty) do
     model
     |> cast(params, [:name, :description, :address, :games, :discoverable])
-    |> validate_required([:name, :address, :discoverable], message: "Are required")
+    |> validate_required([:name, :discoverable], message: "Are required")
     |> validate_length(:address, min: 1, message: "Group address can not be empty")
     |> validate_length(:description, max: 1000, message: "Group description can be no more than 1000 characters.")
     |> validate_length(:name, min: 1, max: 200)
@@ -54,12 +54,19 @@ defmodule Thegm.Groups do
   end
 
   def lat_lng(model) do
-    case GoogleMaps.geocode(model.changes.address) do
-      {:ok, result} ->
-        lat = List.first(result["results"])["geometry"]["location"]["lat"]
-        lng = List.first(result["results"])["geometry"]["location"]["lng"]
+    cond do
+      Map.has_key?(model.changes, :address) && model.changes.address !== nil ->
+        case GoogleMaps.geocode(model.changes.address) do
+          {:ok, result} ->
+            lat = List.first(result["results"])["geometry"]["location"]["lat"]
+            lng = List.first(result["results"])["geometry"]["location"]["lng"]
+            model
+            |> put_change(:geom, %Geo.Point{coordinates: {lng, lat}, srid: 4326})
+        end
+
+      true ->
         model
-        |> put_change(:geom, %Geo.Point{coordinates: {lng, lat}, srid: 4326})
+        |> put_change(:geom, nil)
     end
   end
 end
