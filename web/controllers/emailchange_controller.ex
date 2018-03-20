@@ -3,7 +3,7 @@ defmodule Thegm.EmailChangeController do
 
   alias Thegm.EmailChangeCodes
 
-  def update(conn, %{"users_id" => users_id, "id" => id, "response" => "accept"}) do
+  def update(conn, %{"id" => id, "response" => "accept"}) do
     case Repo.get(EmailChangeCodes, id) do
       nil ->
         conn
@@ -45,7 +45,7 @@ defmodule Thegm.EmailChangeController do
     end
   end
 
-  def update(conn, %{"users_id" => users_id, "id" => id, "response" => "reject"}) do
+  def update(conn, %{"id" => id, "response" => "reject"}) do
     case Repo.get(EmailChangeCodes, id) do
       nil ->
         conn
