@@ -9,7 +9,7 @@ defmodule Thegm.GroupThreadCommentsView do
   end
 
   def render("index.json", %{comments: comments, meta: meta}) do
-    distinct_users = included_users(comments, [])
+    distinct_users = Thegm.ThreadsView.included_users(comments, [])
 
     # Hydrate only if there are things to hydrate
     hydrated_group_and_thread = case comments do
@@ -56,18 +56,5 @@ defmodule Thegm.GroupThreadCommentsView do
 
   def group_hydration(group) do
     Thegm.GroupsView.base_json(group)
-  end
-
-  def included_users([], included) do
-    included
-  end
-
-  def included_users([head | tail], included) do
-    included = cond do
-      length(included) == 0 ->
-        included ++ [head.users]
-      Enum.member?(included, head.users) ->
-        included ++ [head.users]
-    end
   end
 end

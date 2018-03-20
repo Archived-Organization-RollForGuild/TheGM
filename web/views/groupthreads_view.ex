@@ -9,7 +9,7 @@ defmodule Thegm.GroupThreadsView do
   end
 
   def render("index.json", %{threads: threads, meta: meta}) do
-    distinct_users = included_users(threads, [])
+    distinct_users = Thegm.ThreadsView.included_users(threads, [])
     # Hydrate only if there are things to hydrate
     hydrated_group = case threads do
       [] ->
@@ -72,18 +72,5 @@ defmodule Thegm.GroupThreadsView do
         groups: Thegm.GroupsView.relationship_data(thread.groups)
       },
     }
-  end
-
-  def included_users([], included) do
-    included
-  end
-
-  def included_users([head | tail], included) do
-    included = cond do
-      length(included) == 0 ->
-        included ++ [head.users]
-      Enum.member?(included, head.users) ->
-        included ++ [head.users]
-    end
   end
 end
