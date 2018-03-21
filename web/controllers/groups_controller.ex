@@ -124,15 +124,12 @@ defmodule Thegm.GroupsController do
   end
 
   def show(conn, %{"id" => groups_id}) do
-    IO.inspect(conn.assigns[:current_user])
     users_id = case conn.assigns[:current_user] do
       nil ->
         nil
       found ->
         found.id
     end
-
-    IO.inspect(users_id)
 
     case groups_query(groups_id, users_id) do
       nil ->
