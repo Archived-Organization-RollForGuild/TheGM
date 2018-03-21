@@ -26,7 +26,7 @@ defmodule Thegm.GroupsController do
 
             conn
             |> put_status(:created)
-            |> render("memberof.json", group: group, users_id: conn.assigns[:current_user].id)
+            |> render("show.json", group: group, users_id: conn.assigns[:current_user].id)
           {:error, :groups, changeset, %{}} ->
             conn
             |> put_status(:unprocessable_entity)
@@ -142,7 +142,7 @@ defmodule Thegm.GroupsController do
       group ->
         conn
         |> put_status(:ok)
-        |> render("adminof.json", group: group, users_id: users_id)
+        |> render("show.json", group: group, users_id: users_id)
     end
   end
 
