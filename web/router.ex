@@ -24,7 +24,7 @@ defmodule Thegm.Router do
     end
 
 
-    resources "/groups", GroupsController, except: [:edit, :new, :show] do
+    resources "/groups", GroupsController, only: [:create, :update, :delete] do
       resources "/members", GroupMembersController, only: [:index, :delete]
       resources "/join-requests", GroupJoinRequestsController, only: [:create, :update, :index]
       resources "/threads", GroupThreadsController, only: [:create, :index, :show] do
@@ -54,7 +54,7 @@ defmodule Thegm.Router do
     post "/resets", PasswordResetsController, :create
     put "/resets/:id", PasswordResetsController, :update
     resources "/email", EmailChangeController, only: [:update]
-    resources "/groups", GroupsController, only: [:show]
+    resources "/groups", GroupsController, only: [:show, :index]
 
     resources "/threads", ThreadsController, only: [:index, :show] do
       resources "/comments", ThreadCommentsController, only: [:index]

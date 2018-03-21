@@ -77,12 +77,18 @@ defmodule Thegm.GroupsController do
   end
 
   def index(conn, params) do
-    users_id = conn.assigns[:current_user].id
     case read_search_params(params) do
       {:ok, settings} ->
-        # Get user's current groups so we can properly exclude them
-        memberships = Repo.all(from m in Thegm.GroupMembers, where: m.users_id == ^users_id, select: m.groups_id)
-        blocks = Repo.all(from b in Thegm.GroupBlockedUsers, where: b.users_id == ^users_id and b.rescinded == false, select: b.groups_id)
+        {users_id, memberships, blocks} = case conn.assigns[:current_user] do
+          nil ->
+            {nil, [], []}
+          found ->
+            # Get user's current groups so we can properly exclude them
+            memberships = Repo.all(from m in Thegm.GroupMembers, where: m.users_id == ^found.id, select: m.groups_id)
+            blocks = Repo.all(from b in Thegm.GroupBlockedUsers, where: b.users_id == ^found.id and b.rescinded == false, select: b.groups_id)
+            {found.id, memberships, blocks}
+        end
+
         # Group search params
         offset = (settings.page - 1) * settings.limit
         geom = %Geo.Point{coordinates: {settings.lng, settings.lat}, srid: 4326}
@@ -93,7 +99,12 @@ defmodule Thegm.GroupsController do
         where: st_distancesphere(g.geom, ^geom) <= ^settings.meters and not g.id in ^memberships and g.discoverable == true)
 
         # Do the search
-        join_requests_query = from gjr in Thegm.GroupJoinRequests, where: gjr.users_id == ^users_id, order_by: [desc: gjr.inserted_at]
+        join_requests_query = case users_id do
+          nil ->
+            from gjr in Thegm.GroupJoinRequests, where: is_nil(gjr.users_id), order_by: [desc: gjr.inserted_at]
+          exists ->
+            join_requests_query = from gjr in Thegm.GroupJoinRequests, where: gjr.users_id == ^users_id, order_by: [desc: gjr.inserted_at]
+        end
         cond do
           total > 0 ->
             groups = Repo.all(
@@ -103,18 +114,18 @@ defmodule Thegm.GroupsController do
               order_by: [asc: st_distancesphere(g.geom, ^geom)],
               limit: ^settings.limit,
               offset: ^offset
-            ) |> Repo.preload([join_requests: join_requests_query]) |> Repo.preload(:group_members)
+            ) |> Repo.preload([join_requests: join_requests_query, group_members: :users])
 
             meta = %{total: total, limit: settings.limit, offset: offset, count: length(groups)}
 
             conn
             |> put_status(:ok)
-            |> render("search.json", groups: groups, meta: meta, user: conn.assigns[:current_user])
+            |> render("index.json", groups: groups, meta: meta, users_id: users_id)
           true ->
             meta = %{total: total, limit: settings.limit, offset: offset, count: 0}
             conn
             |> put_status(:ok)
-            |> render("search.json", groups: [], meta: meta)
+            |> render("index.json", groups: [], meta: meta, users_id: users_id)
         end
       {:error, errors} ->
         conn
