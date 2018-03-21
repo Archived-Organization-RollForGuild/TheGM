@@ -9,6 +9,10 @@ defmodule Thegm.Router do
     plug Thegm.AuthenticateUser
   end
 
+  pipeline :tryauth do
+    plug Thegm.TryAuthenticateUser
+  end
+
   scope "/", Thegm do
     pipe_through [:api, :auth]
 
@@ -20,7 +24,7 @@ defmodule Thegm.Router do
     end
 
 
-    resources "/groups", GroupsController, except: [:edit, :new] do
+    resources "/groups", GroupsController, except: [:edit, :new, :show] do
       resources "/members", GroupMembersController, only: [:index, :delete]
       resources "/join-requests", GroupJoinRequestsController, only: [:create, :update, :index]
       resources "/threads", GroupThreadsController, only: [:create, :index, :show] do
@@ -36,7 +40,7 @@ defmodule Thegm.Router do
   end
 
   scope "/", Thegm do
-    pipe_through :api
+    pipe_through [:api, :tryauth]
 
     get "/isteapot", IsTeapotController, :index
     get "/deathcheck", DeathCheckController, :index
@@ -50,6 +54,7 @@ defmodule Thegm.Router do
     post "/resets", PasswordResetsController, :create
     put "/resets/:id", PasswordResetsController, :update
     resources "/email", EmailChangeController, only: [:update]
+    resources "/groups", GroupsController, only: [:show]
 
     resources "/threads", ThreadsController, only: [:index, :show] do
       resources "/comments", ThreadCommentsController, only: [:index]

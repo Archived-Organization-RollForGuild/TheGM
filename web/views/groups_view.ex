@@ -1,27 +1,22 @@
 defmodule Thegm.GroupsView do
   use Thegm.Web, :view
 
-  def render("memberof.json", %{group: group, user: user}) do
-    included = Enum.map(group.group_members, &user_hydration/1)
-    data = member_json(group, user)
-    %{
-      data: data,
-      included: included
-    }
-  end
-
-  def render("adminof.json", %{group: group, user: user}) do
-    included = Enum.map(group.group_members, &user_hydration/1)
-    data = member_json(group, user)
-    %{
-      data: data,
-      included: included
-    }
-  end
-
-  def render("notmember.json", %{group: group, user: user}) do
-    data = non_member_json(group, user)
-    %{data: data}
+  def render("show.json", %{group: group, users_id: users_id}) do
+    status = group_member_status(group, users_id)
+    cond do
+      status == "member" or status == "admin" ->
+        included = Enum.map(group.group_members, &user_hydration/1)
+        data = member_json(group, status)
+        %{
+          data: data,
+          included: included
+        }
+      true ->
+        data = non_member_json(group, status)
+        %{
+          data: data
+        }
+    end
   end
 
   def render("search.json", %{groups: groups, meta: meta, user: user}) do
@@ -44,9 +39,7 @@ defmodule Thegm.GroupsView do
     }
   end
 
-  def member_json(group, user) do
-    status = group_member_status(group, user)
-
+  def member_json(group, status) do
     %{
       type: "groups",
       id: group.id,
@@ -67,9 +60,7 @@ defmodule Thegm.GroupsView do
     }
   end
 
-  def non_member_json(group, user) do
-    status = group_member_status(group, user)
-
+  def non_member_json(group, status) do
     %{
       type: "groups",
       id: group.id,
@@ -133,13 +124,13 @@ defmodule Thegm.GroupsView do
     }
   end
 
-  def group_member_status(group, user) do
-    case get_member(group.group_members, user.id) do
+  def group_member_status(group, users_id) do
+    case get_member(group.group_members, users_id) do
       nil ->
         case group.join_requests do
           # user has not previously requested to join the group
           [] ->
-            false
+            nil
           # user has previously requested to join the group
           join_requests ->
             # Because we ordered by updated descending, get the most recent request

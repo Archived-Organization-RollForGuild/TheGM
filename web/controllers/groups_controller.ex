@@ -26,7 +26,7 @@ defmodule Thegm.GroupsController do
 
             conn
             |> put_status(:created)
-            |> render("memberof.json", group: group, user: conn.assigns[:current_user])
+            |> render("show.json", group: group, users_id: conn.assigns[:current_user].id)
           {:error, :groups, changeset, %{}} ->
             conn
             |> put_status(:unprocessable_entity)
@@ -124,9 +124,14 @@ defmodule Thegm.GroupsController do
   end
 
   def show(conn, %{"id" => groups_id}) do
-    users_id = conn.assigns[:current_user].id
+    users_id = case conn.assigns[:current_user] do
+      nil ->
+        nil
+      found ->
+        found.id
+    end
 
-    case Repo.one(groups_query(groups_id, users_id)) do
+    case groups_query(groups_id, users_id) do
       nil ->
         conn
         |> put_status(:not_found)
@@ -134,7 +139,7 @@ defmodule Thegm.GroupsController do
       group ->
         conn
         |> put_status(:ok)
-        |> render("adminof.json", group: group, user: conn.assigns[:current_user])
+        |> render("show.json", group: group, users_id: users_id)
     end
   end
 
@@ -284,11 +289,14 @@ defmodule Thegm.GroupsController do
   end
 
   def groups_query(groups_id, users_id) do
-    from g in Groups,
-         left_join: gm in assoc(g, :group_members),
-         left_join: u in assoc(gm, :users),
-         left_join: gjr in GroupJoinRequests, on: gjr.groups_id == g.id and gjr.users_id == ^users_id,
-         where: (g.id == ^groups_id),
-         preload: [group_members: {gm, users: u}, join_requests: gjr]
+    join_requests_query = case users_id do
+      nil ->
+        from gjr in Thegm.GroupJoinRequests, where: is_nil(gjr.users_id), order_by: [desc: gjr.inserted_at]
+      exists ->
+        join_requests_query = from gjr in Thegm.GroupJoinRequests, where: gjr.users_id == ^users_id, order_by: [desc: gjr.inserted_at]
+    end
+
+    Repo.one(from g in Groups, where: (g.id == ^groups_id))
+    |> Repo.preload([join_requests: join_requests_query, group_members: :users])
   end
 end
