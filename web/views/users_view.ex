@@ -41,7 +41,7 @@ defmodule Thegm.UsersView do
   end
 
   def group_hydration(membership) do
-    group_membership = %{
+    %{
       type: "groups",
       id: membership.groups_id,
       attributes: Thegm.GroupsView.users_groupmembers_groups(membership.groups)
