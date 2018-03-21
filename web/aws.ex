@@ -8,11 +8,10 @@ defmodule Thegm.AWS do
   alias ExAws.S3
 
   def upload_avatar(image_path, avatar_identifier) do
-    image =
-      image_path
-      |> S3.Upload.stream_file
-      |> S3.upload(@bucket_name, "#{@avatar_location}/#{avatar_identifier}.jpg")
-      |> ExAws.request!
+    image_path
+    |> S3.Upload.stream_file
+    |> S3.upload(@bucket_name, "#{@avatar_location}/#{avatar_identifier}.jpg")
+    |> ExAws.request!
   end
 
   def remove_avatar(avatar_identifier) do
