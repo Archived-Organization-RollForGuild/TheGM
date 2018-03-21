@@ -293,7 +293,7 @@ defmodule Thegm.GroupsController do
       nil ->
         from gjr in Thegm.GroupJoinRequests, where: is_nil(gjr.users_id), order_by: [desc: gjr.inserted_at]
       _ ->
-        join_requests_query = from gjr in Thegm.GroupJoinRequests, where: gjr.users_id == ^users_id, order_by: [desc: gjr.inserted_at]
+        from gjr in Thegm.GroupJoinRequests, where: gjr.users_id == ^users_id, order_by: [desc: gjr.inserted_at]
     end
 
     Repo.one(from g in Groups, where: (g.id == ^groups_id))
