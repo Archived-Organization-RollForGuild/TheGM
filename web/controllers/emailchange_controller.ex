@@ -17,7 +17,7 @@ defmodule Thegm.EmailChangeController do
         else
           code = EmailChangeCodes.changeset(resp, %{used: true})
           case Repo.update(code) do
-            {:ok, updated_code} ->
+            {:ok, _} ->
               case Repo.get(Thegm.Users, resp.users_id) |> Repo.preload([{:group_members, :groups}]) do
                 nil ->
                   conn
@@ -59,7 +59,7 @@ defmodule Thegm.EmailChangeController do
         else
           code = EmailChangeCodes.changeset(resp, %{used: true})
           case Repo.update(code) do
-            {:ok, updated_code} ->
+            {:ok, _} ->
               case Repo.get(Thegm.Users, resp.users_id) |> Repo.preload([{:group_members, :groups}]) do
                 nil ->
                   conn
