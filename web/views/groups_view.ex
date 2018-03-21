@@ -1,26 +1,26 @@
 defmodule Thegm.GroupsView do
   use Thegm.Web, :view
 
-  def render("memberof.json", %{group: group, user: user}) do
+  def render("memberof.json", %{group: group, users_id: users_id}) do
     included = Enum.map(group.group_members, &user_hydration/1)
-    data = member_json(group, user)
+    data = member_json(group, users_id)
     %{
       data: data,
       included: included
     }
   end
 
-  def render("adminof.json", %{group: group, user: user}) do
+  def render("adminof.json", %{group: group, users_id: users_id}) do
     included = Enum.map(group.group_members, &user_hydration/1)
-    data = member_json(group, user)
+    data = member_json(group, users_id)
     %{
       data: data,
       included: included
     }
   end
 
-  def render("notmember.json", %{group: group, user: user}) do
-    data = non_member_json(group, user)
+  def render("notmember.json", %{group: group, users_id: users_id}) do
+    data = non_member_json(group, users_id)
     %{data: data}
   end
 
@@ -44,8 +44,8 @@ defmodule Thegm.GroupsView do
     }
   end
 
-  def member_json(group, user) do
-    status = group_member_status(group, user)
+  def member_json(group, users_id) do
+    status = group_member_status(group, users_id)
 
     %{
       type: "groups",
@@ -67,8 +67,8 @@ defmodule Thegm.GroupsView do
     }
   end
 
-  def non_member_json(group, user) do
-    status = group_member_status(group, user)
+  def non_member_json(group, users_id) do
+    status = group_member_status(group, users_id)
 
     %{
       type: "groups",
@@ -133,8 +133,8 @@ defmodule Thegm.GroupsView do
     }
   end
 
-  def group_member_status(group, user) do
-    case get_member(group.group_members, user.id) do
+  def group_member_status(group, users_id) do
+    case get_member(group.group_members, users_id) do
       nil ->
         case group.join_requests do
           # user has not previously requested to join the group
