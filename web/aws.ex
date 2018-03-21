@@ -4,7 +4,6 @@ defmodule Thegm.AWS do
   @aws_region System.get_env("RFG_API_AWS_REGION")
   @avatar_location "avatars"
 
-  alias Thegm.Users
   alias ExAws.S3
 
   def upload_avatar(image_path, avatar_identifier) do
