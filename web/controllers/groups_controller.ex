@@ -2,7 +2,6 @@ defmodule Thegm.GroupsController do
   use Thegm.Web, :controller
 
   alias Thegm.Groups
-  alias Thegm.GroupJoinRequests
   alias Ecto.Multi
   import Geo.PostGIS
 
