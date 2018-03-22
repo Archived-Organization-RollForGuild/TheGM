@@ -2,41 +2,35 @@ defmodule Thegm.GroupsView do
   use Thegm.Web, :view
 
   def render("show.json", %{group: group, users_id: users_id}) do
-    status = group_member_status(group, users_id)
+    data = show_json(group, users_id)
+    status = data[:attributes][:member_status]
     cond do
-      status == "member" or status == "admin" ->
+       status == "member" or status == "admin" ->
         included = Enum.map(group.group_members, &user_hydration/1)
-        data = member_json(group, status)
         %{
           data: data,
           included: included
         }
       true ->
-        data = non_member_json(group, status)
         %{
           data: data
         }
     end
   end
 
-  def render("search.json", %{groups: groups, meta: meta, user: user}) do
-    data = Enum.map(groups, fn g -> search_json(g, user) end)
-
+  def render("index.json", %{groups: groups, meta: meta, users_id: users_id}) do
+    data = Enum.map(groups, fn g -> show_json(g, users_id) end)
     %{meta: search_meta(meta), data: data}
   end
 
-  def base_json(group) do
-    %{
-      type: "groups",
-      id: group.id,
-      attributes: %{
-        name: group.name,
-        description: group.description,
-        games: group.games,
-        slug: group.slug,
-        discoverable: group.discoverable
-      }
-    }
+  def show_json(group, user) do
+    status = group_member_status(group, user)
+    cond do
+      status == "member" or status == "admin" ->
+       member_json(group, status)
+      true ->
+        non_member_json(group, status)
+    end
   end
 
   def member_json(group, status) do
@@ -76,23 +70,20 @@ defmodule Thegm.GroupsView do
     }
   end
 
-  def search_json(group, user) do
-    status = group_member_status(group, user)
-
-     %{
+  def base_json(group) do
+    %{
       type: "groups",
       id: group.id,
       attributes: %{
         name: group.name,
         description: group.description,
         games: group.games,
-        members: length(group.group_members),
         slug: group.slug,
-        distance: group.distance,
-        member_status: status
+        discoverable: group.discoverable
       }
     }
   end
+
 
   def user_hydration(member) do
     group_member = %{
