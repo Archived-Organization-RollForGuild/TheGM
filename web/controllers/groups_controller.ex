@@ -2,7 +2,6 @@ defmodule Thegm.GroupsController do
   use Thegm.Web, :controller
 
   alias Thegm.Groups
-  alias Thegm.GroupJoinRequests
   alias Ecto.Multi
   import Geo.PostGIS
 
@@ -102,8 +101,8 @@ defmodule Thegm.GroupsController do
         join_requests_query = case users_id do
           nil ->
             from gjr in Thegm.GroupJoinRequests, where: is_nil(gjr.users_id), order_by: [desc: gjr.inserted_at]
-          exists ->
-            join_requests_query = from gjr in Thegm.GroupJoinRequests, where: gjr.users_id == ^users_id, order_by: [desc: gjr.inserted_at]
+          _ ->
+            from gjr in Thegm.GroupJoinRequests, where: gjr.users_id == ^users_id, order_by: [desc: gjr.inserted_at]
         end
         cond do
           total > 0 ->
@@ -303,8 +302,8 @@ defmodule Thegm.GroupsController do
     join_requests_query = case users_id do
       nil ->
         from gjr in Thegm.GroupJoinRequests, where: is_nil(gjr.users_id), order_by: [desc: gjr.inserted_at]
-      exists ->
-        join_requests_query = from gjr in Thegm.GroupJoinRequests, where: gjr.users_id == ^users_id, order_by: [desc: gjr.inserted_at]
+      _ ->
+        from gjr in Thegm.GroupJoinRequests, where: gjr.users_id == ^users_id, order_by: [desc: gjr.inserted_at]
     end
 
     Repo.one(from g in Groups, where: (g.id == ^groups_id))

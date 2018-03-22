@@ -27,7 +27,7 @@ defmodule Thegm.UserAvatarsController do
 
             user = Users.changeset(user, %{avatar: true})
             case Repo.update(user) do
-              {:ok, user} ->
+              {:ok, _} ->
                 send_resp(conn, :created, "")
               {:error, user} ->
                 conn
@@ -80,7 +80,7 @@ defmodule Thegm.UserAvatarsController do
 
             user = Users.changeset(user, %{avatar: false})
             case Repo.update(user) do
-              {:ok, user} ->
+              {:ok, _} ->
                 send_resp(conn, :gone, "")
               {:error, user} ->
                 conn
