@@ -1,7 +1,6 @@
 defmodule Thegm.GroupThreadsController do
   use Thegm.Web, :controller
 
-  alias Thegm.Users
   alias Thegm.GroupThreads
 
   def create(conn, %{"groups_id" => groups_id, "data" => %{"attributes" => params, "type" => type}}) do
