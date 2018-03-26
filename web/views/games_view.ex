@@ -29,4 +29,15 @@ defmodule Thegm.GamesView do
       url: game.url
     }
   end
+
+  def relationship_data(game) do
+    %{
+      id: game.id,
+      type: "games"
+    }
+  end
+
+  def users_usergames_games(game) do
+    games_show(game)
+  end
 end

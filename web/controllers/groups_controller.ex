@@ -22,7 +22,7 @@ defmodule Thegm.GroupsController do
 
         case Repo.transaction(multi) do
           {:ok, result} ->
-            group = Repo.preload(result.groups, [{:group_members, :users}])
+            group = Repo.preload(result.groups, [{:group_games, :games}, {:group_members, :users}])
 
             conn
             |> put_status(:created)
@@ -103,7 +103,7 @@ defmodule Thegm.GroupsController do
               order_by: [asc: st_distancesphere(g.geom, ^geom)],
               limit: ^settings.limit,
               offset: ^offset
-            ) |> Repo.preload([join_requests: join_requests_query]) |> Repo.preload(:group_members)
+            ) |> Repo.preload([join_requests: join_requests_query]) |> Repo.preload(:group_members, :group_games)
 
             meta = %{total: total, limit: settings.limit, offset: offset, count: length(groups)}
 
@@ -287,8 +287,10 @@ defmodule Thegm.GroupsController do
     from g in Groups,
          left_join: gm in assoc(g, :group_members),
          left_join: u in assoc(gm, :users),
+         left_join: gg in assoc(g, :group_games),
+         left_join: ga in assoc(gg, :games),
          left_join: gjr in GroupJoinRequests, on: gjr.groups_id == g.id and gjr.users_id == ^users_id,
          where: (g.id == ^groups_id),
-         preload: [group_members: {gm, users: u}, join_requests: gjr]
+         preload: [group_members: {gm, users: u}, group_games: {gg, games: ga}, join_requests: gjr]
   end
 end

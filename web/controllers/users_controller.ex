@@ -36,7 +36,7 @@ defmodule Thegm.UsersController do
     current_user = conn.assigns[:current_user]
     cond do
       type == "users" ->
-        case Repo.get(Users, users_id) |> Repo.preload([{:group_members, :groups}]) do
+        case Repo.get(Users, users_id) |> Repo.preload([{:user_games, :games}, {:group_members, :groups}]) do
           nil ->
             conn
             |> put_status(:not_found)
@@ -76,7 +76,7 @@ defmodule Thegm.UsersController do
   def show(conn, %{"id" => users_id}) do
     current_user_id = conn.assigns[:current_user].id
 
-    case Repo.get(Users, users_id) |> Repo.preload([{:group_members, :groups}]) do
+    case Repo.get(Users, users_id) |> Repo.preload([{:user_games, :games}, {:group_members, :groups}]) do
       nil ->
         conn
         |> put_status(:not_found)

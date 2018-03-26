@@ -2,7 +2,7 @@ defmodule Thegm.GroupsView do
   use Thegm.Web, :view
 
   def render("memberof.json", %{group: group, user: user}) do
-    included = Enum.map(group.group_members, &user_hydration/1)
+    included = Enum.map(group.group_members, &user_hydration/1) ++ Enum.map(group.group_games, &game_hydration/1)
     data = member_json(group, user)
     %{
       data: data,
@@ -11,7 +11,7 @@ defmodule Thegm.GroupsView do
   end
 
   def render("adminof.json", %{group: group, user: user}) do
-    included = Enum.map(group.group_members, &user_hydration/1)
+    included = Enum.map(group.group_members, &user_hydration/1) ++ Enum.map(group.group_games, &game_hydration/1)
     data = member_json(group, user)
     %{
       data: data,
@@ -62,7 +62,8 @@ defmodule Thegm.GroupsView do
         discoverable: group.discoverable
       },
       relationships: %{
-        group_members: Thegm.GroupMembersView.groups_users(group.group_members)
+        group_members: Thegm.GroupMembersView.groups_users(group.group_members),
+        group_games: Thegm.GroupGamesView.groups_games(group.group_games)
       }
     }
   end
@@ -81,6 +82,9 @@ defmodule Thegm.GroupsView do
         slug: group.slug,
         member_status: status,
         discoverable: group.discoverable
+      },
+      relationships: %{
+        group_games: Thegm.GroupGamesView.groups_games(group.group_games)
       }
     }
   end
@@ -99,7 +103,10 @@ defmodule Thegm.GroupsView do
         slug: group.slug,
         distance: group.distance,
         member_status: status
-      }
+      },
+       relationships: %{
+         group_games: Thegm.GroupGamesView.groups_games(group.group_games)
+       }
     }
   end
 
@@ -111,6 +118,14 @@ defmodule Thegm.GroupsView do
     }
     Map.put(group_member.attributes, :role, member.role)
     group_member
+  end
+
+  def game_hydration(user_game) do
+    %{
+      type: "games",
+      id: user_game.games_id,
+      attributes: Thegm.GamesView.users_usergames_games(user_game.games)
+    }
   end
 
   def users_groupmembers_groups(group) do

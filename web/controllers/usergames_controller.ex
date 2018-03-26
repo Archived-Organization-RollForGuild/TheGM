@@ -76,7 +76,7 @@ defmodule Thegm.UserGamesController do
               id: UUID.uuid4,
               users_id: users_id,
               games_id: usergame["id"],
-              type: usergame["type"],
+              field: usergame["field"],
               inserted_at: NaiveDateTime.utc_now(),
               updated_at: NaiveDateTime.utc_now()
             }
