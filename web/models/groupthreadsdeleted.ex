@@ -13,7 +13,6 @@ defmodule Thegm.GroupThreadsDeleted do
   end
 
   def create_changeset(model, params \\ :empty) do
-    IO.inspect params
     model
     |> cast(params, [:users_id, :group_threads_id, :deleter_role])
     |> validate_required([:users_id, :group_threads_id, :deleter_role], message: "are required.")
