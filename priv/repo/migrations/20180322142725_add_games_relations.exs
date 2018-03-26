@@ -4,6 +4,7 @@ defmodule Thegm.Repo.Migrations.AddGamesRelations do
   def change do
     create table(:user_games, primary_key: false) do
       add :id, :uuid, primary_key: true
+      add :field, :string, null: false
       add :users_id, references(:users, on_delete: :nothing, type: :uuid)
       add :games_id, references(:games, on_delete: :delete_all, type: :uuid)
 

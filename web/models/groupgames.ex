@@ -5,17 +5,16 @@ defmodule Thegm.GroupGames do
   @derive {Phoenix.Param, key: :id}
   @foreign_key_type :binary_id
 
-  schema "groupgames" do
-    belongs_to :users, Thegm.Groups
+  schema "group_games" do
+    belongs_to :groups, Thegm.Groups
     belongs_to :games, Thegm.Games
 
     timestamps()
   end
 
-
   def create_changeset(model, params \\ :empty) do
     model
-    |> cast(params, [:status, :games_id, :groups_id])
+    |> cast(params, [:games_id, :groups_id])
     |> validate_required([:groups_id, :games_id])
     |> unique_constraint(:groups_id, name: :group_games_games_id_groups_id_index)
     |> foreign_key_constraint(:games_id, name: :group_games_games_id_fk)

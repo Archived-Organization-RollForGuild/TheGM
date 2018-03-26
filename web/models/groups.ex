@@ -19,6 +19,7 @@ defmodule Thegm.Groups do
     has_many :group_members, Thegm.GroupMembers
     has_many :join_requests, Thegm.GroupJoinRequests
     has_many :blocked_users, Thegm.GroupBlockedUsers
+    has_many :group_games, Thegm.GroupGames
 
 
     timestamps()
