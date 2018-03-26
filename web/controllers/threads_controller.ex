@@ -32,7 +32,7 @@ defmodule Thegm.ThreadsController do
     case read_search_params(params) do
       {:ok, settings} ->
         # Get total in search
-        total = Repo.one(from t in Threads, select: count(t.id))
+        total = Repo.one(from t in Threads, where: t.deleted == false, select: count(t.id))
 
         # calculate offset
         offset = (settings.page - 1) * settings.limit
@@ -42,6 +42,7 @@ defmodule Thegm.ThreadsController do
           total > 0 ->
             threads = Repo.all(
               from t in Threads,
+              where: t.deleted == false,
               order_by: [desc: :pinned, desc: :inserted_at],
               limit: ^settings.limit,
               offset: ^offset
