@@ -33,7 +33,7 @@ defmodule Thegm.Router do
     end
 
     resources "/threads", ThreadsController, only: [:create, :delete] do
-      resources "/comments", ThreadCommentsController, only: [:create]
+      resources "/comments", ThreadCommentsController, only: [:create, :delete]
     end
 
     post "/logout", SessionsController, :delete
@@ -57,7 +57,7 @@ defmodule Thegm.Router do
     resources "/groups", GroupsController, only: [:show, :index]
 
     resources "/threads", ThreadsController, only: [:index, :show] do
-      resources "/comments", ThreadCommentsController, only: [:index]
+      resources "/comments", ThreadCommentsController, only: [:index, :show]
     end
   end
 end

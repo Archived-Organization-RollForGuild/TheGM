@@ -25,19 +25,53 @@ defmodule Thegm.ThreadCommentsView do
     }
   end
 
+  def render("show.json", %{comment: comment}) do
+    cond do
+      comment.deleted == true ->
+        %{
+          data: show(comment),
+          included: [thread_hydration(comment.threads)]
+        }
+      true ->
+        %{
+          data: show(comment),
+          included: [user_hydration(comment.users), thread_hydration(comment.threads)]
+        }
+    end
+  end
+
   def show(comment) do
-    %{
-      type: "thread-comments",
-      id: comment.id,
-      attributes: %{
-        comment: comment.comment,
-        inserted_at: comment.inserted_at
-      },
-      relationships: %{
-        users: Thegm.UsersView.relationship_data(comment.users),
-        threads: Thegm.ThreadsView.relationship_data(comment.threads)
-      }
-    }
+    cond do
+      comment.deleted == true ->
+        %{
+          type: "thread-comments",
+          id: comment.id,
+          attributes: %{
+            comment: "[deleted by " <> comment.thread_comments_deleted.deleter_role <> "]",
+            inserted_at: comment.inserted_at,
+            updated_at: comment.updated_at,
+            deleted: comment.deleted
+          },
+          relationships: %{
+            threads: Thegm.ThreadsView.relationship_data(comment.threads)
+          }
+        }
+      true ->
+        %{
+          type: "thread-comments",
+          id: comment.id,
+          attributes: %{
+            comment: comment.comment,
+            inserted_at: comment.inserted_at,
+            updated_at: comment.updated_at,
+            deleted: comment.deleted
+          },
+          relationships: %{
+            users: Thegm.UsersView.relationship_data(comment.users),
+            threads: Thegm.ThreadsView.relationship_data(comment.threads)
+          }
+        }
+    end
   end
 
   def user_hydration(user) do
