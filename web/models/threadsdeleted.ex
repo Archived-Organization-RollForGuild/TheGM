@@ -1,10 +1,10 @@
-defmodule Thegm.DeletedThreads do
+defmodule Thegm.ThreadsDeleted do
   use Thegm.Web, :model
 
   @primary_key false
   @foreign_key_type :binary_id
 
-  schema "deleted_threads" do
+  schema "threads_deleted" do
     field :deleter_role, :string
     belongs_to :threads, Thegm.Threads, primary_key: true
     belongs_to :users, Thegm.Users

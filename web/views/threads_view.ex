@@ -61,7 +61,7 @@ defmodule Thegm.ThreadsView do
           id: thread.id,
           attributes: %{
             title: "[deleted]",
-            body: "[deleted by " <> thread.deleted_threads.deleter_role <> "]",
+            body: "[deleted by " <> thread.threads_deleted.deleter_role <> "]",
             comments: length(thread.thread_comments),
             pinned: thread.pinned,
             inserted_at: thread.inserted_at,
