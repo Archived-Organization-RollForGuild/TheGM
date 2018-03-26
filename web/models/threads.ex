@@ -9,8 +9,10 @@ defmodule Thegm.Threads do
     field :title, :string
     field :body, :string
     field :pinned, :boolean
+    field :deleted, :boolean
     belongs_to :users, Thegm.Users
     has_many :thread_comments, Thegm.ThreadComments
+    has_one :threads_deleted, Thegm.ThreadsDeleted
 
     timestamps()
   end
@@ -21,5 +23,10 @@ defmodule Thegm.Threads do
     |> validate_required([:title, :users_id], message: "are required")
     |> validate_length(:title, min: 1, max: 256, message: "must be between 1 and 256 characters")
     |> validate_length(:body, max: 8192, message: "cannot exceed 8192 characters")
+  end
+
+  def update_changeset(model, params \\ :empty) do
+    model
+    |> cast(params, [:body, :pinned, :deleted])
   end
 end

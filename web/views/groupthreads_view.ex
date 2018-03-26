@@ -2,10 +2,18 @@ defmodule Thegm.GroupThreadsView do
   use Thegm.Web, :view
 
   def render("show.json", %{thread: thread}) do
-    %{
-      data: show(thread),
-      included: [user_hydration(thread.users), group_hydration(thread.groups)]
-    }
+    cond do
+      thread.deleted == true ->
+        %{
+          data: show(thread),
+          included: [group_hydration(thread.groups)]
+        }
+      true ->
+        %{
+          data: show(thread),
+          included: [user_hydration(thread.users), group_hydration(thread.groups)]
+        }
+    end
   end
 
   def render("index.json", %{threads: threads, meta: meta}) do
@@ -57,20 +65,38 @@ defmodule Thegm.GroupThreadsView do
   end
 
   def show(thread) do
-    %{
-      type: "threads",
-      id: thread.id,
-      attributes: %{
-        title: thread.title,
-        body: thread.body,
-        comments: length(thread.group_thread_comments),
-        pinned: thread.pinned,
-        inserted_at: thread.inserted_at
-      },
-      relationships: %{
-        users: Thegm.UsersView.relationship_data(thread.users),
-        groups: Thegm.GroupsView.relationship_data(thread.groups)
-      },
-    }
+    cond do
+      thread.deleted == true ->
+        %{
+          type: "threads",
+          id: thread.id,
+          attributes: %{
+            title: "[deleted]",
+            body: "[deleted by " <> thread.group_threads_deleted.deleter_role <> "]",
+            comments: length(thread.group_thread_comments),
+            pinned: thread.pinned,
+            inserted_at: thread.inserted_at
+          },
+          relationships: %{
+            groups: Thegm.GroupsView.relationship_data(thread.groups)
+          },
+        }
+      true ->
+        %{
+          type: "threads",
+          id: thread.id,
+          attributes: %{
+            title: thread.title,
+            body: thread.body,
+            comments: length(thread.group_thread_comments),
+            pinned: thread.pinned,
+            inserted_at: thread.inserted_at
+          },
+          relationships: %{
+            users: Thegm.UsersView.relationship_data(thread.users),
+            groups: Thegm.GroupsView.relationship_data(thread.groups)
+          },
+        }
+    end
   end
 end
