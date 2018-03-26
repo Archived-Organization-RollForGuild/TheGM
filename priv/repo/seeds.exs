@@ -30,10 +30,9 @@ defmodule Main do
       {:ok, gamesdata} ->
         case Poison.decode!(gamesdata, as: %{"games" => [%Game{}]}) do
           %{"games" => games} ->
-            transaction = Multi.new
-            Enum.map(games, fn (game_entry) ->
-              id = Games.generate_uuid(game_entry.name, game_entry.version)
 
+            game_operations = Enum.map(games, fn (game_entry) ->
+              id = Games.generate_uuid(game_entry.name, game_entry.version)
               unless game_entry.avatar == nil do
                 icon = open("resources/"<> game_entry.avatar)
                        |> gravity("Center")
@@ -45,7 +44,7 @@ defmodule Main do
                 AWS.upload_game_icon(icon.path, id)
               end
 
-              game = Games.create_changeset(%Games{}, %{
+              Games.create_changeset(%Games{}, %{
                 id: id,
                 avatar: game_entry.avatar !== nil,
                 description: game_entry.description,
@@ -54,25 +53,29 @@ defmodule Main do
                 publisher: game_entry.publisher,
                 version: game_entry.version
               })
+            end)
 
-              transaction
-              |> Multi.insert(:games, game)
-
+            game_disambig_operations = Enum.reduce(games, [], fn (game_entry, acc) ->
               unless game_entry.disambiguations == nil do
-                Enum.map(game_entry.disambiguations, fn (disambiguation_entry) ->
-                  disambiguation = GameDisambiguations.create_changeset(%GameDisambiguations{}, %{
+                id = Games.generate_uuid(game_entry.name, game_entry.version)
+                disambigs = Enum.map(game_entry.disambiguations, fn (disambiguation_entry) ->
+                  GameDisambiguations.create_changeset(%GameDisambiguations{}, %{
                     name: disambiguation_entry,
                     games_id: id
                   })
-
-                  transaction
-                  |> Multi.insert(:game_disambiguations, disambiguation)
                 end)
+
+                acc ++ disambigs
               end
             end)
 
+            transaction = Multi.new
+            |> Multi.insert_all(:game_operations, Games, game_operations)
+            |> Multi.insert_all(:game_disambig_operations, GameDisambiguations, game_disambig_operations)
+
             case Repo.transaction(transaction) do
-              {:ok, _} ->
+              {:ok, values} ->
+                IO.inspect values
                 IO.puts "Operation successful"
 
               {:error, _, value, _} ->
