@@ -2,6 +2,7 @@ defmodule Thegm.ThreadsController do
   use Thegm.Web, :controller
 
   alias Thegm.Threads
+  alias Ecto.Multi
 
   def create(conn, %{"data" => %{"attributes" => params, "type" => type}}) do
     users_id = conn.assigns[:current_user].id
@@ -72,6 +73,45 @@ defmodule Thegm.ThreadsController do
         |> render(Thegm.ErrorView, "error.json", error: ["A thread with that id was not found"])
       thread ->
         render conn, "show.json", thread: thread
+    end
+  end
+
+  def delete(conn, %{"id" => threads_id}) do
+    users_id = conn.assigns[:current_user].id
+    case Repo.get(Threads, threads_id) do
+      nil ->
+        conn
+        |> put_status(:not_found)
+        |> render(Thegm.ErrorView, "error.json", error: ["A thread with that id was not found"])
+      thread ->
+        cond do
+          thread.users_id == users_id ->
+            delete_thread = Threads.update_changeset(thread, %{deleted: true})
+            deleted_info = Thegm.DeletedThreads.create_changeset(%Thegm.DeletedThreads{}, %{users_id: users_id, threads_id: thread.id, deleter_role: "user"})
+            multi =
+              Multi.new
+              |> Multi.update(:threads, delete_thread)
+              |> Multi.insert(:deleted_threads, deleted_info)
+
+              case Repo.transaction(multi) do
+                {:ok, _} ->
+                  conn
+                  |> put_status(:ok)
+                  |> render("")
+                {:error, :threads, changeset, %{}} ->
+                  conn
+                  |> put_status(:unprocessable_entity)
+                  |> render(Thegm.ErrorView, "error.json", errors: Enum.map(changeset.errors, fn {k, v} -> Atom.to_string(k) <> ": " <> elem(v, 0) end))
+                {:error, :deleted_threads, changeset, %{}} ->
+                  conn
+                  |> put_status(:unprocessable_entity)
+                  |> render(Thegm.ErrorView, "error.json", errors: Enum.map(changeset.errors, fn {k, v} -> Atom.to_string(k) <> ": " <> elem(v, 0) end))
+              end
+          true ->
+            conn
+            |> put_status(:forbidden)
+            |> render(Thegm.ErrorView, "error.json", error: ["You must be the user who posted this thread to delete it"])
+        end
     end
   end
 

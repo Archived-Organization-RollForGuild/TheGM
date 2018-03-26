@@ -2,10 +2,17 @@ defmodule Thegm.ThreadsView do
   use Thegm.Web, :view
 
   def render("show.json", %{thread: thread}) do
-    %{
-      data: show(thread),
-      included: [user_hydration(thread.users)]
-    }
+    cond do
+      thread.deleted == true ->
+        %{
+          data: show(thread)
+        }
+      true ->
+        %{
+          data: show(thread),
+          included: [user_hydration(thread.users)]
+        }
+    end
   end
 
   def render("index.json", %{threads: threads, meta: meta}) do
@@ -47,20 +54,37 @@ defmodule Thegm.ThreadsView do
   end
 
   def show(thread) do
-    %{
-      type: "threads",
-      id: thread.id,
-      attributes: %{
-        title: thread.title,
-        body: thread.body,
-        comments: length(thread.thread_comments),
-        pinned: thread.pinned,
-        inserted_at: thread.inserted_at
-      },
-      relationships: %{
-        users: Thegm.UsersView.relationship_data(thread.users)
-      },
-    }
+    cond do
+      thread.deleted == true ->
+        %{
+          type: "threads",
+          id: thread.id,
+          attributes: %{
+            title: "[deleted]",
+            body: "[deleted by " <> thread.deleted_threads.deleter_role <> "]",
+            comments: length(thread.thread_comments),
+            pinned: thread.pinned,
+            inserted_at: thread.inserted_at,
+            updated_at: thread.updated_at
+          }
+        }
+      true ->
+        %{
+          type: "threads",
+          id: thread.id,
+          attributes: %{
+            title: thread.title,
+            body: thread.body,
+            comments: length(thread.thread_comments),
+            pinned: thread.pinned,
+            inserted_at: thread.inserted_at,
+            updated_at: thread.updated_at
+          },
+          relationships: %{
+            users: Thegm.UsersView.relationship_data(thread.users)
+          },
+        }
+    end
   end
 
   def included_users([], included) do
