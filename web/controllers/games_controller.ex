@@ -1,30 +1,35 @@
 defmodule Thegm.GamesController do
   use Thegm.Web, :controller
+  alias Thegm.Games
+  alias Thegm.GameDisambiguations
 
   def index(conn, params) do
     case read_search_params(params) do
       {:ok, settings} ->
         # Get total in search
-        total = Repo.one(from t in Threads, select: count(t.id))
+        total = Repo.one(from t in Games, select: count(t.id))
 
         # calculate offset
         offset = (settings.page - 1) * settings.limit
 
         # do the search
+        query = params["query"] <> "%"
+
         cond do
           total > 0 ->
-            threads = Repo.all(
-                        from t in Threads,
-                        order_by: [desc: :pinned, desc: :inserted_at],
+            games = Repo.all(
+                        from g in Games,
+                        join: gd in GameDisambiguations, where: gd.games_id == g.id,
+                        where: ilike(g.name, ^query) or ilike(gd.name, ^query),
                         limit: ^settings.limit,
                         offset: ^offset
-                      ) |> Repo.preload([:users, :thread_comments])
+                      )
 
-            meta = %{total: total, limit: settings.limit, offset: offset, count: length(threads)}
+            meta = %{total: total, limit: settings.limit, offset: offset, count: length(games)}
 
             conn
             |> put_status(:ok)
-            |> render("index.json", threads: threads, meta: meta)
+            |> render("index.json", games: games, meta: meta)
           true ->
             meta = %{total: total, limit: settings.limit, offset: offset, count: 0}
             conn

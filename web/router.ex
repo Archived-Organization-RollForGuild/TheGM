@@ -19,6 +19,8 @@ defmodule Thegm.Router do
       resources "/password", UserPasswordsController, only: [:update], singleton: true
     end
 
+    resources "/games", GamesController, only: [:index]
+
 
     resources "/groups", GroupsController, except: [:edit, :new] do
       resources "/members", GroupMembersController, only: [:index, :delete]
