@@ -20,15 +20,14 @@ defmodule Thegm.GameDisambiguations do
 
   def changeset(model, params \\ :empty) do
     model
-    |> cast(params, [:name])
+    |> cast(params, [:name, :games_id])
     |> validate_required([:name], message: "Are required")
     |> validate_length(:name, min: 1, max: 200)
-    |> Validators.validate_url(:url)
   end
 
   def create_changeset(model, params \\ :empty) do
     model
     |> changeset(params)
-    |> cast(%{id: generate_uuid(params["name"])}, [:id])
+    |> cast(%{id: generate_uuid(params.name)}, [:id])
   end
 end

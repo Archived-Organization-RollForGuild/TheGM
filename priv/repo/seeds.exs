@@ -14,6 +14,7 @@ alias Ecto.Multi
 alias Thegm.AWS
 alias Thegm.Games
 alias Thegm.GameDisambiguations
+alias Thegm.Repo
 
 import Mogrify
 
@@ -28,21 +29,20 @@ defmodule Main do
     case File.read("resources/games-list.json") do
       {:ok, gamesdata} ->
         case Poison.decode!(gamesdata, as: %{"games" => [%Game{}]}) do
-          {:ok, games} ->
+          %{"games" => games} ->
             transaction = Multi.new
             Enum.map(games, fn (game_entry) ->
               id = Games.generate_uuid(game_entry.name, game_entry.version)
 
               unless game_entry.avatar == nil do
-                IO.puts game_entry.avatar
                 icon = open("resources/"<> game_entry.avatar)
                        |> gravity("Center")
                        |> resize_to_limit("512x512")
                        |> extent("512x512")
-                       |> format("jpg")
-                       |> save()
+                       |> format("png")
+                       |> save
 
-                AWS.upload_game_icon(icon, id)
+                AWS.upload_game_icon(icon.path, id)
               end
 
               game = Games.create_changeset(%Games{}, %{
@@ -59,9 +59,8 @@ defmodule Main do
               |> Multi.insert(:games, game)
 
               unless game_entry.disambiguations == nil do
-                game_entry.map(game_entry.disambiguations, fn (disambiguation_entry) ->
+                Enum.map(game_entry.disambiguations, fn (disambiguation_entry) ->
                   disambiguation = GameDisambiguations.create_changeset(%GameDisambiguations{}, %{
-                    id: GameDisambiguations.generate_uuid(disambiguation_entry),
                     name: disambiguation_entry,
                     games_id: id
                   })
@@ -70,17 +69,15 @@ defmodule Main do
                   |> Multi.insert(:game_disambiguations, disambiguation)
                 end)
               end
-
-              transaction
-              |> Multi.insert(:game)
             end)
 
             case Repo.transaction(transaction) do
-              {:ok, result} ->
-                IO.puts result
+              {:ok, _} ->
+                IO.puts "Operation successful"
 
-              {:error, operation, value, _} ->
-                IO.puts operation, value
+              {:error, _, value, _} ->
+                IO.puts "Operation failed"
+                IO.inspect value
             end
 
           {:error, reason} ->

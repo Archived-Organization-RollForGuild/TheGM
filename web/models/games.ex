@@ -21,8 +21,12 @@ defmodule Thegm.Games do
     timestamps()
   end
 
-  def generate_uuid(name, version \\ "") do
-    UUID.uuid5(@uuid_namespace, name <> "/" <> version)
+  def generate_uuid(name, version) do
+    if version do
+      UUID.uuid5(@uuid_namespace, name <> "/" <> version)
+    else
+      UUID.uuid5(@uuid_namespace, name)
+    end
   end
 
   def changeset(model, params \\ :empty) do
@@ -39,7 +43,6 @@ defmodule Thegm.Games do
   def create_changeset(model, params \\ :empty) do
     model
     |> changeset(params)
-    |> cast(%{
-      id: generate_uuid(params["name"], params["version"]), avatar: false}, [:id, :avatar])
+    |> cast(%{id: generate_uuid(params.name, params.version)}, [:id])
   end
 end

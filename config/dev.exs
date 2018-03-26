@@ -57,6 +57,9 @@ config :mailchimp,
 config :google_maps,
   api_key: System.get_env("RFG_API_GOOGLE_API_KEY")
 
+config :ex_aws,
+  debug_requests: true
+
 config :ex_aws, :s3,
   access_key_id: System.get_env("RFG_AWS_ACCESS_KEY_ID"),
   secret_access_key: System.get_env("RFG_AWS_SECRET_ACCESS_KEY"),
