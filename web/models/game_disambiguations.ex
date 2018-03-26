@@ -1,9 +1,7 @@
 defmodule Thegm.GameDisambiguations do
   use Thegm.Web, :model
 
-  @uuid_namespace UUID.uuid5(:url, "https://rollforguild.com/gamedisambiguations/")
-
-  @primary_key {:id, :binary_id, autogenerate: false}
+  @primary_key {:id, :binary_id, autogenerate: true}
   @derive {Phoenix.Param, key: :id}
   @foreign_key_type :binary_id
 
@@ -14,9 +12,6 @@ defmodule Thegm.GameDisambiguations do
     timestamps()
   end
 
-  def generate_uuid(name) do
-    UUID.uuid5(@uuid_namespace, name)
-  end
 
   def changeset(model, params \\ :empty) do
     model
@@ -28,6 +23,5 @@ defmodule Thegm.GameDisambiguations do
   def create_changeset(model, params \\ :empty) do
     model
     |> changeset(params)
-    |> cast(%{id: generate_uuid(params.name)}, [:id])
   end
 end

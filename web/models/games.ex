@@ -35,7 +35,7 @@ defmodule Thegm.Games do
     |> validate_required([:name], message: "Are required")
     |> validate_length(:version, min: 1, message: "Game version can not be empty")
     |> validate_length(:publisher, min: 1, message: "Game publisher can not be empty")
-    |> validate_length(:description, max: 500, message: "Game description can be no more than 500 characters.")
+    |> validate_length(:description, max: 8192, message: "Game description can be no more than 500 characters.")
     |> validate_length(:name, min: 1, max: 200)
     |> Validators.validate_url(:url)
   end

@@ -44,30 +44,34 @@ defmodule Main do
                 AWS.upload_game_icon(icon.path, id)
               end
 
-              Games.create_changeset(%Games{}, %{
+              %{
                 id: id,
                 avatar: game_entry.avatar !== nil,
                 description: game_entry.description,
                 url: game_entry.homepage,
                 name: game_entry.name,
                 publisher: game_entry.publisher,
-                version: game_entry.version
-              })
+                version: game_entry.version,
+                inserted_at: NaiveDateTime.utc_now(),
+                updated_at: NaiveDateTime.utc_now()
+              }
             end)
 
             game_disambig_operations = Enum.reduce(games, [], fn (game_entry, acc) ->
               unless game_entry.disambiguations == nil do
                 id = Games.generate_uuid(game_entry.name, game_entry.version)
-                disambigs = Enum.map(game_entry.disambiguations, fn (disambiguation_entry) ->
-                  GameDisambiguations.create_changeset(%GameDisambiguations{}, %{
+                acc ++ Enum.map(game_entry.disambiguations, fn (disambiguation_entry) ->
+                  %{
+                    id: UUID.uuid4,
                     name: disambiguation_entry,
-                    games_id: id
-                  })
+                    games_id: id,
+                    inserted_at: NaiveDateTime.utc_now(),
+                    updated_at: NaiveDateTime.utc_now()
+                  }
                 end)
-
-                acc ++ disambigs
               end
             end)
+
 
             transaction = Multi.new
             |> Multi.insert_all(:game_operations, Games, game_operations)
@@ -75,7 +79,7 @@ defmodule Main do
 
             case Repo.transaction(transaction) do
               {:ok, values} ->
-                IO.inspect values
+                IO.inspect game_disambig_operations
                 IO.puts "Operation successful"
 
               {:error, _, value, _} ->
