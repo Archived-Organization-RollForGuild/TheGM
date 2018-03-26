@@ -27,19 +27,34 @@ defmodule Thegm.GroupThreadCommentsView do
   end
 
   def show(comment) do
-    %{
-      type: "thread-comments",
-      id: comment.id,
-      attributes: %{
-        comment: comment.comment,
-        inserted_at: comment.inserted_at
-      },
-      relationships: %{
-        users: Thegm.UsersView.relationship_data(comment.users),
-        threads: Thegm.ThreadsView.relationship_data(comment.group_threads),
-        groups: Thegm.GroupsView.relationship_data(comment.groups)
+    if comment.deleted_at do
+      %{
+        type: "thread-comments",
+        id: comment.id,
+        attributes: %{
+          comment: comment.comment,
+          inserted_at: comment.inserted_at
+        },
+        relationships: %{
+          users: Thegm.UsersView.relationship_data(comment.users),
+          threads: Thegm.ThreadsView.relationship_data(comment.group_threads),
+          groups: Thegm.GroupsView.relationship_data(comment.groups)
+        }
       }
-    }
+    else
+      %{
+        type: "thread-comments",
+        id: comment.id,
+        attributes: %{
+          inserted_at: comment.inserted_at,
+          deleted_at: comment.deleted_at
+        },
+        relationships: %{
+          threads: Thegm.ThreadsView.relationship_data(comment.group_threads),
+          groups: Thegm.GroupsView.relationship_data(comment.groups)
+        }
+      }
+    end
   end
 
   def user_hydration(user) do
