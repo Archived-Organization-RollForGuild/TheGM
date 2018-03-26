@@ -28,12 +28,12 @@ defmodule Thegm.Router do
       resources "/members", GroupMembersController, only: [:index, :delete]
       resources "/join-requests", GroupJoinRequestsController, only: [:create, :update, :index]
       resources "/threads", GroupThreadsController, only: [:create, :index, :show] do
-        resources "/comments", GroupThreadCommentsController, only: [:create, :index]
+        resources "/comments", GroupThreadCommentsController, only: [:create, :index, :delete]
       end
     end
 
     resources "/threads", ThreadsController, only: [:create] do
-      resources "/comments", ThreadCommentsController, only: [:create]
+      resources "/comments", ThreadCommentsController, only: [:create, :delete]
     end
 
     post "/logout", SessionsController, :delete

@@ -7,11 +7,17 @@ defmodule Thegm.GroupThreadComments do
 
   schema "group_thread_comments" do
     field :comment, :string
+    field :deleted_at, :naive_datetime
     belongs_to :group_threads, Thegm.GroupThreads
     belongs_to :groups, Thegm.Groups
     belongs_to :users, Thegm.Users
 
     timestamps()
+  end
+
+  def soft_delete(model) do
+    model
+    |> cast(%{deleted_at: NaiveDateTime.utc_now()}, [:deleted_at])
   end
 
   def create_changeset(model, params \\ :empty) do

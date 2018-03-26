@@ -64,6 +64,33 @@ defmodule Thegm.ThreadCommentsController do
     end
   end
 
+  def delete(conn, %{"threads_id" => _, "id" => comments_id}) do
+    current_user_id = conn.assigns[:current_user].id
+
+    case Repo.get(ThreadComments, comments_id) do
+      nil ->
+        conn
+        |> put_status(:not_found)
+        |> render(Thegm.ErrorView, "error.json", errors: ["Comment not found, maybe you already deleted it?"])
+      comment ->
+        cond do
+          comment.users_id == current_user_id ->
+            case Repo.update(ThreadComments.soft_delete(comment)) do
+              {:ok, _} ->
+                send_resp(conn, :no_content, "")
+              {:error, changeset} ->
+                conn
+                |> put_status(:internal_server_error)
+                |> render(Thegm.ErrorView, "error.json", errors: Enum.map(changeset.errors, fn {k, v} -> Atom.to_string(k) <> ": " <> elem(v, 0) end))
+            end
+          true ->
+            conn
+            |> put_status(:forbidden)
+            |> render(Thegm.ErrorView, "error.json", errors: ["You do not have permission delete this comment"])
+        end
+    end
+  end
+
   defp read_search_params(params) do
     errors = []
 
