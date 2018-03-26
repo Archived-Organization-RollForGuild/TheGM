@@ -12,6 +12,7 @@ defmodule Thegm.Threads do
     field :deleted, :boolean
     belongs_to :users, Thegm.Users
     has_many :thread_comments, Thegm.ThreadComments
+    has_one :deleted_threads, Thegm.DeletedThreads
 
     timestamps()
   end

@@ -11,7 +11,7 @@ defmodule Thegm.ThreadsController do
         thread_changeset = Threads.create_changeset(%Threads{}, Map.merge(params, %{"users_id" => users_id}))
         case Repo.insert(thread_changeset) do
           {:ok, thread} ->
-            thread = thread |> Repo.preload([:users, :thread_comments])
+            thread = thread |> Repo.preload([:users, :thread_comments, :deleted_threads])
             conn
             |> put_status(:created)
             |> render("show.json", thread: thread)
@@ -46,7 +46,7 @@ defmodule Thegm.ThreadsController do
               order_by: [desc: :pinned, desc: :inserted_at],
               limit: ^settings.limit,
               offset: ^offset
-            ) |> Repo.preload([:users, :thread_comments])
+            ) |> Repo.preload([:users, :thread_comments, :deleted_threads])
 
             meta = %{total: total, limit: settings.limit, offset: offset, count: length(threads)}
 
@@ -67,7 +67,7 @@ defmodule Thegm.ThreadsController do
   end
 
   def show(conn, %{"id" => threads_id}) do
-    case Repo.get(Threads, threads_id) |> Repo.preload([:users, :thread_comments]) do
+    case Repo.get(Threads, threads_id) |> Repo.preload([:users, :thread_comments, :deleted_threads]) do
       nil ->
         conn
         |> put_status(:not_found)
@@ -95,10 +95,11 @@ defmodule Thegm.ThreadsController do
               |> Multi.insert(:deleted_threads, deleted_info)
 
               case Repo.transaction(multi) do
-                {:ok, _} ->
+                {:ok, %{threads: updated_thread, deleted_threads: _}} ->
+                  updated_thread = updated_thread |> Repo.preload([:users, :thread_comments, :deleted_threads])
                   conn
                   |> put_status(:ok)
-                  |> render("")
+                  |> render("show.json", thread: updated_thread)
                 {:error, :threads, changeset, %{}} ->
                   conn
                   |> put_status(:unprocessable_entity)
