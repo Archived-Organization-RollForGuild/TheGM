@@ -11,7 +11,6 @@ defmodule Thegm.Groups do
     field :slug, :string, null: false
     field :description, :string
     field :address, :string, null: true
-    field :games, {:array, :string}
     field :distance, :float, virtual: true
     field :geom, Geo.Geometry
     field :discoverable, :boolean
