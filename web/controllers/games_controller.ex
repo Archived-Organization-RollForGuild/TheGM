@@ -37,7 +37,7 @@ defmodule Thegm.GamesController do
             meta = %{total: total, limit: settings.limit, offset: offset, count: 0}
             conn
             |> put_status(:ok)
-            |> render("index.json", threads: [], meta: meta)
+            |> render("index.json", games: [], meta: meta)
         end
       {:error, errors} ->
         conn
