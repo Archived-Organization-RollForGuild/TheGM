@@ -32,7 +32,7 @@ defmodule Thegm.ThreadCommentsController do
     case read_search_params(params) do
       {:ok, settings} ->
         # Get total in search
-        total = Repo.one(from tc in ThreadComments, select: count(tc.id))
+        total = Repo.one(from tc in ThreadComments, where: tc.threads_id == ^settings.threads_id, select: count(tc.id))
 
         # calculate offset
         offset = (settings.page - 1) * settings.limit
@@ -42,6 +42,7 @@ defmodule Thegm.ThreadCommentsController do
           total > 0 ->
             comments = Repo.all(
               from tc in ThreadComments,
+              where: tc.threads_id == ^settings.threads_id,
               order_by: [asc: :inserted_at],
               limit: ^settings.limit,
               offset: ^offset
@@ -163,11 +164,18 @@ defmodule Thegm.ThreadCommentsController do
         {limit, errors}
     end
 
+    {threads_id, errors} = case params["threads_id"] do
+      nil ->
+        {nil, errors ++ [threads_id: "Must be supplied"]}
+      temp ->
+        {temp, errors}
+    end
+
     resp = cond do
       length(errors) > 0 ->
         {:error, errors}
       true ->
-        {:ok, %{page: page, limit: limit}}
+        {:ok, %{page: page, limit: limit, threads_id: threads_id}}
     end
     resp
   end
