@@ -58,13 +58,6 @@ defmodule Thegm.UsersView do
     }
   end
 
-  #show multiple users
-  def render("index.json", %{users: users}) do
-    %{
-      users: Enum.map(users, &users_public/1)
-    }
-  end
-
   def users_public(user) do
     %{
       username: user.username,

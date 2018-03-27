@@ -15,8 +15,7 @@ defmodule Thegm.AWS do
   end
 
   def upload_game_icon(image_path, avatar_identifier) do
-    image =
-      image_path
+    image_path
       |> S3.Upload.stream_file
       |> S3.upload(@bucket_name, "#{@game_icon_location}/#{avatar_identifier}.jpg")
       |> ExAws.request!
