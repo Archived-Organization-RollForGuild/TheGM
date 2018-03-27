@@ -43,7 +43,6 @@ defmodule Thegm.GroupsView do
         description: group.description,
         address: group.address,
         geo: Thegm.GeoView.geo(group.geom),
-        games: group.games,
         members: length(group.group_members),
         slug: group.slug,
         member_status: status,
@@ -63,7 +62,6 @@ defmodule Thegm.GroupsView do
       attributes: %{
         name: group.name,
         description: group.description,
-        games: group.games,
         members: length(group.group_members),
         slug: group.slug,
         member_status: status,
@@ -82,7 +80,6 @@ defmodule Thegm.GroupsView do
       attributes: %{
         name: group.name,
         description: group.description,
-        games: group.games,
         slug: group.slug,
         discoverable: group.discoverable
       },
