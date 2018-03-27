@@ -31,7 +31,6 @@ defmodule Thegm.GroupMembersView do
   end
 
   def groups_users(members) do
-    base = Application.get_env(:thegm, :api_url)
     %{
       data: Enum.map(members, fn(x) -> Thegm.UsersView.relationship_data(x.users) end)
     }

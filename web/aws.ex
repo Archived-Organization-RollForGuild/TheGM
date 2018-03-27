@@ -1,19 +1,17 @@
 defmodule Thegm.AWS do
-  @s3_options Application.get_env(:ex_aws, :s3)
+  #@s3_options Application.get_env(:ex_aws, :s3)
   @bucket_name System.get_env("RFG_API_AWS_BUCKET")
   @aws_region System.get_env("RFG_API_AWS_REGION")
   @avatar_location "avatars"
   @game_icon_location "games"
 
-  alias Thegm.Users
   alias ExAws.S3
 
   def upload_avatar(image_path, avatar_identifier) do
-    image =
-      image_path
-      |> S3.Upload.stream_file
-      |> S3.upload(@bucket_name, "#{@avatar_location}/#{avatar_identifier}.jpg")
-      |> ExAws.request!
+    image_path
+    |> S3.Upload.stream_file
+    |> S3.upload(@bucket_name, "#{@avatar_location}/#{avatar_identifier}.jpg")
+    |> ExAws.request!
   end
 
   def upload_game_icon(image_path, avatar_identifier) do

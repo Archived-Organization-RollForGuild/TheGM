@@ -27,7 +27,7 @@ defmodule Thegm.GroupMembers do
     |> cast(params, [:role])
   end
 
-  def tombstone_changeset(model, params \\ :empty) do
+  def tombstone_changeset(model) do
     model
     |> put_change(:active, nil)
   end

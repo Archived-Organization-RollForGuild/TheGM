@@ -2,7 +2,6 @@ defmodule Thegm.GroupsController do
   use Thegm.Web, :controller
 
   alias Thegm.Groups
-  alias Thegm.GroupJoinRequests
   alias Ecto.Multi
   import Geo.PostGIS
 
@@ -26,7 +25,7 @@ defmodule Thegm.GroupsController do
 
             conn
             |> put_status(:created)
-            |> render("memberof.json", group: group, user: conn.assigns[:current_user])
+            |> render("show.json", group: group, users_id: conn.assigns[:current_user].id)
           {:error, :groups, changeset, %{}} ->
             conn
             |> put_status(:unprocessable_entity)
@@ -77,12 +76,18 @@ defmodule Thegm.GroupsController do
   end
 
   def index(conn, params) do
-    users_id = conn.assigns[:current_user].id
     case read_search_params(params) do
       {:ok, settings} ->
-        # Get user's current groups so we can properly exclude them
-        memberships = Repo.all(from m in Thegm.GroupMembers, where: m.users_id == ^users_id, select: m.groups_id)
-        blocks = Repo.all(from b in Thegm.GroupBlockedUsers, where: b.users_id == ^users_id and b.rescinded == false, select: b.groups_id)
+        {users_id, memberships, blocks} = case conn.assigns[:current_user] do
+          nil ->
+            {nil, [], []}
+          found ->
+            # Get user's current groups so we can properly exclude them
+            memberships = Repo.all(from m in Thegm.GroupMembers, where: m.users_id == ^found.id, select: m.groups_id)
+            blocks = Repo.all(from b in Thegm.GroupBlockedUsers, where: b.users_id == ^found.id and b.rescinded == false, select: b.groups_id)
+            {found.id, memberships, blocks}
+        end
+
         # Group search params
         offset = (settings.page - 1) * settings.limit
         geom = %Geo.Point{coordinates: {settings.lng, settings.lat}, srid: 4326}
@@ -93,7 +98,12 @@ defmodule Thegm.GroupsController do
         where: st_distancesphere(g.geom, ^geom) <= ^settings.meters and not g.id in ^memberships and g.discoverable == true)
 
         # Do the search
-        join_requests_query = from gjr in Thegm.GroupJoinRequests, where: gjr.users_id == ^users_id, order_by: [desc: gjr.inserted_at]
+        join_requests_query = case users_id do
+          nil ->
+            from gjr in Thegm.GroupJoinRequests, where: is_nil(gjr.users_id), order_by: [desc: gjr.inserted_at]
+          _ ->
+            from gjr in Thegm.GroupJoinRequests, where: gjr.users_id == ^users_id, order_by: [desc: gjr.inserted_at]
+        end
         cond do
           total > 0 ->
             groups = Repo.all(
@@ -103,18 +113,18 @@ defmodule Thegm.GroupsController do
               order_by: [asc: st_distancesphere(g.geom, ^geom)],
               limit: ^settings.limit,
               offset: ^offset
-            ) |> Repo.preload([join_requests: join_requests_query]) |> Repo.preload(:group_members, :group_games)
+            ) |> Repo.preload([join_requests: join_requests_query, group_members: :users, group_games: :games])
 
             meta = %{total: total, limit: settings.limit, offset: offset, count: length(groups)}
 
             conn
             |> put_status(:ok)
-            |> render("search.json", groups: groups, meta: meta, user: conn.assigns[:current_user])
+            |> render("index.json", groups: groups, meta: meta, users_id: users_id)
           true ->
             meta = %{total: total, limit: settings.limit, offset: offset, count: 0}
             conn
             |> put_status(:ok)
-            |> render("search.json", groups: [], meta: meta)
+            |> render("index.json", groups: [], meta: meta, users_id: users_id)
         end
       {:error, errors} ->
         conn
@@ -124,9 +134,14 @@ defmodule Thegm.GroupsController do
   end
 
   def show(conn, %{"id" => groups_id}) do
-    users_id = conn.assigns[:current_user].id
+    users_id = case conn.assigns[:current_user] do
+      nil ->
+        nil
+      found ->
+        found.id
+    end
 
-    case Repo.one(groups_query(groups_id, users_id)) do
+    case groups_query(groups_id, users_id) do
       nil ->
         conn
         |> put_status(:not_found)
@@ -134,7 +149,7 @@ defmodule Thegm.GroupsController do
       group ->
         conn
         |> put_status(:ok)
-        |> render("adminof.json", group: group, user: conn.assigns[:current_user])
+        |> render("show.json", group: group, users_id: users_id)
     end
   end
 
@@ -284,13 +299,14 @@ defmodule Thegm.GroupsController do
   end
 
   def groups_query(groups_id, users_id) do
-    from g in Groups,
-         left_join: gm in assoc(g, :group_members),
-         left_join: u in assoc(gm, :users),
-         left_join: gg in assoc(g, :group_games),
-         left_join: ga in assoc(gg, :games),
-         left_join: gjr in GroupJoinRequests, on: gjr.groups_id == g.id and gjr.users_id == ^users_id,
-         where: (g.id == ^groups_id),
-         preload: [group_members: {gm, users: u}, group_games: {gg, games: ga}, join_requests: gjr]
+    join_requests_query = case users_id do
+      nil ->
+        from gjr in Thegm.GroupJoinRequests, where: is_nil(gjr.users_id), order_by: [desc: gjr.inserted_at]
+      _ ->
+        from gjr in Thegm.GroupJoinRequests, where: gjr.users_id == ^users_id, order_by: [desc: gjr.inserted_at]
+    end
+
+    Repo.one(from g in Groups, where: (g.id == ^groups_id))
+    |> Repo.preload([join_requests: join_requests_query, group_members: :users, group_games: :games])
   end
 end

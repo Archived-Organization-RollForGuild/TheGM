@@ -1,8 +1,8 @@
 defmodule Thegm.GroupThreadsController do
   use Thegm.Web, :controller
 
-  alias Thegm.Users
   alias Thegm.GroupThreads
+  alias Ecto.Multi
 
   def create(conn, %{"groups_id" => groups_id, "data" => %{"attributes" => params, "type" => type}}) do
     users_id = conn.assigns[:current_user].id
@@ -17,7 +17,7 @@ defmodule Thegm.GroupThreadsController do
             thread_changeset = GroupThreads.create_changeset(%GroupThreads{}, Map.merge(params, %{"groups_id" => groups_id, "users_id" => users_id}))
             case Repo.insert(thread_changeset) do
               {:ok, thread} ->
-                thread = thread |> Repo.preload([:users, :groups, :group_thread_comments])
+                thread = thread |> Repo.preload([:users, :groups, :group_thread_comments, :group_threads_deleted])
                 conn
                 |> put_status(:created)
                 |> render("show.json", thread: thread)
@@ -46,7 +46,7 @@ defmodule Thegm.GroupThreadsController do
             |> render(Thegm.ErrorView, "error.json", errors: ["Must be a membere of group"])
           _ ->
             # Get total in search
-            total = Repo.one(from gt in GroupThreads, where: gt.groups_id == ^settings.groups_id, select: count(gt.id))
+            total = Repo.one(from gt in GroupThreads, where: gt.groups_id == ^settings.groups_id and gt.deleted == false, select: count(gt.id))
 
             # calculate offset
             offset = (settings.page - 1) * settings.limit
@@ -56,11 +56,11 @@ defmodule Thegm.GroupThreadsController do
               total > 0 ->
                 threads = Repo.all(
                   from gt in GroupThreads,
-                  where: gt.groups_id == ^settings.groups_id,
+                  where: gt.groups_id == ^settings.groups_id and gt.deleted == false,
                   order_by: [desc: :pinned, desc: :inserted_at],
                   limit: ^settings.limit,
                   offset: ^offset
-                ) |> Repo.preload([:users, :groups, :group_thread_comments])
+                ) |> Repo.preload([:users, :groups, :group_thread_comments, :group_threads_deleted, :group_threads_deleted])
 
                 meta = %{total: total, limit: settings.limit, offset: offset, count: length(threads)}
 
@@ -89,13 +89,60 @@ defmodule Thegm.GroupThreadsController do
         |> put_status(:forbidden)
         |> render(Thegm.ErrorView, "error.json", errors: ["Must be a membere of group"])
       _ ->
-        case Repo.get(GroupThreads, threads_id) |> Repo.preload([:users, :groups, :group_thread_comments]) do
+        case Repo.get(GroupThreads, threads_id) |> Repo.preload([:users, :groups, :group_thread_comments, :group_threads_deleted]) do
           nil ->
             conn
             |> put_status(:not_found)
             |> render(Thegm.ErrorView, "error.json", error: ["A thread with that id belonging to the specified group was not found"])
           thread ->
             render conn, "show.json", thread: thread
+        end
+    end
+  end
+
+  def delete(conn, %{"groups_id" => groups_id, "id" => threads_id}) do
+    users_id = conn.assigns[:current_user].id
+    case Repo.one(from gm in Thegm.GroupMembers, where: gm.groups_id == ^groups_id and gm.users_id == ^users_id) do
+      nil ->
+        conn
+        |> put_status(:forbidden)
+        |> render(Thegm.ErrorView, "error.json", errors: ["Must be a membere of group"])
+      _ ->
+        case Repo.get(GroupThreads, threads_id) do
+          nil ->
+            conn
+            |> put_status(:not_found)
+            |> render(Thegm.ErrorView, "error.json", error: ["A thread with that id was not found"])
+          thread ->
+            cond do
+              thread.users_id == users_id ->
+                delete_thread = GroupThreads.update_changeset(thread, %{deleted: true})
+                deleted_info = Thegm.GroupThreadsDeleted.create_changeset(%Thegm.GroupThreadsDeleted{}, %{users_id: users_id, group_threads_id: thread.id, deleter_role: "user"})
+                multi =
+                  Multi.new
+                  |> Multi.update(:group_threads, delete_thread)
+                  |> Multi.insert(:group_threads_deleted, deleted_info)
+
+                  case Repo.transaction(multi) do
+                    {:ok, %{group_threads: updated_thread, group_threads_deleted: _}} ->
+                      updated_thread = updated_thread |> Repo.preload([:users, :groups, :group_thread_comments, :group_threads_deleted])
+                      conn
+                      |> put_status(:ok)
+                      |> render("show.json", thread: updated_thread)
+                    {:error, :group_threads, changeset, %{}} ->
+                      conn
+                      |> put_status(:unprocessable_entity)
+                      |> render(Thegm.ErrorView, "error.json", errors: Enum.map(changeset.errors, fn {k, v} -> Atom.to_string(k) <> ": " <> elem(v, 0) end))
+                    {:error, :group_threads_deleted, changeset, %{}} ->
+                      conn
+                      |> put_status(:unprocessable_entity)
+                      |> render(Thegm.ErrorView, "error.json", errors: Enum.map(changeset.errors, fn {k, v} -> Atom.to_string(k) <> ": " <> elem(v, 0) end))
+                  end
+              true ->
+                conn
+                |> put_status(:forbidden)
+                |> render(Thegm.ErrorView, "error.json", error: ["You must be the user who posted this thread to delete it"])
+            end
         end
     end
   end

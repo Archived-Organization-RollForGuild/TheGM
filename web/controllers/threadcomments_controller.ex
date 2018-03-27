@@ -1,7 +1,6 @@
 defmodule Thegm.ThreadCommentsController do
   use Thegm.Web, :controller
 
-  alias Thegm.Users
   alias Thegm.ThreadComments
 
   def create(conn, %{"threads_id" => threads_id, "data" => %{"attributes" => params, "type" => type}}) do

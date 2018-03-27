@@ -35,9 +35,15 @@ defmodule Thegm.UsersView do
     }
   end
 
+  #show multiple users
+  def render("index.json", %{users: users}) do
+    %{
+      users: Enum.map(users, &users_public/1)
+    }
+  end
 
   def group_hydration(membership) do
-    group_membership = %{
+    %{
       type: "groups",
       id: membership.groups_id,
       attributes: Thegm.GroupsView.users_groupmembers_groups(membership.groups)
