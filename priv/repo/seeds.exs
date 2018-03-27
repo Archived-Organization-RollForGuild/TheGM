@@ -15,7 +15,7 @@ alias Thegm.AWS
 alias Thegm.Games
 alias Thegm.GameDisambiguations
 alias Thegm.Repo
-
+alias ExAws.S3
 import Mogrify
 
 defmodule Game do
@@ -25,8 +25,16 @@ defmodule Game do
 end
 
 defmodule Main do
+  @seeds_bucket "thegm"
+
   def main do
-    case File.read("resources/games-list.json") do
+    Temp.track!
+
+    {:ok, tmp_path} = Temp.path
+    S3.download_file(@seeds_bucket, "seeds/games-list.json", tmp_path)
+    |> ExAws.request!
+
+    case File.read(tmp_path) do
       {:ok, gamesdata} ->
         case Poison.decode!(gamesdata, as: %{"games" => [%Game{}]}) do
           %{"games" => games} ->
@@ -34,7 +42,11 @@ defmodule Main do
             game_operations = Enum.map(games, fn (game_entry) ->
               id = Games.generate_uuid(game_entry.name, game_entry.version)
               unless game_entry.avatar == nil do
-                icon = open("resources/"<> game_entry.avatar)
+                {:ok, avatar_tmp_path} = Temp.path
+                S3.download_file(@seeds_bucket, "seeds/" <> game_entry.avatar, avatar_tmp_path)
+                |> ExAws.request!
+
+                icon = open(avatar_tmp_path)
                        |> gravity("Center")
                        |> resize_to_limit("512x512")
                        |> extent("512x512")
