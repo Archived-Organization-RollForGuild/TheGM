@@ -19,7 +19,7 @@ defmodule Thegm.GamesController do
           total > 0 ->
             games = Repo.all(
                         from g in Games,
-                        left_outer_join: gd in GameDisambiguations, where: gd.games_id == g.id,
+                        left_join: gd in GameDisambiguations, where: gd.games_id == g.id,
                         where: ilike(g.name, ^query) or ilike(gd.name, ^query),
                         limit: ^settings.limit,
                         offset: ^offset
