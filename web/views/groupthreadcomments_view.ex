@@ -26,20 +26,55 @@ defmodule Thegm.GroupThreadCommentsView do
     }
   end
 
+  def render("show.json", %{comment: comment}) do
+    cond do
+      comment.deleted == true ->
+        %{
+          data: show(comment),
+          included: [thread_hydration(comment.group_threads), group_hydration(comment.groups)]
+        }
+      true ->
+        %{
+          data: show(comment),
+          included: [user_hydration(comment.users), thread_hydration(comment.group_threads), group_hydration(comment.groups)]
+        }
+    end
+  end
+
   def show(comment) do
-    %{
-      type: "thread-comments",
-      id: comment.id,
-      attributes: %{
-        comment: comment.comment,
-        inserted_at: comment.inserted_at
-      },
-      relationships: %{
-        users: Thegm.UsersView.relationship_data(comment.users),
-        threads: Thegm.ThreadsView.relationship_data(comment.group_threads),
-        groups: Thegm.GroupsView.relationship_data(comment.groups)
-      }
-    }
+    cond do
+      comment.deleted == true ->
+        %{
+          type: "thread-comments",
+          id: comment.id,
+          attributes: %{
+            comment: "[deleted by " <> comment.group_thread_comments_deleted.deleter_role <> "]",
+            inserted_at: comment.inserted_at,
+            updated_at: comment.updated_at,
+            deleted: comment.deleted
+          },
+          relationships: %{
+            threads: Thegm.ThreadsView.relationship_data(comment.group_threads),
+            groups: Thegm.GroupsView.relationship_data(comment.groups)
+          }
+        }
+      true ->
+        %{
+          type: "thread-comments",
+          id: comment.id,
+          attributes: %{
+            comment: comment.comment,
+            inserted_at: comment.inserted_at,
+            updated_at: comment.updated_at,
+            deleted: comment.deleted
+          },
+          relationships: %{
+            users: Thegm.UsersView.relationship_data(comment.users),
+            threads: Thegm.ThreadsView.relationship_data(comment.group_threads),
+            groups: Thegm.GroupsView.relationship_data(comment.groups)
+          }
+        }
+    end
   end
 
   def user_hydration(user) do

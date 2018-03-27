@@ -113,6 +113,8 @@ defmodule Thegm.ThreadsView do
 
   def included_users([head | tail], included) do
     included = cond do
+      head.deleted ->
+        included
       !Enum.member?(included, head.users) ->
         included ++ [head.users]
       true ->
