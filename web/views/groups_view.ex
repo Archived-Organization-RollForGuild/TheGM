@@ -82,9 +82,6 @@ defmodule Thegm.GroupsView do
         description: group.description,
         slug: group.slug,
         discoverable: group.discoverable
-      },
-      relationships: %{
-        group_games: Thegm.GroupGamesView.groups_games(group.group_games)
       }
     }
   end
