@@ -13,10 +13,10 @@ defmodule Thegm.GamesView do
   end
 
   #show multiple users
-  def render("index.json", %{games: games}) do
-    %{
-      games: Enum.map(games, &games_show/1)
-    }
+  def render("index.json", %{games: games, meta: meta}) do
+    data = Enum.map(games, &games_show/1)
+
+    %{meta: search_meta(meta), data: data}
   end
 
   def games_show(game) do
@@ -35,6 +35,10 @@ defmodule Thegm.GamesView do
       id: game.id,
       type: "games"
     }
+  end
+
+  def search_meta(meta) do
+    %{total: meta.total, count: meta.count, limit: meta.limit, offset: meta.offset}
   end
 
   def users_usergames_games(game) do
