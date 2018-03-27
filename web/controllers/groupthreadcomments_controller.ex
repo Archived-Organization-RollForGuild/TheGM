@@ -2,6 +2,7 @@ defmodule Thegm.GroupThreadCommentsController do
   use Thegm.Web, :controller
 
   alias Thegm.GroupThreadComments
+  alias Ecto.Multi
 
   def create(conn, %{"groups_id" => groups_id, "group_threads_id" => group_threads_id, "data" => %{"attributes" => params, "type" => type}}) do
     users_id = conn.assigns[:current_user].id
@@ -16,7 +17,7 @@ defmodule Thegm.GroupThreadCommentsController do
             comment_changeset = GroupThreadComments.create_changeset(%GroupThreadComments{}, Map.merge(params, %{"users_id" => users_id, "group_threads_id" => group_threads_id, "groups_id" => groups_id}))
             case Repo.insert(comment_changeset) do
               {:ok, comment} ->
-                comment = comment |> Repo.preload([:users, :group_threads, :groups])
+                comment = comment |> Repo.preload([:users, :group_threads, :groups, :group_thread_comments_deleted])
                 conn
                 |> put_status(:created)
                 |> render("create.json", comment: comment)
@@ -59,7 +60,7 @@ defmodule Thegm.GroupThreadCommentsController do
                   order_by: [asc: :inserted_at],
                   limit: ^settings.limit,
                   offset: ^offset
-                ) |> Repo.preload([:users, :group_threads, :groups])
+                ) |> Repo.preload([:users, :group_threads, :groups, :group_thread_comments_deleted])
 
                 meta = %{total: total, limit: settings.limit, offset: offset, count: length(comments)}
 
@@ -78,6 +79,75 @@ defmodule Thegm.GroupThreadCommentsController do
         conn
         |> put_status(:bad_request)
         |> render(Thegm.ErrorView, "error.json", errors: Enum.map(errors, fn {k, v} -> Atom.to_string(k) <> ": " <> v end))
+    end
+  end
+
+  def show(conn, %{"groups_id" => groups_id, "group_threads_id" => threads_id, "id" => comments_id}) do
+    users_id = conn.assigns[:current_user].id
+    case Repo.one(from gm in Thegm.GroupMembers, where: gm.groups_id == ^groups_id and gm.users_id == ^users_id and gm.active == true) do
+      nil ->
+        conn
+        |> put_status(:forbidden)
+        |> render(Thegm.ErrorView, "error.json", errors: ["Must be a member of the group to take this action"])
+      _ ->
+        case Repo.one(from gtc in Thegm.GroupThreadComments, where: gtc.groups_id == ^groups_id and gtc.group_threads_id == ^threads_id and gtc.id == ^comments_id) do
+          nil ->
+            conn
+            |> put_status(:not_found)
+            |> render(Thegm.ErrorView, "error.json", errors: ["A comment belonging to that group and thread was not found"])
+          comment ->
+            comment = comment |> Repo.preload([:groups, :group_threads, :users, :group_thread_comments_deleted])
+            conn
+            |> put_status(:ok)
+            |> render("show.json", comment: comment)
+        end
+    end
+  end
+
+  def delete(conn, %{"groups_id" => groups_id, "group_threads_id" => threads_id, "id" => comments_id}) do
+    users_id = conn.assigns[:current_user].id
+    case Repo.one(from gm in Thegm.GroupMembers, where: gm.groups_id == ^groups_id and gm.users_id == ^users_id and gm.active == true) do
+      nil ->
+        conn
+        |> put_status(:forbidden)
+        |> render(Thegm.ErrorView, "error.json", errors: ["Must be a member of the group to take this action"])
+      _ ->
+        case Repo.one(from gtc in Thegm.GroupThreadComments, where: gtc.groups_id == ^groups_id and gtc.group_threads_id == ^threads_id and gtc.id == ^comments_id) do
+          nil ->
+            conn
+            |> put_status(:not_found)
+            |> render(Thegm.ErrorView, "error.json", errors: ["A comment belonging to that group and thread was not found"])
+          comment ->
+            cond do
+              comment.users_id == users_id ->
+                delete_comment = GroupThreadComments.update_changeset(comment, %{deleted: true})
+                deleted_info = Thegm.GroupThreadCommentsDeleted.create_changeset(%Thegm.GroupThreadCommentsDeleted{}, %{users_id: users_id, group_thread_comments_id: comment.id, deleter_role: "user"})
+                multi =
+                  Multi.new
+                  |> Multi.update(:group_thread_comments, delete_comment)
+                  |> Multi.insert(:group_thread_comments_deleted, deleted_info)
+
+                  case Repo.transaction(multi) do
+                    {:ok, %{group_thread_comments: updated_comment, group_thread_comments_deleted: _}} ->
+                      updated_comment = updated_comment |> Repo.preload([:users, :groups, :group_threads, :group_thread_comments_deleted])
+                      conn
+                      |> put_status(:ok)
+                      |> render("show.json", comment: updated_comment)
+                    {:error, :group_thread_comments, changeset, %{}} ->
+                      conn
+                      |> put_status(:unprocessable_entity)
+                      |> render(Thegm.ErrorView, "error.json", errors: Enum.map(changeset.errors, fn {k, v} -> Atom.to_string(k) <> ": " <> elem(v, 0) end))
+                    {:error, :group_thread_comments_deleted, changeset, %{}} ->
+                      conn
+                      |> put_status(:unprocessable_entity)
+                      |> render(Thegm.ErrorView, "error.json", errors: Enum.map(changeset.errors, fn {k, v} -> Atom.to_string(k) <> ": " <> elem(v, 0) end))
+                  end
+              true ->
+                conn
+                |> put_status(:forbidden)
+                |> render(Thegm.ErrorView, "error.json", error: ["You must be the user who posted this thread to delete it"])
+            end
+        end
     end
   end
 

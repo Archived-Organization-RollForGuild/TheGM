@@ -41,16 +41,34 @@ defmodule Thegm.ThreadsView do
   end
 
   def just_thread(thread) do
-    %{
-      type: "threads",
-      id: thread.id,
-      attributes: %{
-        title: thread.title,
-        body: thread.body,
-        pinned: thread.pinned,
-        inserted_at: thread.inserted_at
-      }
-    }
+    cond do
+      thread.deleted == true ->
+        %{
+          type: "threads",
+          id: thread.id,
+          attributes: %{
+            title: "[deleted]",
+            body: "[deleted]",
+            deleted: thread.deleted,
+            pinned: thread.pinned,
+            inserted_at: thread.inserted_at,
+            updated_at: thread.updated_at
+          }
+        }
+      true ->
+        %{
+          type: "threads",
+          id: thread.id,
+          attributes: %{
+            title: thread.title,
+            body: thread.body,
+            deleted: thread.deleted,
+            pinned: thread.pinned,
+            inserted_at: thread.inserted_at,
+            updated_at: thread.updated_at
+          }
+        }
+    end
   end
 
   def show(thread) do
@@ -64,6 +82,7 @@ defmodule Thegm.ThreadsView do
             body: "[deleted by " <> thread.threads_deleted.deleter_role <> "]",
             comments: length(thread.thread_comments),
             pinned: thread.pinned,
+            deleted: thread.deleted,
             inserted_at: thread.inserted_at,
             updated_at: thread.updated_at
           }
@@ -77,6 +96,7 @@ defmodule Thegm.ThreadsView do
             body: thread.body,
             comments: length(thread.thread_comments),
             pinned: thread.pinned,
+            deleted: thread.deleted,
             inserted_at: thread.inserted_at,
             updated_at: thread.updated_at
           },
@@ -93,6 +113,8 @@ defmodule Thegm.ThreadsView do
 
   def included_users([head | tail], included) do
     included = cond do
+      head.deleted ->
+        included
       !Enum.member?(included, head.users) ->
         included ++ [head.users]
       true ->
