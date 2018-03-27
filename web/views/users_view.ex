@@ -2,7 +2,7 @@ defmodule Thegm.UsersView do
   use Thegm.Web, :view
 
   def render("public.json", %{user: user}) do
-    included = Enum.map(user.group_members, &group_hydration/1)
+    included = Enum.map(user.group_members, &group_hydration/1) ++ Enum.map(user.user_games, &game_hydration/1)
 
     %{
       data: %{
@@ -10,7 +10,8 @@ defmodule Thegm.UsersView do
         id: user.id,
         attributes: users_public(user),
         relationships: %{
-          groups: Thegm.GroupMembersView.users_groups(user.group_members)
+          groups: Thegm.GroupMembersView.users_groups(user.group_members),
+          games: Thegm.UserGamesView.users_games(user.user_games)
         }
       },
       included: included
@@ -18,7 +19,7 @@ defmodule Thegm.UsersView do
   end
 
   def render("private.json", %{user: user}) do
-    included = Enum.map(user.group_members, &group_hydration/1)
+    included = Enum.map(user.group_members, &group_hydration/1) ++ Enum.map(user.user_games, &game_hydration/1)
 
     %{
       data: %{
@@ -26,7 +27,8 @@ defmodule Thegm.UsersView do
         id: user.id,
         attributes: users_private(user),
         relationships: %{
-          groups: Thegm.GroupMembersView.users_groups(user.group_members)
+          groups: Thegm.GroupMembersView.users_groups(user.group_members),
+          games: Thegm.UserGamesView.users_games(user.user_games)
         }
       },
       included: included
@@ -45,6 +47,14 @@ defmodule Thegm.UsersView do
       type: "groups",
       id: membership.groups_id,
       attributes: Thegm.GroupsView.users_groupmembers_groups(membership.groups)
+    }
+  end
+
+  def game_hydration(user_game) do
+    %{
+      type: "games",
+      id: user_game.games_id,
+      attributes: Thegm.GamesView.users_usergames_games(user_game.games)
     }
   end
 

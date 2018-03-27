@@ -21,8 +21,11 @@ defmodule Thegm.Router do
     resources "/users", UsersController do
       resources "/avatar", UserAvatarsController, only: [:create, :delete], singleton: true
       resources "/password", UserPasswordsController, only: [:update], singleton: true
+      resources "/games", UserGamesController, only: [:index, :delete, :create]
+      resources "/games", UserGamesController, only: [:update], singleton: true
     end
 
+    resources "/games", GamesController, only: [:index]
 
     resources "/groups", GroupsController, only: [:create, :update, :delete] do
       resources "/members", GroupMembersController, only: [:index, :delete]
@@ -30,6 +33,8 @@ defmodule Thegm.Router do
       resources "/threads", GroupThreadsController, only: [:create, :index, :show, :delete] do
         resources "/comments", GroupThreadCommentsController, only: [:create, :index, :show, :delete]
       end
+      resources "/games", GroupGamesController, only: [:index, :delete, :create]
+      resources "/games", GroupGamesController, only: [:update], singleton: true
     end
 
     resources "/threads", ThreadsController, only: [:create, :delete] do

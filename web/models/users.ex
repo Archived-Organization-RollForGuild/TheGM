@@ -15,6 +15,7 @@ defmodule Thegm.Users do
     field :avatar, :boolean
     field :bio, :string
     has_many :group_members, Thegm.GroupMembers
+    has_many :user_games, Thegm.UserGames
 
     timestamps()
   end

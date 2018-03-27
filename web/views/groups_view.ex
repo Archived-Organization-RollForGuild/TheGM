@@ -1,12 +1,13 @@
 defmodule Thegm.GroupsView do
   use Thegm.Web, :view
 
+
   def render("show.json", %{group: group, users_id: users_id}) do
     data = show_json(group, users_id)
     status = data[:attributes][:member_status]
     cond do
        status == "member" or status == "admin" ->
-        included = Enum.map(group.group_members, &user_hydration/1)
+        included = Enum.map(group.group_members, &user_hydration/1) ++ Enum.map(group.group_games, &game_hydration/1)
         %{
           data: data,
           included: included
@@ -49,7 +50,8 @@ defmodule Thegm.GroupsView do
         discoverable: group.discoverable
       },
       relationships: %{
-        group_members: Thegm.GroupMembersView.groups_users(group.group_members)
+        group_members: Thegm.GroupMembersView.groups_users(group.group_members),
+        group_games: Thegm.GroupGamesView.groups_games(group.group_games)
       }
     }
   end
@@ -66,6 +68,9 @@ defmodule Thegm.GroupsView do
         slug: group.slug,
         member_status: status,
         discoverable: group.discoverable
+      },
+      relationships: %{
+        group_games: Thegm.GroupGamesView.groups_games(group.group_games)
       }
     }
   end
@@ -80,6 +85,9 @@ defmodule Thegm.GroupsView do
         games: group.games,
         slug: group.slug,
         discoverable: group.discoverable
+      },
+      relationships: %{
+        group_games: Thegm.GroupGamesView.groups_games(group.group_games)
       }
     }
   end
@@ -93,6 +101,14 @@ defmodule Thegm.GroupsView do
     }
     Map.put(group_member.attributes, :role, member.role)
     group_member
+  end
+
+  def game_hydration(user_game) do
+    %{
+      type: "games",
+      id: user_game.games_id,
+      attributes: Thegm.GamesView.users_usergames_games(user_game.games)
+    }
   end
 
   def users_groupmembers_groups(group) do
