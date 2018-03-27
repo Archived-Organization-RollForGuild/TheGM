@@ -1,25 +1,28 @@
 defmodule Thegm.GamesController do
   use Thegm.Web, :controller
   alias Thegm.Games
-  alias Thegm.GameDisambiguations
 
   def index(conn, params) do
     case read_search_params(params) do
       {:ok, settings} ->
         # Get total in search
-        total = Repo.one(from t in Games, select: count(t.id))
+        query = params["query"] <> "%"
+        total = Repo.one(
+                  from g in Games,
+                  left_join: gd in assoc(g, :game_disambiguations),
+                  select: count(g.id),
+                  where: ilike(g.name, ^query) or ilike(gd.name, ^query)
+        )
 
         # calculate offset
         offset = (settings.page - 1) * settings.limit
 
         # do the search
-        query = params["query"] <> "%"
-
         cond do
           total > 0 ->
             games = Repo.all(
                         from g in Games,
-                        left_join: gd in GameDisambiguations, where: gd.games_id == g.id,
+                        left_join: gd in assoc(g, :game_disambiguations),
                         where: ilike(g.name, ^query) or ilike(gd.name, ^query),
                         limit: ^settings.limit,
                         offset: ^offset

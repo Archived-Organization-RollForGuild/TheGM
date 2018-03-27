@@ -17,6 +17,8 @@ defmodule Thegm.Games do
     field :avatar, :boolean, null: false
     has_many :user_games, Thegm.UserGames
     has_many :group_games, Thegm.GroupGames
+    has_many :game_disambiguations, Thegm.GameDisambiguations
+
 
     timestamps()
   end
