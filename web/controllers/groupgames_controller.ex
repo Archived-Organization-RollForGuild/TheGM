@@ -14,7 +14,7 @@ defmodule Thegm.GroupGamesController do
       resp ->
         conn
         |> put_status(:ok)
-        |> render("index.json", members: resp)
+        |> render("index.json", groupgames: resp)
     end
   end
 

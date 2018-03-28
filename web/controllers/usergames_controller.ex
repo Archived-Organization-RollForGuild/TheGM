@@ -14,7 +14,7 @@ defmodule Thegm.UserGamesController do
       resp ->
         conn
         |> put_status(:ok)
-        |> render("index.json", members: resp)
+        |> render("index.json", usergames: resp)
     end
   end
 
