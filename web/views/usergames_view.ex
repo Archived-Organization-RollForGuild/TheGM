@@ -1,32 +1,21 @@
 defmodule Thegm.UserGamesView do
   use Thegm.Web, :view
 
-  def render("index.json", %{usergames: usergames}) do
-    %{data: Enum.map(usergames, &usergame/1)}
+  def render("index.json", %{usergames: usergames, meta: meta}) do
+    %{
+      meta: Thegm.MetaView.meta(meta),
+      data: Enum.map(usergames, &hydrate_user_game/1)
+    }
   end
 
-  def usergame(usergame) do
-    base = Application.get_env(:thegm, :api_url)
-    %{
+  def hydrate_user_game(usergame) do
+    usergame_hydration = %{
       type: "user-games",
-      id: usergame.id,
-      attributes: %{
-        games_id: usergame.games_id,
-        users_id: usergame.users_id
-      },
-      relationships: %{
-        game: %{
-          links: %{
-            self: base <> "/games/" <> usergame.games_id
-          }
-        },
-        user: %{
-          links: %{
-            self: base <> "/users/" <> usergame.users_id
-          }
-        }
-      }
+      id: usergame.games_id,
+      attributes: Thegm.GamesView.games_show(usergame.games)
     }
+    usergame_hydration = put_in(usergame_hydration, [:attributes, :field], usergame.field)
+    put_in(usergame_hydration, [:attributes, :inserted_at], usergame.inserted_at)
   end
 
   def users_games(user_games) do
