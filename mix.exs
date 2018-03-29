@@ -55,7 +55,8 @@ defmodule Thegm.Mixfile do
       {:hackney, "~> 1.11"},
       {:mogrify, "~> 0.5.6"},
       {:sweet_xml, "~> 0.6"},
-      {:temp, "~> 0.4"}
+      {:temp, "~> 0.4"},
+      {:timex, "~> 3.1"}
     ]
   end
 
