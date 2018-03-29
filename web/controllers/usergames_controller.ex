@@ -5,16 +5,39 @@ defmodule Thegm.UserGamesController do
   alias Thegm.Users
   alias Ecto.Multi
 
-  def index(conn, %{"users_id" => users_id}) do
-    case Repo.all(from ug in UserGames, where: ug.users_id == ^users_id) |> Repo.preload(:games) do
-      nil ->
+  def index(conn, params) do
+    case read_params(params) do
+      {:ok, settings} ->
+        case Repo.one(from ug in UserGames, where: ug.users_id == ^settings.users_id) do
+          nil ->
+            conn
+            |> put_status(:not_found)
+            |> render(Thegm.ErrorView, "error.json", errors: ["User Games not found"])
+          _ ->
+            # Get total in search
+            total = Repo.one(from ug in UserGames,
+                             select: count(ug.id),
+                             where: ug.users_id == ^settings.users_id)
+
+            offset = (settings.page - 1) * settings.limit
+            usergames = Repo.all(
+                           from ug in UserGames,
+                           where: ug.users_id == ^settings.users_id,
+                           order_by: [desc: ug.inserted_at],
+                           limit: ^settings.limit,
+                           offset: ^offset) |> Repo.preload(:games)
+            meta = %{total: total, limit: settings.limit, offset: offset, count: length(usergames)}
+
+            conn
+            |> put_status(:ok)
+            |> render("index.json", usergames: usergames, meta: meta)
+        end
+      {:error, errors} ->
         conn
-        |> put_status(:not_found)
-        |> render(Thegm.ErrorView, "error.json", errors: ["User games could not be located"])
-      resp ->
-        conn
-        |> put_status(:ok)
-        |> render("index.json", members: resp)
+        |> put_status(:bad_request)
+        |> render(Thegm.ErrorView,
+             "error.json",
+             errors: Enum.map(errors, fn {k, v} -> Atom.to_string(k) <> ": " <> v end))
     end
   end
 
@@ -133,5 +156,51 @@ defmodule Thegm.UserGamesController do
             end
         end
     end
+  end
+
+  defp read_params(params) do
+    errors = []
+
+    # set page
+    {users_id, errors} = case params["users_id"] do
+      nil ->
+        errors = errors ++ ["users_id": "must be supplied"]
+        {nil, errors}
+      temp ->
+        {temp, errors}
+    end
+
+    # set page
+    {page, errors} = case params["page"] do
+      nil ->
+        page = 1
+        {page, errors}
+      temp ->
+        {page, _} = Integer.parse(temp)
+        errors = if page < 1 do
+          errors ++ [page: "Must be a positive integer"]
+        end
+        {page, errors}
+    end
+
+    {limit, errors} = case params["limit"] do
+      nil ->
+        limit = 100
+        {limit, errors}
+      temp ->
+        {limit, _} = Integer.parse(temp)
+        errors = if limit < 1 do
+          errors ++ [limit: "Must be at integer greater than 0"]
+        end
+        {limit, errors}
+    end
+
+    resp = cond do
+      length(errors) > 0 ->
+        {:error, errors}
+      true ->
+        {:ok, %{users_id: users_id, page: page, limit: limit}}
+    end
+    resp
   end
 end

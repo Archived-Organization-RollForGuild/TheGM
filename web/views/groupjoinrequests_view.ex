@@ -17,6 +17,4 @@ defmodule Thegm.GroupJoinRequestsView do
     join_request = put_in(join_request, [:attributes, :status], "pending")
     put_in(join_request, [:attributes, :requested_at], request.inserted_at)
   end
-
-
 end

@@ -111,7 +111,6 @@ defmodule Thegm.GroupsView do
     %{
       name: group.name,
       description: group.description,
-      games: group.games,
       slug: group.slug
     }
   end

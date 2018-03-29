@@ -10,7 +10,7 @@ defmodule Thegm.GamesController do
         total = Repo.one(
                   from g in Games,
                   left_join: gd in assoc(g, :game_disambiguations),
-                  select: count(g.id),
+                  select: count(fragment("DISTINCT ?", g.id)),
                   where: ilike(g.name, ^query) or ilike(gd.name, ^query)
         )
 
@@ -24,6 +24,7 @@ defmodule Thegm.GamesController do
                         from g in Games,
                         left_join: gd in assoc(g, :game_disambiguations),
                         where: ilike(g.name, ^query) or ilike(gd.name, ^query),
+                        group_by: g.id,
                         limit: ^settings.limit,
                         offset: ^offset
                       )

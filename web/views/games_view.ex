@@ -3,12 +3,7 @@ defmodule Thegm.GamesView do
 
   def render("show.json", %{game: game}) do
     %{
-      data: %{
-        type: "games",
-        id: game.id,
-        attributes: games_show(game),
-        relationships: %{}
-      }
+      data: games_show(game)
     }
   end
 
@@ -21,12 +16,17 @@ defmodule Thegm.GamesView do
 
   def games_show(game) do
     %{
-      avatar: game.avatar,
-      description: game.description,
-      name: game.name,
-      version: game.version,
-      publisher: game.publisher,
-      url: game.url
+      type: "games",
+      id: game.id,
+      attributes: %{
+        avatar: game.avatar,
+        description: game.description,
+        name: game.name,
+        version: game.version,
+        publisher: game.publisher,
+        url: game.url
+      },
+      relationships: %{}
     }
   end
 
