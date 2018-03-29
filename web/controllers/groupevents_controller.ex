@@ -22,9 +22,10 @@ defmodule Thegm.GroupEventsController do
 
                 case Repo.insert(event_changeset) do
                   {:ok, event} ->
-                    IO.inspect event
+                    event = event |> Repo.preload([:groups, :games])
                     conn
                     |> put_status(:created)
+                    |> render("show.json", event: event)
                   {:error, resp} ->
                     error_list = Enum.map(resp.errors, fn {k, v} -> Atom.to_string(k) <> ": " <> elem(v, 0) end)
                     conn
