@@ -28,6 +28,7 @@ defmodule Thegm.Router do
     resources "/games", GamesController, only: [:index]
 
     resources "/groups", GroupsController, only: [:create, :update, :delete] do
+      resources "/events", GroupEventsController, only: [:create]
       resources "/members", GroupMembersController, only: [:index, :delete]
       resources "/join-requests", GroupJoinRequestsController, only: [:create, :update, :index]
       resources "/threads", GroupThreadsController, only: [:create, :index, :show, :delete] do
