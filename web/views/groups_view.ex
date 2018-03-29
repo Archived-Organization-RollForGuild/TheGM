@@ -50,7 +50,8 @@ defmodule Thegm.GroupsView do
       },
       relationships: %{
         group_members: Thegm.GroupMembersView.groups_users(group.group_members),
-        group_games: Thegm.GroupGamesView.groups_games(group.group_games)
+        group_games: Thegm.GroupGamesView.groups_games(group.group_games),
+        group_events: Thegm.GroupEventsView.relationship_link(group)
       }
     }
   end
@@ -68,7 +69,8 @@ defmodule Thegm.GroupsView do
         discoverable: group.discoverable
       },
       relationships: %{
-        group_games: Thegm.GroupGamesView.groups_games(group.group_games)
+        group_games: Thegm.GroupGamesView.groups_games(group.group_games),
+        group_events: Thegm.GroupEventsView.relationship_link(group)
       }
     }
   end

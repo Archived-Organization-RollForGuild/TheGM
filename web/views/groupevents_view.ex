@@ -41,4 +41,8 @@ defmodule Thegm.GroupEventsView do
       attributes: Thegm.GroupsView.base_json(group)
     }
   end
+
+  def relationship_link(group) do
+    %{link: Application.get_env(:thegm, :api_url) <> "/groups/" <> group.id <> "/events"}
+  end
 end
