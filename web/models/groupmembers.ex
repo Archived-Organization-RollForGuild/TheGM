@@ -5,6 +5,9 @@ defmodule Thegm.GroupMembers do
   @derive {Phoenix.Param, key: :id}
   @foreign_key_type :binary_id
 
+  @member_roles ["owner", "admin", "member"]
+  @admin_roles ["owner", "admin"]
+
   schema "group_members" do
     field :role, :string
     field :active, :boolean
@@ -25,10 +28,24 @@ defmodule Thegm.GroupMembers do
   def role_changeset(model, params \\ :empty) do
     model
     |> cast(params, [:role])
+    |> validate_required([:role], message: "Are required")
+    |> validate_inclusion(:role, @member_roles)
   end
 
   def tombstone_changeset(model) do
     model
     |> put_change(:active, nil)
+  end
+
+  def isOwner(model) do
+    model.role == "owner"
+  end
+
+  def isAdmin(model) do
+    Enum.any?(@admin_roles, fn role -> model.role == role end)
+  end
+
+  def isMember(model) do
+    Enum.any?(@member_roles, fn role -> model.role == role end)
   end
 end

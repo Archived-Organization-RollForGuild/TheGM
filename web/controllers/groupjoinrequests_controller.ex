@@ -3,6 +3,7 @@ defmodule Thegm.GroupJoinRequestsController do
 
   alias Thegm.GroupJoinRequests
   alias Ecto.Multi
+  alias Thegm.GroupMembers
 
   # NOTE: This can probably be made prettier somehow, it isn't very readable currently - Quigley
   def create(conn, %{"groups_id" => groups_id}) do
@@ -91,7 +92,7 @@ defmodule Thegm.GroupJoinRequestsController do
     admin_user_id = conn.assigns[:current_user].id
     member = Repo.one(from gm in Thegm.GroupMembers, where: gm.groups_id == ^groups_id and gm.users_id == ^admin_user_id)
     cond do
-      member.role == "admin" ->
+      GroupMembers.isAdmin(member) ->
         case type do
           "join-requests" ->
             case Repo.one(from gjr in GroupJoinRequests, where: gjr.users_id == ^request_user_id and gjr.groups_id == ^groups_id and gjr.pending == true) do
@@ -167,7 +168,7 @@ defmodule Thegm.GroupJoinRequestsController do
     users_id = conn.assigns[:current_user].id
     case read_params(params) do
       {:ok, settings} ->
-        case Repo.one(from gm in Thegm.GroupMembers, where: gm.groups_id == ^settings.groups_id and gm.users_id == ^users_id and gm.role == "admin") do
+        case Repo.one(from gm in Thegm.GroupMembers, where: gm.groups_id == ^settings.groups_id and gm.users_id == ^users_id and gm.role in ["owner", "admin"]) do
           nil ->
             conn
             |> put_status(:forbidden)

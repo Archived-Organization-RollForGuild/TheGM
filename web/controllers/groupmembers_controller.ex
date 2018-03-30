@@ -25,6 +25,54 @@ defmodule Thegm.GroupMembersController do
     end
   end
 
+  def update(conn, %{"groups_id" => groups_id, "id" => users_id, "data" => %{"attributes" => %{"role" => role}}}) do
+    current_user_id = conn.assigns[:current_user].id
+
+    case Repo.get(Groups, groups_id) |> Repo.preload(:group_members) do
+      nil ->
+        conn
+        |> put_status(:not_found)
+        |> render(Thegm.ErrorView, "error.json", errors: ["Group not found, maybe you already deleted it?"])
+      group ->
+        current_user_member = Enum.find(group.group_members, fn x -> x.users_id == current_user_id end)
+        target_member = Enum.find(group.group_members, fn x -> x.users_id == users_id end)
+
+        cond do
+          role == "owner" ->
+            conn
+            |> put_status(:forbidden)
+            |> render(Thegm.ErrorView, "error.json", errors: ["members: Members cannot be changed to owner"])
+
+          target_member == nil or GroupMembers.isMember(target_member) == false ->
+            conn
+            |> put_status(:not_found)
+            |> render(Thegm.ErrorView, "error.json", errors: ["members: Is not a member of the group"])
+
+          current_user_member == nil ->
+            conn
+            |> put_status(:not_found)
+            |> render(Thegm.ErrorView, "error.json", errors: ["members: You are not a member of the group"])
+
+          GroupMembers.isOwner(current_user_member) == false ->
+            conn
+            |> put_status(:forbidden)
+            |> render(Thegm.ErrorView, "error.json", errors: ["members: You do not have permission to change user roles"])
+
+          true ->
+            member = GroupMembers.role_changeset(target_member, %{role: role})
+
+            case Repo.update(member) do
+              {:ok, _} ->
+                send_resp(conn, :no_content, "")
+              {:error, changeset} ->
+                conn
+                |> put_status(:internal_server_error)
+                |> render(Thegm.ErrorView, "error.json", errors: Enum.map(changeset.errors, fn {k, v} -> Atom.to_string(k) <> ": " <> elem(v, 0) end))
+            end
+        end
+    end
+  end
+
   def delete(conn, %{"groups_id" => groups_id, "id" => users_id}) do
     current_user_id = conn.assigns[:current_user].id
 
@@ -49,12 +97,12 @@ defmodule Thegm.GroupMembersController do
             |> put_status(:not_found)
             |> render(Thegm.ErrorView, "error.json", errors: ["members: You are not a member of the group"])
 
-          current_user_member.role != "admin" && current_user_id != users_id ->
+          GroupMembers.isAdmin(current_user_member) == false && current_user_id != users_id ->
             conn
             |> put_status(:forbidden)
             |> render(Thegm.ErrorView, "error.json", errors: ["You do not have permission to remove this user"])
 
-          target_member.role == "admin" ->
+          GroupMembers.isAdmin(target_member) ->
             conn
             |> put_status(:forbidden)
             |> render(Thegm.ErrorView, "error.json", errors: ["Admins cannot be removed from the group"])

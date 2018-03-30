@@ -4,6 +4,7 @@ defmodule Thegm.GroupsController do
   alias Thegm.Groups
   alias Ecto.Multi
   import Geo.PostGIS
+  alias Thegm.GroupMembers
 
   def create(conn, %{"data" => %{"attributes" => params, "type" => type}}) do
     case {type, params} do
@@ -15,7 +16,7 @@ defmodule Thegm.GroupsController do
           |> Multi.run(:group_members, fn %{groups: group} ->
             member_changeset =
               %Thegm.GroupMembers{groups_id: group.id}
-              |> Thegm.GroupMembers.create_changeset(%{role: "admin", users_id: conn.assigns[:current_user].id})
+              |> Thegm.GroupMembers.create_changeset(%{role: "owner", users_id: conn.assigns[:current_user].id})
             Repo.insert(member_changeset)
           end)
 
@@ -57,11 +58,7 @@ defmodule Thegm.GroupsController do
             |> render(Thegm.ErrorView, "error.json", errors: ["members: Must be member of group", "role: Must be admin of group"])
           member ->
             cond do
-              member.role != "admin" ->
-                conn
-                |> put_status(:forbidden)
-                |> render(Thegm.ErrorView, "error.json", errors: ["role: Must be admin"])
-              member.role == "admin" ->
+              GroupMembers.isAdmin(member) ->
                 case Repo.delete(group) do
                   {:ok, _} ->
                     send_resp(conn, :no_content, "")
@@ -70,6 +67,10 @@ defmodule Thegm.GroupsController do
                     |> put_status(:internal_server_error)
                     |> render(Thegm.ErrorView, "error.json", errors: Enum.map(changeset.errors, fn {k, v} -> Atom.to_string(k) <> ": " <> elem(v, 0) end))
                 end
+              true ->
+                conn
+                |> put_status(:forbidden)
+                |> render(Thegm.ErrorView, "error.json", errors: ["role: Must be admin"])
             end
         end
     end
@@ -164,7 +165,7 @@ defmodule Thegm.GroupsController do
             |> render(Thegm.ErrorView, "error.json", errors: ["membership: You must be a member", "role: You must be an admin"])
           member ->
             cond do
-              member.role == "admin" ->
+              GroupMembers.isAdmin(member) ->
                 group = Groups.changeset(member.groups, params)
                 group = cond do
                   Map.has_key?(group.changes, :address) ->
@@ -291,7 +292,7 @@ defmodule Thegm.GroupsController do
 
   def get_admin([head | tail], users_id) do
     cond do
-      head.users_id == users_id and head.role == "admin" ->
+      head.users_id == users_id and GroupMembers.isAdmin(head) ->
         head
       true ->
         get_admin(tail, users_id)

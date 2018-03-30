@@ -1,12 +1,12 @@
 defmodule Thegm.GroupsView do
   use Thegm.Web, :view
-
+  alias Thegm.GroupMembers
 
   def render("show.json", %{group: group, users_id: users_id}) do
     data = show_json(group, users_id)
-    status = data[:attributes][:member_status]
+    member = data[:attributes][:member_status]
     cond do
-       status == "member" or status == "admin" ->
+       GroupMembers.isMember(%{role: member}) ->
         included = Enum.map(group.group_members, &user_hydration/1) ++ Enum.map(group.group_games, &game_hydration/1)
         %{
           data: data,
@@ -27,7 +27,7 @@ defmodule Thegm.GroupsView do
   def show_json(group, user) do
     status = group_member_status(group, user)
     cond do
-      status == "member" or status == "admin" ->
+      GroupMembers.isMember(%{role: status}) ->
        member_json(group, status)
       true ->
         non_member_json(group, status)
