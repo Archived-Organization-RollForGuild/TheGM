@@ -36,7 +36,7 @@ defmodule Thegm.Groups do
 
   def changeset(model, params \\ :empty) do
     model
-    |> cast(params, [:name, :description, :address, :games, :discoverable])
+    |> cast(params, [:name, :description, :address, :discoverable])
     |> validate_required([:name, :discoverable], message: "Are required")
     |> validate_length(:address, min: 1, message: "Group address can not be empty")
     |> validate_length(:description, max: 1000, message: "Group description can be no more than 1000 characters.")
