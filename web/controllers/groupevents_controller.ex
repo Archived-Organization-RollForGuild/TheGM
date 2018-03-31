@@ -2,6 +2,7 @@ defmodule Thegm.GroupEventsController do
   use Thegm.Web, :controller
 
   alias Thegm.GroupEvents
+  alias Thegm.GroupMembers
 
   def create(conn, %{"groups_id" => groups_id, "data" => %{"attributes" => params, "type" => type}}) do
     users_id = conn.assigns[:current_user].id
@@ -12,7 +13,7 @@ defmodule Thegm.GroupEventsController do
         |> render(Thegm.ErrorView, "error.json", errors: ["Must be a member of the group"])
       member ->
         cond do
-          member.role == "admin" ->
+          GroupMembers.isAdmin(member) ->
             case {type, params} do
               {"events", params} ->
                 case read_start_end(params) do

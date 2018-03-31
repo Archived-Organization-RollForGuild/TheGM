@@ -4,6 +4,7 @@ defmodule Thegm.GroupGamesController do
   alias Thegm.GroupGames
   alias Thegm.Groups
   alias Ecto.Multi
+  alias Thegm.GroupMembers
 
   def index(conn, params) do
     case read_params(params) do
@@ -58,7 +59,7 @@ defmodule Thegm.GroupGamesController do
             |> put_status(:not_found)
             |> render(Thegm.ErrorView, "error.json", errors: ["members: You are not a member of the group"])
 
-          current_user_member.role != "admin" ->
+          GroupMembers.isAdmin(current_user_member) == false ->
             conn
             |> put_status(:forbidden)
             |> render(Thegm.ErrorView, "error.json", errors: ["You do not have permission to add games"])
@@ -111,7 +112,7 @@ defmodule Thegm.GroupGamesController do
             |> put_status(:not_found)
             |> render(Thegm.ErrorView, "error.json", errors: ["members: You are not a member of the group"])
 
-          current_user_member.role != "admin" ->
+          GroupMembers.isAdmin(current_user_member) == false ->
             conn
             |> put_status(:forbidden)
             |> render(Thegm.ErrorView, "error.json", errors: ["You do not have permission to modify games"])
@@ -170,7 +171,7 @@ defmodule Thegm.GroupGamesController do
             |> put_status(:not_found)
             |> render(Thegm.ErrorView, "error.json", errors: ["members: You are not a member of the group"])
 
-          current_user_member.role != "admin" ->
+          GroupMembers.isAdmin(current_user_member) == false ->
             conn
             |> put_status(:forbidden)
             |> render(Thegm.ErrorView, "error.json", errors: ["You do not have permission to remove this game"])
