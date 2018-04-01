@@ -119,4 +119,33 @@ defmodule Thegm.GroupMembersController do
         end
     end
   end
+
+  def is_member(groups_id: groups_id, users_id: users_id) do
+    cond do
+      users_id == nil ->
+        false
+      true ->
+        case Repo.one(from gm in GroupMembers, where: gm.groups_id == ^groups_id and gm.users_id == ^users_id and gm.active == true) do
+          nil ->
+            false
+          _ ->
+            true
+        end
+    end
+  end
+
+  def is_member([], users_id: _) do
+    false
+  end
+
+  # list should be of group members
+  # Runtime O(n)
+  def is_member([head, tail], users_id: users_id) do
+    cond do
+      head.users_id == users_id and head.active ->
+        true
+      true ->
+        is_member(tail, users_id: users_id)
+    end
+  end
 end

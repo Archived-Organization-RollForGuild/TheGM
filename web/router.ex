@@ -60,7 +60,9 @@ defmodule Thegm.Router do
     post "/resets", PasswordResetsController, :create
     put "/resets/:id", PasswordResetsController, :update
     resources "/email", EmailChangeController, only: [:update]
-    resources "/groups", GroupsController, only: [:show, :index]
+    resources "/groups", GroupsController, only: [:show, :index] do
+      resources "/events", GroupEventsController, only: [:show]
+    end
 
     resources "/threads", ThreadsController, only: [:index, :show] do
       resources "/comments", ThreadCommentsController, only: [:index, :show]
