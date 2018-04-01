@@ -16,6 +16,29 @@ defmodule Thegm.GroupEventsView do
     end
   end
 
+  def render("index.json", %{events: events, meta: meta, is_member: is_member}) do
+    distinct_games = Thegm.GamesView.included_games(events, [])
+    hydrated_group = case events do
+      [] ->
+        []
+      [head | _] ->
+        [hydrate_group(head.groups)]
+    end
+
+    data = cond do
+      is_member ->
+        Enum.map(events, fn e -> private_show(e) end)
+      true ->
+        Enum.map(events, fn e -> public_show(e) end)
+    end
+
+    %{
+      meta: meta,
+      data: data,
+      included: Enum.map(distinct_games, &hydrate_game/1) ++ hydrated_group
+    }
+  end
+
   def private_show(event) do
     %{
       id: event.id,
