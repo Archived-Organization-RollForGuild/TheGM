@@ -28,7 +28,7 @@ defmodule Thegm.GroupEventsController do
                         event = event |> Repo.preload([:groups, :games])
                         conn
                         |> put_status(:created)
-                        |> render("show.json", event: event)
+                        |> render("show.json", event: event, is_member: true)
                       {:error, resp} ->
                         error_list = Enum.map(resp.errors, fn {k, v} -> Atom.to_string(k) <> ": " <> elem(v, 0) end)
                         conn
@@ -83,7 +83,7 @@ defmodule Thegm.GroupEventsController do
                             event = event |> Repo.preload([:groups, :games])
                             conn
                             |> put_status(:created)
-                            |> render("show.json", event: event)
+                            |> render("show.json", event: event, is_member: true)
                           {:error, resp} ->
                             error_list = Enum.map(resp.errors, fn {k, v} -> Atom.to_string(k) <> ": " <> elem(v, 0) end)
                             conn
@@ -106,6 +106,27 @@ defmodule Thegm.GroupEventsController do
             |> put_status(:forbidden)
             |> render(Thegm.ErrorView, "error.json", errors: ["Must be a group admin to take this action"])
         end
+    end
+  end
+
+  def show(conn, %{"groups_id" => groups_id, "id" => events_id}) do
+    users_id = case conn.assigns[:current_user] do
+      nil ->
+        nil
+      found ->
+        found.id
+    end
+
+    case Repo.one(from ge in GroupEvents, where: ge.groups_id == ^groups_id and ge.id == ^events_id) |> Repo.preload([:groups, :games]) do
+      nil ->
+        conn
+        |> put_status(:not_found)
+        |> render(Thegm.ErrorView, "error.json", errors: ["Could not find specified event for group"])
+      event ->
+        is_member = Thegm.GroupMembersController.is_member(groups_id: groups_id, users_id: users_id)
+        conn
+        |> put_status(:ok)
+        |> render("show.json", event: event, is_member: is_member)
     end
   end
 
