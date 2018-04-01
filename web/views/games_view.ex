@@ -44,4 +44,21 @@ defmodule Thegm.GamesView do
   def users_usergames_games(game) do
     games_show(game)
   end
+
+  def included_games([], included) do
+    included
+  end
+
+  # Expects the list of models to each have a preloaded game
+  def included_games([head | tail], included) do
+    included = cond do
+      # If it's already included, skip it
+      Enum.member?(included, head.games) ->
+        included
+      # Else, add it
+      true ->
+        included ++ [head.games]
+    end
+    included_games(tail, included)
+  end
 end

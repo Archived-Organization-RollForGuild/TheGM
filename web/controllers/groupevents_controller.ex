@@ -130,6 +130,51 @@ defmodule Thegm.GroupEventsController do
     end
   end
 
+  def index(conn, params) do
+    users_id = case conn.assigns[:current_user] do
+      nil ->
+        nil
+      found ->
+        found.id
+    end
+
+    case read_search_params(params) do
+      {:ok, settings} ->
+        is_member = Thegm.GroupMembersController.is_member(groups_id: settings.groups_id, users_id: users_id)
+
+        # Search params
+        offset = (settings.page - 1) * settings.limit
+        now = NaiveDateTime.utc_now()
+
+        # Get total in search
+        total = Repo.one(from ge in GroupEvents, where: ge.groups_id == ^settings.groups_id and ge.end_time >= ^now, select: count(ge.id))
+        cond do
+          total > 0 ->
+            events =  Repo.all(from ge in GroupEvents,
+              where: ge.groups_id == ^settings.groups_id and ge.end_time >= ^now,
+              order_by: [asc: ge.start_time],
+              limit: ^settings.limit,
+              offset: ^offset
+            ) |> Repo.preload([:groups, :games])
+
+            meta = %{total: total, limit: settings.limit, offset: offset, count: length(events)}
+
+            conn
+            |> put_status(:ok)
+            |> render("index.json", events: events, meta: meta, is_member: is_member)
+          true ->
+            meta = %{total: total, limit: settings.limit, offset: offset, count: 0}
+            conn
+            |> put_status(:ok)
+            |> render("index.json", events: [], meta: meta, is_member: is_member)
+        end
+      {:error, errors} ->
+        conn
+        |> put_status(:bad_request)
+        |> render(Thegm.ErrorView, "error.json", errors: Enum.map(errors, fn {k, v} -> Atom.to_string(k) <> ": " <> elem(v, 0) end))
+    end
+  end
+
   def read_start_end(params) do
     errors = []
 
@@ -169,5 +214,56 @@ defmodule Thegm.GroupEventsController do
       true ->
         {:ok, %{start_time: start_time, end_time: end_time}}
     end
+  end
+
+  defp read_search_params(params) do
+    errors = []
+
+    # verify groups_id
+    {groups_id, errors} = case params["groups_id"] do
+      nil ->
+        errors = errors ++ [groups_id: "Must be supplied"]
+        {nil, errors}
+      temp ->
+        {temp, errors}
+    end
+
+    # set page
+    {page, errors} = case params["page"] do
+      nil ->
+        {1, errors}
+      temp ->
+        {page, _} = Integer.parse(temp)
+        errors = cond do
+          page < 1 ->
+            errors ++ [page: "Must be a positive integer"]
+          true ->
+            errors
+        end
+        {page, errors}
+    end
+
+    {limit, errors} = case params["limit"] do
+      nil ->
+        {100, errors}
+      temp ->
+        {limit, _} = Integer.parse(temp)
+        errors = cond do
+
+          limit < 1 ->
+            errors ++ [limit: "Must be at integer greater than 0"]
+          true ->
+            errors
+        end
+        {limit, errors}
+    end
+
+    resp = cond do
+      length(errors) > 0 ->
+        {:error, errors}
+      true ->
+        {:ok, %{page: page, limit: limit, groups_id: groups_id}}
+    end
+    resp
   end
 end
