@@ -11,8 +11,8 @@ defmodule Thegm.GroupMembersView do
       type: "members",
       id: member.id,
       attributes: %{
-        user_id: member.users_id,
-        group_id: member.groups_id,
+        users_id: member.users_id,
+        groups_id: member.groups_id,
         role: member.role
       },
       relationships: %{
