@@ -11,6 +11,7 @@ defmodule Thegm.GroupEvents do
     field :location, :string
     field :start_time, :utc_datetime
     field :end_time, :utc_datetime
+    field :deleted, :boolean
     belongs_to :groups, Thegm.Groups
     belongs_to :games, Thegm.Games
 
@@ -32,5 +33,10 @@ defmodule Thegm.GroupEvents do
     |> validate_length(:title, min: 1, max: 8192, message: "must be between 1 and 8192 characters.")
     |> validate_length(:description, max: 8192, message: "must be less than 8192 characters")
     |> validate_length(:location, max: 8192, message: "must be less than 8192 characters")
+  end
+
+  def delete_changeset(model) do
+    model
+    |> cast(%{deleted: true}, [:deleted])
   end
 end
