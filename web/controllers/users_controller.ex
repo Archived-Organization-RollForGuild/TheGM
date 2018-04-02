@@ -4,9 +4,10 @@ defmodule Thegm.UsersController do
   alias Thegm.Users
   alias Thegm.EmailChangeCodes
 
-  def index(conn, _params) do
-    users = Repo.all(Users)
-    render conn, "index.json", users: users
+  def index(conn, %{}) do
+    conn
+    |> put_status(:not_implemented)
+    |> render(Thegm.ErrorView, "error.json", errors: ["This endpoint is not implemented"])
   end
 
   def create(conn, %{"data" => %{"attributes" => params, "type" => type}}) do
