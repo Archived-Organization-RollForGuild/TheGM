@@ -4,24 +4,50 @@ defmodule Thegm.GroupMembersController do
   alias Thegm.GroupMembers
   alias Thegm.Groups
 
-  def index(conn, %{"groups_id" => groups_id}) do
+  def index(conn, params) do
     users_id = conn.assigns[:current_user].id
-    case Repo.all(from m in GroupMembers, where: m.groups_id == ^groups_id) |> Repo.preload(:users) do
-      nil ->
-        conn
-        |> put_status(:not_found)
-        |> render(Thegm.ErrorView, "error.json", errors: ["Group members could not be located"])
-      resp ->
-        case Enum.any?(resp, fn x -> x.users_id == users_id end) do
-          true ->
-            conn
-            |> put_status(:ok)
-            |> render("members.json", members: resp)
+    case read_params(params) do
+      {:ok, settings} ->
+        case is_member(groups_id: settings.groups_id, users_id: users_id) do
           false ->
             conn
             |> put_status(:forbidden)
             |> render(Thegm.ErrorView, "error.json", errors: ["You must be a member of the group to view the members"])
+          true ->
+            # Get total in search
+            total = Repo.one(from gm in GroupMembers,
+                             select: count(gm.id),
+                             where: gm.groups_id == ^settings.groups_id)
+            offset = (settings.page - 1) * settings.limit
+
+            cond do
+              total > 0 ->
+                groupmembers = Repo.all(
+                                 from gm in GroupMembers,
+                                 where: gm.groups_id == ^settings.groups_id,
+                                 order_by: [desc: gm.inserted_at],
+                                 limit: ^settings.limit,
+                                 offset: ^offset) |> Repo.preload(:users)
+                meta = %{total: total, limit: settings.limit, offset: offset, count: length(groupmembers)}
+
+                conn
+                |> put_status(:ok)
+                |> render("index.json", members: groupmembers, meta: meta)
+
+              true ->
+                meta = %{total: total, limit: settings.limit, offset: offset, count: 0}
+
+                conn
+                |> put_status(:ok)
+                |> render("index.json", members: [], meta: meta)
+            end
         end
+      {:error, errors} ->
+        conn
+        |> put_status(:bad_request)
+        |> render(Thegm.ErrorView,
+             "error.json",
+             errors: Enum.map(errors, fn {k, v} -> Atom.to_string(k) <> ": " <> v end))
     end
   end
 
@@ -147,5 +173,51 @@ defmodule Thegm.GroupMembersController do
       true ->
         is_member(tail, users_id: users_id)
     end
+  end
+
+  defp read_params(params) do
+    errors = []
+
+    # set page
+    {groups_id, errors} = case params["groups_id"] do
+      nil ->
+        errors = errors ++ ["groups_id": "must be supplied"]
+        {nil, errors}
+      temp ->
+        {temp, errors}
+    end
+
+    # set page
+    {page, errors} = case params["page"] do
+      nil ->
+        page = 1
+        {page, errors}
+      temp ->
+        {page, _} = Integer.parse(temp)
+        errors = if page < 1 do
+          errors ++ [page: "Must be a positive integer"]
+        end
+        {page, errors}
+    end
+
+    {limit, errors} = case params["limit"] do
+      nil ->
+        limit = 100
+        {limit, errors}
+      temp ->
+        {limit, _} = Integer.parse(temp)
+        errors = if limit < 1 do
+          errors ++ [limit: "Must be at integer greater than 0"]
+        end
+        {limit, errors}
+    end
+
+    resp = cond do
+      length(errors) > 0 ->
+        {:error, errors}
+      true ->
+        {:ok, %{groups_id: groups_id, page: page, limit: limit}}
+    end
+    resp
   end
 end
