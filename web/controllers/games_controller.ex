@@ -47,6 +47,26 @@ defmodule Thegm.GamesController do
     end
   end
 
+  def create(conn, %{"data" => %{"type" => type, "attributes" => params}}) do
+    users_id = conn.assigns[:current_user].id
+    cond do
+      type == "games" ->
+        game_changeset = Thegm.GameSuggestions.create_changeset(%Thegm.GameSuggestions{}, Map.merge(params, %{"users_id" => users_id}))
+        case Repo.insert(game_changeset) do
+          {:ok, _} ->
+            send_resp(conn, :no_content, "")
+          {:error, resp} ->
+            conn
+            |> put_status(:bad_request)
+            |> render(Thegm.ErrorView, "error.json", errors: Enum.map(resp.errors, fn {k, v} -> Atom.to_string(k) <> ": " <> elem(v, 0) end))
+        end
+      true ->
+        conn
+        |> put_status(:bad_request)
+        |> render(Thegm.ErrorView, "error.json", errors: ["Posted a non 'games' type"])
+    end
+  end
+
   defp read_search_params(params) do
     errors = []
 
