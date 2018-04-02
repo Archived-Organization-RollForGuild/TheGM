@@ -48,7 +48,8 @@ defmodule Thegm.GroupEventsView do
         description: event.description,
         location: event.location,
         start_time: event.start_time,
-        end_time: event.end_time
+        end_time: event.end_time,
+        deleted: event.deleted
       },
       relationships: %{
         groups: Thegm.GroupsView.relationship_data(event.groups),
@@ -65,7 +66,8 @@ defmodule Thegm.GroupEventsView do
         title: event.title,
         description: event.description,
         start_time: event.start_time,
-        end_time: event.end_time
+        end_time: event.end_time,
+        deleted: event.deleted
       },
       relationships: %{
         groups: Thegm.GroupsView.relationship_data(event.groups),
