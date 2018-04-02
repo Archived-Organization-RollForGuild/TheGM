@@ -8,29 +8,32 @@ defmodule Thegm.GroupGamesController do
   def index(conn, params) do
     case read_params(params) do
       {:ok, settings} ->
-        case Repo.one(from gg in GroupGames, where: gg.groups_id == ^settings.groups_id) do
-          nil ->
-            conn
-            |> put_status(:not_found)
-            |> render(Thegm.ErrorView, "error.json", errors: ["Group Games not found"])
-          _ ->
-            # Get total in search
-            total = Repo.one(from gg in GroupGames,
-                             select: count(gg.id),
-                             where: gg.groups_id == ^settings.groups_id)
+        # Get total in search
+        total = Repo.one(from gg in GroupGames,
+                         select: count(gg.id),
+                         where: gg.groups_id == ^settings.groups_id)
+        offset = (settings.page - 1) * settings.limit
 
-            offset = (settings.page - 1) * settings.limit
+        cond do
+          total > 0 ->
             groupgames = Repo.all(
-                     from gg in GroupGames,
-                     where: gg.groups_id == ^settings.groups_id,
-                     order_by: [desc: gg.inserted_at],
-                     limit: ^settings.limit,
-                     offset: ^offset) |> Repo.preload(:games)
+                           from gg in GroupGames,
+                           where: gg.groups_id == ^settings.groups_id,
+                           order_by: [desc: gg.inserted_at],
+                           limit: ^settings.limit,
+                           offset: ^offset) |> Repo.preload(:games)
             meta = %{total: total, limit: settings.limit, offset: offset, count: length(groupgames)}
 
             conn
             |> put_status(:ok)
             |> render("index.json", groupgames: groupgames, meta: meta)
+
+          true ->
+            meta = %{total: total, limit: settings.limit, offset: offset, count: 0}
+
+            conn
+            |> put_status(:ok)
+            |> render("index.json", groupgames: [], meta: meta)
         end
       {:error, errors} ->
         conn
