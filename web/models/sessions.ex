@@ -1,9 +1,10 @@
 defmodule Thegm.Sessions do
   use Thegm.Web, :model
 
+  @primary_key {:token, :string, autogenerate: false}
+  @derive {Phoenix.Param, key: :token}
   @foreign_key_type :binary_id
   schema "sessions" do
-    field :token, :string
     belongs_to :users, Thegm.Users
 
     timestamps()
