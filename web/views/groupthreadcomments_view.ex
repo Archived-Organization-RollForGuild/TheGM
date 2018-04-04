@@ -81,7 +81,7 @@ defmodule Thegm.GroupThreadCommentsView do
     %{
       type: "users",
       id: user.id,
-      attributes: Thegm.UsersView.users_private(user)
+      attributes: Thegm.UsersView.users_public(user)
     }
   end
 
