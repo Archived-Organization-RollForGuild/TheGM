@@ -62,6 +62,9 @@ config :ex_aws, :s3,
   secret_access_key: System.get_env("RFG_AWS_SECRET_ACCESS_KEY"),
   region: System.get_env("RFG_API_AWS_REGION")
 
+config :ex_aws,
+  debug_requests: true
+
 config :thegm,
   api_url: "http://dev.api.rollforguild.com",
   web_url: "https://dev.rollforguild.com"

@@ -15,6 +15,7 @@ defmodule Thegm.Users do
     field :avatar, :boolean
     field :bio, :string
     has_many :group_members, Thegm.GroupMembers
+    has_many :user_games, Thegm.UserGames
 
     timestamps()
   end
@@ -38,17 +39,11 @@ defmodule Thegm.Users do
     |> put_password_hash
   end
 
-  def update_email(model, params) do
-    model
-    |> changeset(params)
-    |> cast(%{active: false}, [:active])
-
-  end
-
   def changeset(model, params \\ :empty) do
     model
     |> cast(params, [:username, :email, :active, :bio, :avatar])
     |> unique_constraint(:email, message: "Email is already taken")
+    |> unique_constraint(:username, message: "Username is already taken")
     |> validate_format(:email, ~r/@/, message: "Invalid email address")
     |> validate_length(:email, min: 4, max: 255)
     |> validate_format(:username, ~r/^[a-zA-Z0-9\s'_-]+$/, message: "Username must be alpha numeric")
@@ -58,8 +53,8 @@ defmodule Thegm.Users do
   def create_changeset(model, params \\ :empty) do
     model
     |> changeset(params)
-    |> unique_constraint(:username, message: "Username is already taken")
     |> cast(%{id: generate_uuid(params["username"]), password: params["password"] }, [:id, :password])
+    |> unique_constraint(:id, name: :users_pkey, message: "Username is already taken") #id is defined by username
     |> validate_required([:username, :password, :email], message: "Are required")
     |> validate_length(:password, min: 4)
     |> put_password_hash
