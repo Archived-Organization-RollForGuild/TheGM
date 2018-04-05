@@ -93,7 +93,7 @@ defmodule Thegm.GroupsView do
     group_member = %{
       type: "users",
       id: member.users_id,
-      attributes: Thegm.UsersView.users_public(member.users)
+      attributes: Thegm.UsersView.users_private(member.users)
     }
     Map.put(group_member.attributes, :role, member.role)
     group_member

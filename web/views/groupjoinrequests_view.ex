@@ -12,7 +12,7 @@ defmodule Thegm.GroupJoinRequestsView do
     join_request = %{
       type: "join-requests",
       id: request.users_id,
-      attributes: Thegm.UsersView.users_public(request.users)
+      attributes: Thegm.UsersView.users_private(request.users)
     }
     join_request = put_in(join_request, [:attributes, :status], "pending")
     put_in(join_request, [:attributes, :requested_at], request.inserted_at)

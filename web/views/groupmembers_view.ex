@@ -12,7 +12,7 @@ defmodule Thegm.GroupMembersView do
     groupmember_hydration = %{
       type: "group-members",
       id: member.users_id,
-      attributes: Thegm.UsersView.users_public(member.users)
+      attributes: Thegm.UsersView.users_private(member.users)
     }
     groupmember_hydration = put_in(groupmember_hydration, [:attributes, :role], member.role)
     put_in(groupmember_hydration, [:attributes, :inserted_at], member.inserted_at)
