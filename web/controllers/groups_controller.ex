@@ -9,6 +9,20 @@ defmodule Thegm.GroupsController do
   def create(conn, %{"data" => %{"attributes" => params, "type" => type}}) do
     case {type, params} do
       {"groups", params} ->
+        params = cond do
+          Map.has_key?(params, "address") && params["address"] != nil ->
+            case Thegm.Geos.get_lat_lng(params["address"]) do
+              {:ok, geo} ->
+                Map.merge(params, %{"lat" => geo[:lat], "lng" => geo[:lng]})
+              {:error, error} ->
+                conn
+                |> put_status(:bad_request)
+                |> Phoenix.Controller.render(Thegm.ErrorView, "error.json", errors: [error])
+                |> halt()
+            end
+          true ->
+            params
+        end
         group_changeset = Groups.create_changeset(%Groups{}, params)
         multi =
           Multi.new
@@ -166,20 +180,27 @@ defmodule Thegm.GroupsController do
           member ->
             cond do
               GroupMembers.isAdmin(member) ->
-                group = Groups.changeset(member.groups, params)
-                group = cond do
-                  Map.has_key?(group.changes, :address) ->
-                    Groups.lat_lng(group)
+                params = cond do
+                  Map.has_key?(params, "address") && params["address"] != nil ->
+                    case Thegm.Geos.get_lat_lng(params["address"]) do
+                      {:ok, geo} ->
+                        Map.merge(params, %{"lat" => geo[:lat], "lng" => geo[:lng]})
+                      {:error, error} ->
+                        conn
+                        |> put_status(:unprocessable_entity)
+                        |> Phoenix.Controller.render(Thegm.ErrorView, "error.json", errors: [error])
+                        |> halt()
+                    end
                   true ->
-                    group
+                    params
                 end
+                group = Groups.changeset(member.groups, params)
                 case Repo.update(group) do
                   {:ok, _} ->
-                    group_response = Repo.one(groups_query(groups_id, users_id))
-
+                    group_response = groups_query(groups_id, users_id)
                     conn
                     |> put_status(:ok)
-                    |> render("adminof.json", group: group_response, user: conn.assigns[:current_user])
+                    |> render("show.json", group: group_response, users_id: users_id)
                   {:error, changeset} ->
                     conn
                     |> put_status(:unprocessable_entity)

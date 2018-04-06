@@ -41,12 +41,13 @@ defmodule Thegm.Groups do
     |> validate_length(:address, min: 1, message: "Group address can not be empty")
     |> validate_length(:description, max: 1000, message: "Group description can be no more than 1000 characters.")
     |> validate_length(:name, min: 1, max: 200)
+    |> lat_lng(params)
   end
 
   def create_changeset(model, params \\ :empty) do
     model
     |> changeset(params)
-    |> lat_lng
+    |> lat_lng(params)
     |> cast(%{id: generate_uuid(params["slug"])}, [:id])
     |> cast(params, [:slug])
     |> unique_constraint(:slug, message: "Group slug must be unique")
@@ -54,17 +55,11 @@ defmodule Thegm.Groups do
     |> validate_format(:slug, ~r/^[a-zA-Z0-9\s-]+$/, message: "Group slug must be alpha numeric (and may include  -)")
   end
 
-  def lat_lng(model) do
+  def lat_lng(model, params) do
     cond do
-      Map.has_key?(model.changes, :address) && model.changes.address !== nil ->
-        case GoogleMaps.geocode(model.changes.address) do
-          {:ok, result} ->
-            lat = List.first(result["results"])["geometry"]["location"]["lat"]
-            lng = List.first(result["results"])["geometry"]["location"]["lng"]
-            model
-            |> put_change(:geom, %Geo.Point{coordinates: {lng, lat}, srid: 4326})
-        end
-
+      Map.has_key?(params, "lat") && Map.has_key?(params, "lng") ->
+        model
+        |> put_change(:geom, %Geo.Point{coordinates: {params["lng"], params["lat"]}, srid: 4326})
       true ->
         model
         |> put_change(:geom, nil)
