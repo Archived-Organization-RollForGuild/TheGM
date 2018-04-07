@@ -49,7 +49,7 @@ defmodule Thegm.Router do
     pipe_through [:api, :tryauth]
 
     get "/isteapot", IsTeapotController, :index
-    get "/deathcheck", DeathCheckController, :index
+    resources "/deathcheck", DeathCheckController, only: [:index]
     post "/register", UsersController, :create
     post "/login", SessionsController, :create
     get "/sessions/:id", SessionsController, :show
