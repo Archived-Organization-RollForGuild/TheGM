@@ -13,10 +13,13 @@ defmodule Thegm.ModelCase do
   """
 
   use ExUnit.CaseTemplate
+  alias Thegm.ErrorHelpers
+  alias Ecto.Changeset
 
   using do
     quote do
       alias Thegm.Repo
+      alias Ecto.Adapters.SQL.Sandbox
 
       import Ecto
       import Ecto.Changeset
@@ -26,10 +29,10 @@ defmodule Thegm.ModelCase do
   end
 
   setup tags do
-    :ok = Ecto.Adapters.SQL.Sandbox.checkout(Thegm.Repo)
+    :ok = Sandbox.checkout(Repo)
 
     unless tags[:async] do
-      Ecto.Adapters.SQL.Sandbox.mode(Thegm.Repo, {:shared, self()})
+      Sandbox.mode(Repo, {:shared, self()})
     end
 
     :ok
@@ -52,7 +55,7 @@ defmodule Thegm.ModelCase do
   """
   def errors_on(struct, data) do
     struct.__struct__.changeset(struct, data)
-    |> Ecto.Changeset.traverse_errors(&Thegm.ErrorHelpers.translate_error/1)
+    |> Changeset.traverse_errors(&ErrorHelpers.translate_error/1)
     |> Enum.flat_map(fn {key, errors} -> for msg <- errors, do: {key, msg} end)
   end
 end

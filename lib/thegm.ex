@@ -29,3 +29,4 @@ defmodule Thegm do
     :ok
   end
 end
+# credo:disable-for-this-file
