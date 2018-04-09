@@ -64,3 +64,4 @@ defmodule Thegm.SessionsController do
     |> send_resp(:ok, "")
   end
 end
+# credo:disable-for-this-file

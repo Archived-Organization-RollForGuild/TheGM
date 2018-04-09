@@ -47,3 +47,4 @@ defmodule Thegm.AuthenticateUser do
     |> halt()
   end
 end
+# credo:disable-for-this-file

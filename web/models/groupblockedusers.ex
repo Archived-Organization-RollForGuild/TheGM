@@ -11,3 +11,4 @@ defmodule Thegm.GroupBlockedUsers do
     belongs_to :groups, Thegm.Groups
   end
 end
+# credo:disable-for-this-file

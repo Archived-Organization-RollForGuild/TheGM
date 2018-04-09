@@ -9,3 +9,4 @@ defmodule Thegm.GeoView do
     end
   end
 end
+# credo:disable-for-this-file

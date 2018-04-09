@@ -198,3 +198,4 @@ defmodule Thegm.GroupThreadsController do
     resp
   end
 end
+# credo:disable-for-this-file

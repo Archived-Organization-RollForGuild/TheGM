@@ -99,3 +99,4 @@ defmodule Thegm.UserAvatarsController do
     UUID.uuid5(@uuid_namespace, resource_identifier)
   end
 end
+# credo:disable-for-this-file

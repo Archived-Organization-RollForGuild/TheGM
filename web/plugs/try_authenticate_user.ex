@@ -40,3 +40,4 @@ defmodule Thegm.TryAuthenticateUser do
     end
   end
 end
+# credo:disable-for-this-file

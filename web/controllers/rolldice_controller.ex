@@ -24,3 +24,4 @@ defmodule Thegm.RollDiceController do
   end
 
 end
+# credo:disable-for-this-file

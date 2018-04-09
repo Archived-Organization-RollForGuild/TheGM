@@ -109,3 +109,4 @@ defmodule Thegm.GamesController do
     resp
   end
 end
+# credo:disable-for-this-file

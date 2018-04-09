@@ -22,3 +22,4 @@ defmodule Thegm.Gettext do
   """
   use Gettext, otp_app: :thegm
 end
+# credo:disable-for-this-file

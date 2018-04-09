@@ -27,3 +27,4 @@ defmodule Thegm.ErrorHelpers do
     end
   end
 end
+# credo:disable-for-this-file

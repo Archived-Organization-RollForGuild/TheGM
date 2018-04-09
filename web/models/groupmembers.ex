@@ -49,3 +49,4 @@ defmodule Thegm.GroupMembers do
     Enum.any?(@member_roles, fn role -> model.role == role end)
   end
 end
+# credo:disable-for-this-file

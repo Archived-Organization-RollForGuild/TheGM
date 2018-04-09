@@ -100,3 +100,4 @@ defmodule Thegm.UniqueController do
     end
   end
 end
+# credo:disable-for-this-file

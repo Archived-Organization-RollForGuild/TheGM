@@ -40,3 +40,4 @@ defmodule Thegm.GroupEvents do
     |> cast(%{deleted: true}, [:deleted])
   end
 end
+# credo:disable-for-this-file

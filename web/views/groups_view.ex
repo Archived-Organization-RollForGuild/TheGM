@@ -174,3 +174,4 @@ defmodule Thegm.GroupsView do
     end
   end
 end
+# credo:disable-for-this-file

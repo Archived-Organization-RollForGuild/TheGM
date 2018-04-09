@@ -69,3 +69,4 @@ defmodule Thegm.Router do
     end
   end
 end
+# credo:disable-for-this-file

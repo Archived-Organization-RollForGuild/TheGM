@@ -180,3 +180,4 @@ defmodule Thegm.ThreadCommentsController do
     resp
   end
 end
+# credo:disable-for-this-file

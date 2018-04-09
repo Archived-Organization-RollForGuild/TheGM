@@ -221,3 +221,4 @@ defmodule Thegm.GroupMembersController do
     resp
   end
 end
+# credo:disable-for-this-file

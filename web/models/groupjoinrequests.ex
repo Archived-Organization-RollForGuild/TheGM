@@ -28,3 +28,4 @@ defmodule Thegm.GroupJoinRequests do
     |> put_change(:pending, nil)
   end
 end
+# credo:disable-for-this-file

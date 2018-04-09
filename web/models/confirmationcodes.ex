@@ -21,3 +21,4 @@ defmodule Thegm.ConfirmationCodes do
     |> cast(params, [:used, :users_id])
   end
 end
+# credo:disable-for-this-file

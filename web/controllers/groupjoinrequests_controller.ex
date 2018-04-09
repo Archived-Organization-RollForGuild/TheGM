@@ -248,3 +248,4 @@ defmodule Thegm.GroupJoinRequestsController do
     resp
   end
 end
+# credo:disable-for-this-file

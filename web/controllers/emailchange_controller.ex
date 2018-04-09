@@ -87,3 +87,4 @@ defmodule Thegm.EmailChangeController do
     end
   end
 end
+# credo:disable-for-this-file

@@ -18,3 +18,4 @@ defmodule Thegm.GroupJoinRequestsView do
     put_in(join_request, [:attributes, :requested_at], request.inserted_at)
   end
 end
+# credo:disable-for-this-file
