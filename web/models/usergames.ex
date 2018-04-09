@@ -22,3 +22,4 @@ defmodule Thegm.UserGames do
     |> foreign_key_constraint(:games_id, name: :user_games_games_id_fk)
   end
 end
+# credo:disable-for-this-file

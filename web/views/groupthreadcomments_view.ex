@@ -93,3 +93,4 @@ defmodule Thegm.GroupThreadCommentsView do
     Thegm.GroupsView.base_json(group)
   end
 end
+# credo:disable-for-this-file

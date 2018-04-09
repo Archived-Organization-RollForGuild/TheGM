@@ -26,3 +26,4 @@ defmodule Thegm.GameSuggestions do
     |> validate_length(:url, max: 8192, message: "must be less than 8192 characters")
   end
 end
+# credo:disable-for-this-file

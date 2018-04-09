@@ -14,6 +14,9 @@ defmodule Thegm.ChannelCase do
   """
 
   use ExUnit.CaseTemplate
+  alias Ecto.Adapters.SQL.Sandbox
+  alias Thegm.Endpoint
+  alias Thegm.Repo
 
   using do
     quote do
@@ -27,15 +30,15 @@ defmodule Thegm.ChannelCase do
 
 
       # The default endpoint for testing
-      @endpoint Thegm.Endpoint
+      @endpoint Endpoint
     end
   end
 
   setup tags do
-    :ok = Ecto.Adapters.SQL.Sandbox.checkout(Thegm.Repo)
+    :ok = Sandbox.checkout(Repo)
 
     unless tags[:async] do
-      Ecto.Adapters.SQL.Sandbox.mode(Thegm.Repo, {:shared, self()})
+      Sandbox.mode(Repo, {:shared, self()})
     end
 
     :ok

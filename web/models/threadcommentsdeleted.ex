@@ -18,3 +18,4 @@ defmodule Thegm.ThreadCommentsDeleted do
     |> validate_required([:users_id, :thread_comments_id, :deleter_role], messages: "are required")
   end
 end
+# credo:disable-for-this-file

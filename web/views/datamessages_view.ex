@@ -7,3 +7,4 @@ defmodule Thegm.DataMessagesView do
     }
   end
 end
+# credo:disable-for-this-file

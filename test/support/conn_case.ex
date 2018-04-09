@@ -21,24 +21,27 @@ defmodule Thegm.ConnCase do
       use Phoenix.ConnTest
 
       alias Thegm.Repo
+      alias Thegm.Endpoint
+      alias Ecto.Adapters.SQL.Sandbox
+      alias Phoenix.ConnTest
+
       import Ecto
       import Ecto.Changeset
       import Ecto.Query
-
       import Thegm.Router.Helpers
 
       # The default endpoint for testing
-      @endpoint Thegm.Endpoint
+      @endpoint Endpoint
     end
   end
 
   setup tags do
-    :ok = Ecto.Adapters.SQL.Sandbox.checkout(Thegm.Repo)
+    :ok = Sandbox.checkout(Repo)
 
     unless tags[:async] do
-      Ecto.Adapters.SQL.Sandbox.mode(Thegm.Repo, {:shared, self()})
+      Sandbox.mode(Repo, {:shared, self()})
     end
 
-    {:ok, conn: Phoenix.ConnTest.build_conn()}
+    {:ok, conn: ConnTest.build_conn()}
   end
 end

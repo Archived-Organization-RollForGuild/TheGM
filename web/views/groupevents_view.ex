@@ -96,3 +96,4 @@ defmodule Thegm.GroupEventsView do
     %{link: Application.get_env(:thegm, :api_url) <> "/groups/" <> group.id <> "/events"}
   end
 end
+# credo:disable-for-this-file

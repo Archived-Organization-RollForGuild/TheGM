@@ -66,3 +66,4 @@ defmodule Thegm.Groups do
     end
   end
 end
+# credo:disable-for-this-file

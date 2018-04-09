@@ -310,3 +310,4 @@ defmodule Thegm.GroupEventsController do
     resp
   end
 end
+# credo:disable-for-this-file

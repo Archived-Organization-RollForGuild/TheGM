@@ -70,3 +70,4 @@ defmodule Thegm.Users do
     end
   end
 end
+# credo:disable-for-this-file

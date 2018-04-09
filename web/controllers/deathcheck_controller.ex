@@ -5,3 +5,4 @@ defmodule Thegm.DeathCheckController do
     conn |> put_status(:ok) |> render(Thegm.DataMessagesView, "message.json", %{message: "Successful saving throw!"})
   end
 end
+# credo:disable-for-this-file

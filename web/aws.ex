@@ -34,3 +34,4 @@ defmodule Thegm.AWS do
     "https://s3.#{@aws_region}.amazonaws.com/#{@bucket_name}/#{@game_icon_location}/#{avatar_identifier}.jpg"
   end
 end
+# credo:disable-for-this-file

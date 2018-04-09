@@ -77,3 +77,4 @@ defmodule Thegm.Web do
     apply(__MODULE__, which, [])
   end
 end
+# credo:disable-for-this-file

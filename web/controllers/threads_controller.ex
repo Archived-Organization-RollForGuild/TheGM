@@ -159,3 +159,4 @@ defmodule Thegm.ThreadsController do
     resp
   end
 end
+# credo:disable-for-this-file

@@ -28,3 +28,4 @@ defmodule Thegm.ErrorView do
     render "500.json", assigns
   end
 end
+# credo:disable-for-this-file
