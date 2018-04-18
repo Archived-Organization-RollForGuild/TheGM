@@ -62,6 +62,7 @@ defmodule Thegm.GroupEventsController do
         conn
         |> put_status(:bad_request)
         |> render(Thegm.ErrorView, "error.json", errors: error_list)
+        |> halt()
     end
   end
 
@@ -101,7 +102,7 @@ defmodule Thegm.GroupEventsController do
         conn
         |> put_status(:not_found)
         |> render(Thegm.ErrorView, "error.json", errors: ["No event with that id found"])
-        |> halt
+        |> halt()
       event ->
         event
     end
@@ -134,6 +135,7 @@ defmodule Thegm.GroupEventsController do
         conn
         |> put_status(:bad_request)
         |> render(Thegm.ErrorView, "error.json", errors: error_list)
+        |> halt()
     end
   end
 
@@ -212,37 +214,50 @@ defmodule Thegm.GroupEventsController do
 
   def delete(conn, %{"groups_id" => groups_id, "id" => events_id}) do
     users_id = conn.assigns[:current_user].id
-    case Repo.one(from gm in Thegm.GroupMembers, where: gm.groups_id == ^groups_id and gm.users_id == ^users_id and gm.active == true) do
+
+    # Ensure user is a member of the group
+    member = case Repo.one(from gm in Thegm.GroupMembers, where: gm.groups_id == ^groups_id and gm.users_id == ^users_id and gm.active == true) do
       nil ->
         conn
         |> put_status(:forbidden)
         |> render(Thegm.ErrorView, "error.json", errors: ["Must be a member of the group"])
+        |> halt()
       member ->
-        cond do
-          GroupMembers.isAdmin(member) ->
-            case Repo.get(Thegm.GroupEvents, events_id) do
-              nil ->
-                conn
-                |> put_status(:not_found)
-                |> render(Thegm.ErrorView, "error.json", errors: ["No event with that id found"])
-              event ->
-                event_changeset = GroupEvents.delete_changeset(event)
+        member
+    end
 
-                case Repo.update(event_changeset) do
-                  {:ok, _} ->
-                    send_resp(conn, :no_content, "")
-                  {:error, resp} ->
-                    error_list = Enum.map(resp.errors, fn {k, v} -> Atom.to_string(k) <> ": " <> elem(v, 0) end)
-                    conn
-                    |> put_status(:bad_request)
-                    |> render(Thegm.ErrorView, "error.json", errors: error_list)
-                end
-            end
-          true ->
-            conn
-            |> put_status(:forbidden)
-            |> render(Thegm.ErrorView, "error.json", errors: ["Must be a group admin to take this action"])
-        end
+    # Ensure member is an admin
+    unless GroupMembers.isAdmin(member) do
+      conn
+      |> put_status(:forbidden)
+      |> render(Thegm.ErrorView, "error.json", errors: ["Must be a group admin to take this action"])
+      |> halt()
+    end
+
+    # Get the specified event
+    event = case Repo.get(Thegm.GroupEvents, events_id) do
+      nil ->
+        conn
+        |> put_status(:not_found)
+        |> render(Thegm.ErrorView, "error.json", errors: ["No event with that id found"])
+        |> halt()
+      event ->
+        event
+    end
+
+    # Mark event as deleted
+    event_changeset = GroupEvents.delete_changeset(event)
+
+    # Update event to be known as deleted
+    case Repo.update(event_changeset) do
+      {:ok, _} ->
+        send_resp(conn, :no_content, "")
+      {:error, resp} ->
+        error_list = Enum.map(resp.errors, fn {k, v} -> Atom.to_string(k) <> ": " <> elem(v, 0) end)
+        conn
+        |> put_status(:bad_request)
+        |> render(Thegm.ErrorView, "error.json", errors: error_list)
+        |> halt()
     end
   end
 
