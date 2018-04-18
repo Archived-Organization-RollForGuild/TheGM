@@ -14,6 +14,8 @@
 
         {Credo.Check.Readability.MaxLineLength, priority: :low, max_length: 100},
 
+        {Credo.Check.Refactor.Nesting, max_nesting: 3},
+
         {Credo.Check.Design.TagTODO, exit_status: 0},
 
         {Credo.Check.Refactor.PipeChainStart, false},
