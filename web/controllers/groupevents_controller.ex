@@ -55,57 +55,73 @@ defmodule Thegm.GroupEventsController do
 
   def update(conn, %{"groups_id" => groups_id, "id" => events_id, "data" => %{"attributes" => params, "type" => type}}) do
     users_id = conn.assigns[:current_user].id
-    case Repo.one(from gm in Thegm.GroupMembers, where: gm.groups_id == ^groups_id and gm.users_id == ^users_id and gm.active == true) do
+
+    # Ensure the user is a member of the group
+    member = case Repo.one(from gm in Thegm.GroupMembers, where: gm.groups_id == ^groups_id and gm.users_id == ^users_id and gm.active == true) do
       nil ->
         conn
         |> put_status(:forbidden)
         |> render(Thegm.ErrorView, "error.json", errors: ["Must be a member of the group"])
+        |> halt()
       member ->
-        cond do
-          GroupMembers.isAdmin(member) ->
-            case {type, params} do
-              {"events", params} ->
-                case Repo.get(Thegm.GroupEvents, events_id) do
-                  nil ->
-                    conn
-                    |> put_status(:not_found)
-                    |> render(Thegm.ErrorView, "error.json", errors: ["No event with that id found"])
-                  event ->
-                    case read_start_end(params) do
-                      {:ok, settings} ->
-                        params = Map.put(params, "start_time", settings.start_time)
-                        params = Map.put(params, "end_time", settings.end_time)
-                        params = Map.put(params, "groups_id", groups_id)
-                        event_changeset = GroupEvents.update_changeset(event, params)
+        member
+    end
 
-                        case Repo.update(event_changeset) do
-                          {:ok, event} ->
-                            event = event |> Repo.preload([:groups, :games])
-                            conn
-                            |> put_status(:created)
-                            |> render("show.json", event: event, is_member: true)
-                          {:error, resp} ->
-                            error_list = Enum.map(resp.errors, fn {k, v} -> Atom.to_string(k) <> ": " <> elem(v, 0) end)
-                            conn
-                            |> put_status(:bad_request)
-                            |> render(Thegm.ErrorView, "error.json", errors: error_list)
-                        end
-                      {:error, errors} ->
-                        conn
-                        |> put_status(:bad_request)
-                        |> render(Thegm.ErrorView, "error.json", errors: Enum.map(errors, fn {k, v} -> Atom.to_string(k) <> ": " <> elem(v, 0) end))
-                    end
-                end
-              _ ->
-                conn
-                |> put_status(:bad_request)
-                |> render(Thegm.ErrorView, "error.json", errors: ["Posted a non `evets` data type"])
-            end
-          true ->
-            conn
-            |> put_status(:forbidden)
-            |> render(Thegm.ErrorView, "error.json", errors: ["Must be a group admin to take this action"])
-        end
+    # Ensure the member is an admin of the group
+    unless GroupMembers.isAdmin(member) do
+      conn
+      |> put_status(:forbidden)
+      |> render(Thegm.ErrorView, "error.json", errors: ["Must be a group admin to take this action"])
+      |> halt()
+    end
+
+    # Ensure received data type is `events`
+    unless type == "events" do
+      conn
+      |> put_status(:bad_request)
+      |> render(Thegm.ErrorView, "error.json", errors: ["Posted a non `evets` data type"])
+      |> halt()
+    end
+
+    # Get the event specified
+    event = case Repo.get(Thegm.GroupEvents, events_id) do
+      nil ->
+        conn
+        |> put_status(:not_found)
+        |> render(Thegm.ErrorView, "error.json", errors: ["No event with that id found"])
+        |> halt
+      event ->
+        event
+    end
+
+    # Read the start and end times
+    params = case read_start_end(params) do
+      {:ok, settings} ->
+        params = Map.put(params, "start_time", settings.start_time)
+        params = Map.put(params, "end_time", settings.end_time)
+        params = Map.put(params, "groups_id", groups_id)
+      {:error, errors} ->
+        conn
+        |> put_status(:bad_request)
+        |> render(Thegm.ErrorView, "error.json", errors: Enum.map(errors, fn {k, v} -> Atom.to_string(k) <> ": " <> elem(v, 0) end))
+        |> halt()
+    end
+
+    # Update the event
+    event_changeset = GroupEvents.update_changeset(event, params)
+
+    # Attempt to update the event in the database
+    case Repo.update(event_changeset) do
+      {:ok, event} ->
+        event = event |> Repo.preload([:groups, :games])
+        conn
+        |> put_status(:created)
+        |> render("show.json", event: event, is_member: true)
+      {:error, resp} ->
+        error_list = Enum.map(resp.errors, fn {k, v} -> Atom.to_string(k) <> ": " <> elem(v, 0) end)
+        conn
+        |> put_status(:bad_request)
+        |> render(Thegm.ErrorView, "error.json", errors: error_list)
     end
   end
 
@@ -310,4 +326,3 @@ defmodule Thegm.GroupEventsController do
     resp
   end
 end
-# credo:disable-for-this-file
