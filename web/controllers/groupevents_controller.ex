@@ -6,50 +6,62 @@ defmodule Thegm.GroupEventsController do
 
   def create(conn, %{"groups_id" => groups_id, "data" => %{"attributes" => params, "type" => type}}) do
     users_id = conn.assigns[:current_user].id
-    case Repo.one(from gm in Thegm.GroupMembers, where: gm.groups_id == ^groups_id and gm.users_id == ^users_id and gm.active == true) do
+
+    # Ensure user is a member of group
+    member = case Repo.one(from gm in Thegm.GroupMembers, where: gm.groups_id == ^groups_id and gm.users_id == ^users_id and gm.active == true) do
       nil ->
         conn
         |> put_status(:forbidden)
         |> render(Thegm.ErrorView, "error.json", errors: ["Must be a member of the group"])
+        |> halt()
       member ->
-        cond do
-          GroupMembers.isAdmin(member) ->
-            case {type, params} do
-              {"events", params} ->
-                case read_start_end(params) do
-                  {:ok, settings} ->
-                    params = Map.put(params, "start_time", settings.start_time)
-                    params = Map.put(params, "end_time", settings.end_time)
-                    params = Map.put(params, "groups_id", groups_id)
-                    event_changeset = GroupEvents.create_changeset(%GroupEvents{}, params)
+        member
+    end
 
-                    case Repo.insert(event_changeset) do
-                      {:ok, event} ->
-                        event = event |> Repo.preload([:groups, :games])
-                        conn
-                        |> put_status(:created)
-                        |> render("show.json", event: event, is_member: true)
-                      {:error, resp} ->
-                        error_list = Enum.map(resp.errors, fn {k, v} -> Atom.to_string(k) <> ": " <> elem(v, 0) end)
-                        conn
-                        |> put_status(:bad_request)
-                        |> render(Thegm.ErrorView, "error.json", errors: error_list)
-                    end
-                  {:error, errors} ->
-                    conn
-                    |> put_status(:bad_request)
-                    |> render(Thegm.ErrorView, "error.json", errors: Enum.map(errors, fn {k, v} -> Atom.to_string(k) <> ": " <> elem(v, 0) end))
-                end
-              _ ->
-                conn
-                |> put_status(:bad_request)
-                |> render(Thegm.ErrorView, "error.json", errors: ["Posted a non `evets` data type"])
-            end
-          true ->
-            conn
-            |> put_status(:forbidden)
-            |> render(Thegm.ErrorView, "error.json", errors: ["Must be a group admin to take this action"])
-        end
+    # Ensure user is an admin of the group
+    unless GroupMembers.isAdmin(member) do
+      conn
+      |> put_status(:forbidden)
+      |> render(Thegm.ErrorView, "error.json", errors: ["Must be a group admin to take this action"])
+      |> halt()
+    end
+
+    # Ensure received data type is `events`
+    unless type == "events" do
+      conn
+      |> put_status(:bad_request)
+      |> render(Thegm.ErrorView, "error.json", errors: ["Posted a non `events` data type"])
+      |> halt()
+    end
+
+    # Read start/end time params
+    case read_start_end(params) do
+      {:ok, settings} ->
+        params = Map.put(params, "start_time", settings.start_time)
+        params = Map.put(params, "end_time", settings.end_time)
+        params = Map.put(params, "groups_id", groups_id)
+      {:error, errors} ->
+        conn
+        |> put_status(:bad_request)
+        |> render(Thegm.ErrorView, "error.json", errors: Enum.map(errors, fn {k, v} -> Atom.to_string(k) <> ": " <> elem(v, 0) end))
+        |> halt()
+    end
+
+    # Create event changeset
+    event_changeset = GroupEvents.create_changeset(%GroupEvents{}, params)
+
+    # Attept to insert event changeset
+    case Repo.insert(event_changeset) do
+      {:ok, event} ->
+        event = event |> Repo.preload([:groups, :games])
+        conn
+        |> put_status(:created)
+        |> render("show.json", event: event, is_member: true)
+      {:error, resp} ->
+        error_list = Enum.map(resp.errors, fn {k, v} -> Atom.to_string(k) <> ": " <> elem(v, 0) end)
+        conn
+        |> put_status(:bad_request)
+        |> render(Thegm.ErrorView, "error.json", errors: error_list)
     end
   end
 
@@ -79,7 +91,7 @@ defmodule Thegm.GroupEventsController do
     unless type == "events" do
       conn
       |> put_status(:bad_request)
-      |> render(Thegm.ErrorView, "error.json", errors: ["Posted a non `evets` data type"])
+      |> render(Thegm.ErrorView, "error.json", errors: ["Posted a non `events` data type"])
       |> halt()
     end
 
