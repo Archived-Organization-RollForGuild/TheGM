@@ -27,7 +27,7 @@ defmodule Thegm.GroupEventsController do
     # end
 
     # Read start/end time params
-    params = case read_start_end(params) do
+    params = case read_start_and_end_times(params) do
       {:ok, settings} ->
         params
         |> Map.put("start_time", settings.start_time)
@@ -93,7 +93,7 @@ defmodule Thegm.GroupEventsController do
     end
 
     # Read the start and end times
-    params = case read_start_end(params) do
+    params = case read_start_and_end_times(params) do
       {:ok, settings} ->
         params
         |> Map.put("start_time", settings.start_time)
@@ -168,7 +168,7 @@ defmodule Thegm.GroupEventsController do
       |> halt()
     end
 
-    settings = case read_pagination_params(params) do
+    settings = case Thegm.ReadPagination.read_pagination_params(params) do
       {:ok, settings} ->
         settings
       {:error, errors} ->
@@ -178,10 +178,10 @@ defmodule Thegm.GroupEventsController do
         |> halt()
     end
 
-    {meta, events} = query_events_with_meta(%{groups_id: groups_id, settings: settings})
+    {meta, events} = query_events_with_meta(groups_id, settings)
 
     # Is the user a member?
-    is_member = Thegm.GroupMembersController.is_member(groups_id: settings.groups_id, users_id: users_id)
+    is_member = Thegm.GroupMembersController.is_member(groups_id: groups_id, users_id: users_id)
 
     conn
     |> put_status(:ok)
@@ -229,11 +229,21 @@ defmodule Thegm.GroupEventsController do
     end
   end
 
-  def read_start_end(params) do
+  def read_start_and_end_times(params) do
     errors = []
 
-    # parse start_time
-    {start_time, errors} = case params["start_time"] do
+    {start_time, errors} = read_start_time(params, errors)
+    {end_time, errors} = read_end_time(params, errors)
+
+    if length(errors) > 0 do
+        {:error, errors}
+    else
+        {:ok, %{start_time: start_time, end_time: end_time}}
+    end
+  end
+
+  defp read_start_time(params, errors) do
+    case params["start_time"] do
       nil ->
         errors = errors ++ [start_time: "Must provide a startime in iso8601 format"]
         {nil, errors}
@@ -246,9 +256,10 @@ defmodule Thegm.GroupEventsController do
             {nil, errors}
         end
     end
+  end
 
-    # parse end_time
-    {end_time, errors} = case params["end_time"] do
+  defp read_end_time(params, errors) do
+    case params["end_time"] do
       nil ->
         errors = errors ++ [end_time: "Must provide a startime in iso8601 format"]
         {nil, errors}
@@ -260,82 +271,6 @@ defmodule Thegm.GroupEventsController do
             errors = errors ++ [end_time: Atom.to_string(error)]
             {nil, errors}
         end
-    end
-
-
-    if length(errors) > 0 do
-        {:error, errors}
-    else
-        {:ok, %{start_time: start_time, end_time: end_time}}
-    end
-  end
-
-  defp read_pagination_params(params) do
-    errors = []
-
-    # set page
-    {page, errors} = case read_int_param_with_default(params: params, name: "page", default: 1) do
-      {:error, error} ->
-        {nil, errors ++ [page: error]}
-
-      {:ok, val} ->
-        case ensure_between_inclusive(val: val, min: 1, max: nil) do
-          {:error, error} ->
-            {nil, errors ++ [page: error]}
-
-          {:ok, val} ->
-            {val, errors}
-        end
-    end
-
-    # set limit
-    {limit, errors} = case read_int_param_with_default(params: params, name: "limit", default: 1) do
-      {:error, error} ->
-        {nil, errors ++ [limit: error]}
-
-      {:ok, val} ->
-        case ensure_between_inclusive(val: val, min: 1, max: nil) do
-          {:error, error} ->
-            {nil, errors ++ [limit: error]}
-
-          {:ok, val} ->
-            {val, errors}
-        end
-    end
-
-    if length(errors) > 0 do
-      {:error, errors}
-    else
-      {:ok, %{offset: (page - 1) * limit, page: page, limit: limit, after: NaiveDateTime.utc_now()}}
-    end
-  end
-
-  defp read_int_param_with_default(params: params, name: name, default: default) do
-    case params[name] do
-      nil ->
-        {:ok, default}
-
-      temp ->
-        case Integer.parse(temp) do
-          {:error} ->
-            {:error, "Unable to parse integer"}
-
-          {integer, _remainder} ->
-            {:ok, integer}
-        end
-    end
-  end
-
-  defp ensure_between_inclusive(val: val, min: min, max: max) do
-    cond do
-      min == nil and val < min ->
-        {:error, "Value must be an integer greater than or equal to " <> Integer.to_string(min)}
-
-      max == nil and val > max ->
-        {:error, "Value must be an integer less than or equal to " <> Integer.to_string(max)}
-
-      true ->
-        {:ok, val}
     end
   end
 
@@ -354,12 +289,14 @@ defmodule Thegm.GroupEventsController do
     end
   end
 
-  defp query_events_with_meta(groups_id: groups_id, settings: settings) do
+  defp query_events_with_meta(groups_id, settings) do
+    now = NaiveDateTime.utc_now()
+
     # Get total in search
-    total = Repo.one(from ge in GroupEvents, where: ge.groups_id == ^settings.groups_id and ge.end_time >= ^settings.after and ge.deleted == false, select: count(ge.id))
+    total = Repo.one(from ge in GroupEvents, where: ge.groups_id == ^groups_id and ge.end_time >= ^now and ge.deleted == false, select: count(ge.id))
 
     events =  Repo.all(from ge in GroupEvents,
-      where: ge.groups_id == ^groups_id and ge.end_time >= ^settings.after and ge.deleted == false,
+      where: ge.groups_id == ^groups_id and ge.end_time >= ^now and ge.deleted == false,
       order_by: [asc: ge.start_time],
       limit: ^settings.limit,
       offset: ^settings.offset
