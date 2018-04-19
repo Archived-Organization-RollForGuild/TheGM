@@ -6,8 +6,57 @@ defmodule Thegm.GroupEventsController do
 
   def create(conn, %{"groups_id" => groups_id, "data" => %{"attributes" => params, "type" => type}}) do
     users_id = conn.assigns[:current_user].id
+<<<<<<< HEAD
     case Repo.one(from gm in Thegm.GroupMembers, where: gm.groups_id == ^groups_id and gm.users_id == ^users_id and gm.active == true) do
       nil ->
+=======
+
+    # Ensure user is a member and admin of the group
+    case is_member_and_admin?(users_id, groups_id) do
+      {:error, error} ->
+        conn
+        |> put_status(:bad_request)
+        |> render(Thegm.ErrorView, "error.json", errors: error)
+        |> halt()
+      {:ok, _} ->
+        nil
+    end
+
+    # # Ensure received data type is `events`
+    # unless type == "events" do
+    #   conn
+    #   |> put_status(:bad_request)
+    #   |> render(Thegm.ErrorView, "error.json", errors: ["Posted a non `events` data type"])
+    #   |> halt()
+    # end
+
+    # Read start/end time params
+    params = case read_start_and_end_times(params) do
+      {:ok, settings} ->
+        params
+        |> Map.put("start_time", settings.start_time)
+        |> Map.put("end_time", settings.end_time)
+        |> Map.put("groups_id", groups_id)
+      {:error, errors} ->
+        conn
+        |> put_status(:bad_request)
+        |> render(Thegm.ErrorView, "error.json", errors: Enum.map(errors, fn {k, v} -> Atom.to_string(k) <> ": " <> elem(v, 0) end))
+        |> halt()
+    end
+
+    # Create event changeset
+    event_changeset = GroupEvents.create_changeset(%GroupEvents{}, params)
+
+    # Attept to insert event changeset
+    case Repo.insert(event_changeset) do
+      {:ok, event} ->
+        event = event |> Repo.preload([:groups, :games])
+        conn
+        |> put_status(:created)
+        |> render("show.json", event: event, is_member: true)
+      {:error, resp} ->
+        error_list = Enum.map(resp.errors, fn {k, v} -> Atom.to_string(k) <> ": " <> elem(v, 0) end)
+>>>>>>> c4a7518... refactor(groupevents): abstract reading pagination params to their own module
         conn
         |> put_status(:forbidden)
         |> render(Thegm.ErrorView, "error.json", errors: ["Must be a member of the group"])
@@ -58,6 +107,7 @@ defmodule Thegm.GroupEventsController do
     case Repo.one(from gm in Thegm.GroupMembers, where: gm.groups_id == ^groups_id and gm.users_id == ^users_id and gm.active == true) do
       nil ->
         conn
+<<<<<<< HEAD
         |> put_status(:forbidden)
         |> render(Thegm.ErrorView, "error.json", errors: ["Must be a member of the group"])
       member ->
@@ -106,6 +156,45 @@ defmodule Thegm.GroupEventsController do
             |> put_status(:forbidden)
             |> render(Thegm.ErrorView, "error.json", errors: ["Must be a group admin to take this action"])
         end
+=======
+        |> put_status(:not_found)
+        |> render(Thegm.ErrorView, "error.json", errors: ["No event with that id found"])
+        |> halt()
+      event ->
+        event
+    end
+
+    # Read the start and end times
+    params = case read_start_and_end_times(params) do
+      {:ok, settings} ->
+        params
+        |> Map.put("start_time", settings.start_time)
+        |> Map.put("end_time", settings.end_time)
+        |> Map.put("groups_id", groups_id)
+      {:error, errors} ->
+        conn
+        |> put_status(:bad_request)
+        |> render(Thegm.ErrorView, "error.json", errors: Enum.map(errors, fn {k, v} -> Atom.to_string(k) <> ": " <> elem(v, 0) end))
+        |> halt()
+    end
+
+    # Update the event
+    event_changeset = GroupEvents.update_changeset(event, params)
+
+    # Attempt to update the event in the database
+    case Repo.update(event_changeset) do
+      {:ok, event} ->
+        event = event |> Repo.preload([:groups, :games])
+        conn
+        |> put_status(:created)
+        |> render("show.json", event: event, is_member: true)
+      {:error, resp} ->
+        error_list = Enum.map(resp.errors, fn {k, v} -> Atom.to_string(k) <> ": " <> elem(v, 0) end)
+        conn
+        |> put_status(:bad_request)
+        |> render(Thegm.ErrorView, "error.json", errors: error_list)
+        |> halt()
+>>>>>>> c4a7518... refactor(groupevents): abstract reading pagination params to their own module
     end
   end
 
@@ -145,7 +234,19 @@ defmodule Thegm.GroupEventsController do
         found.id
     end
 
+<<<<<<< HEAD
     case read_search_params(params) do
+=======
+    groups_id = params["groups_id"]
+    if groups_id == nil do
+      conn
+      |> put_status(:bad_request)
+      |> render(Thegm.ErrorView, "error.json", errors: ["groups_id: Must be supplied!"])
+      |> halt()
+    end
+
+    settings = case Thegm.ReadPagination.read_pagination_params(params) do
+>>>>>>> c4a7518... refactor(groupevents): abstract reading pagination params to their own module
       {:ok, settings} ->
         is_member = Thegm.GroupMembersController.is_member(groups_id: settings.groups_id, users_id: users_id)
 
@@ -180,6 +281,18 @@ defmodule Thegm.GroupEventsController do
         |> put_status(:bad_request)
         |> render(Thegm.ErrorView, "error.json", errors: Enum.map(errors, fn {k, v} -> Atom.to_string(k) <> ": " <> elem(v, 0) end))
     end
+<<<<<<< HEAD
+=======
+
+    {meta, events} = query_events_with_meta(groups_id, settings)
+
+    # Is the user a member?
+    is_member = Thegm.GroupMembersController.is_member(groups_id: groups_id, users_id: users_id)
+
+    conn
+    |> put_status(:ok)
+    |> render("index.json", events: events, meta: meta, is_member: is_member)
+>>>>>>> c4a7518... refactor(groupevents): abstract reading pagination params to their own module
   end
 
   def delete(conn, %{"groups_id" => groups_id, "id" => events_id}) do
@@ -218,11 +331,21 @@ defmodule Thegm.GroupEventsController do
     end
   end
 
-  def read_start_end(params) do
+  def read_start_and_end_times(params) do
     errors = []
 
-    # parse start_time
-    {start_time, errors} = case params["start_time"] do
+    {start_time, errors} = read_start_time(params, errors)
+    {end_time, errors} = read_end_time(params, errors)
+
+    if length(errors) > 0 do
+        {:error, errors}
+    else
+        {:ok, %{start_time: start_time, end_time: end_time}}
+    end
+  end
+
+  defp read_start_time(params, errors) do
+    case params["start_time"] do
       nil ->
         errors = errors ++ [start_time: "Must provide a startime in iso8601 format"]
         {nil, errors}
@@ -235,9 +358,10 @@ defmodule Thegm.GroupEventsController do
             {nil, errors}
         end
     end
+  end
 
-    # parse end_time
-    {end_time, errors} = case params["end_time"] do
+  defp read_end_time(params, errors) do
+    case params["end_time"] do
       nil ->
         errors = errors ++ [end_time: "Must provide a startime in iso8601 format"]
         {nil, errors}
@@ -250,6 +374,7 @@ defmodule Thegm.GroupEventsController do
             {nil, errors}
         end
     end
+<<<<<<< HEAD
 
     cond do
       length(errors) > 0 ->
@@ -308,6 +433,41 @@ defmodule Thegm.GroupEventsController do
         {:ok, %{page: page, limit: limit, groups_id: groups_id}}
     end
     resp
+=======
+  end
+
+  defp is_member_and_admin?(users_id, groups_id) do
+    # Ensure user is a member of group
+    case Repo.one(from gm in Thegm.GroupMembers, where: gm.groups_id == ^groups_id and gm.users_id == ^users_id and gm.active == true) do
+      nil ->
+        {:error, ["Must be a member of the group"]}
+      member ->
+        # Ensure user is an admin of the group
+        if GroupMembers.isAdmin(member) do
+          {:ok, member}
+        else
+          {:error, ["Must be a group admin to take this action"]}
+        end
+    end
+  end
+
+  defp query_events_with_meta(groups_id, settings) do
+    now = NaiveDateTime.utc_now()
+
+    # Get total in search
+    total = Repo.one(from ge in GroupEvents, where: ge.groups_id == ^groups_id and ge.end_time >= ^now and ge.deleted == false, select: count(ge.id))
+
+    events =  Repo.all(from ge in GroupEvents,
+      where: ge.groups_id == ^groups_id and ge.end_time >= ^now and ge.deleted == false,
+      order_by: [asc: ge.start_time],
+      limit: ^settings.limit,
+      offset: ^settings.offset
+    ) |> Repo.preload([:groups, :games])
+
+    meta = %{total: total, limit: settings.limit, offset: settings.offset, count: length(events)}
+
+    {meta, events}
+>>>>>>> c4a7518... refactor(groupevents): abstract reading pagination params to their own module
   end
 end
 # credo:disable-for-this-file
