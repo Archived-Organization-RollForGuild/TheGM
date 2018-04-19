@@ -4,42 +4,35 @@ defmodule Thegm.GroupEventsController do
   alias Thegm.GroupEvents
   alias Thegm.GroupMembers
 
-  def create(conn, %{"groups_id" => groups_id, "data" => %{"attributes" => params, "type" => type}}) do
+  def create(conn, %{"groups_id" => groups_id, "data" => %{"attributes" => params, "type" => "events"}}) do
     users_id = conn.assigns[:current_user].id
 
-    # Ensure user is a member of group
-    member = case Repo.one(from gm in Thegm.GroupMembers, where: gm.groups_id == ^groups_id and gm.users_id == ^users_id and gm.active == true) do
-      nil ->
+    # Ensure user is a member and admin of the group
+    case is_member_and_admin?(users_id, groups_id) do
+      {:error, error} ->
         conn
-        |> put_status(:forbidden)
-        |> render(Thegm.ErrorView, "error.json", errors: ["Must be a member of the group"])
+        |> put_status(:bad_request)
+        |> render(Thegm.ErrorView, "error.json", errors: error)
         |> halt()
-      member ->
-        member
+      {:ok, _} ->
+        nil
     end
 
-    # Ensure user is an admin of the group
-    unless GroupMembers.isAdmin(member) do
-      conn
-      |> put_status(:forbidden)
-      |> render(Thegm.ErrorView, "error.json", errors: ["Must be a group admin to take this action"])
-      |> halt()
-    end
-
-    # Ensure received data type is `events`
-    unless type == "events" do
-      conn
-      |> put_status(:bad_request)
-      |> render(Thegm.ErrorView, "error.json", errors: ["Posted a non `events` data type"])
-      |> halt()
-    end
+    # # Ensure received data type is `events`
+    # unless type == "events" do
+    #   conn
+    #   |> put_status(:bad_request)
+    #   |> render(Thegm.ErrorView, "error.json", errors: ["Posted a non `events` data type"])
+    #   |> halt()
+    # end
 
     # Read start/end time params
-    case read_start_end(params) do
+    params = case read_start_end(params) do
       {:ok, settings} ->
-        params = Map.put(params, "start_time", settings.start_time)
-        params = Map.put(params, "end_time", settings.end_time)
-        params = Map.put(params, "groups_id", groups_id)
+        params
+        |> Map.put("start_time", settings.start_time)
+        |> Map.put("end_time", settings.end_time)
+        |> Map.put("groups_id", groups_id)
       {:error, errors} ->
         conn
         |> put_status(:bad_request)
@@ -66,35 +59,27 @@ defmodule Thegm.GroupEventsController do
     end
   end
 
-  def update(conn, %{"groups_id" => groups_id, "id" => events_id, "data" => %{"attributes" => params, "type" => type}}) do
+  def update(conn, %{"groups_id" => groups_id, "id" => events_id, "data" => %{"attributes" => params, "type" => "events"}}) do
     users_id = conn.assigns[:current_user].id
 
-    # Ensure the user is a member of the group
-    member = case Repo.one(from gm in Thegm.GroupMembers, where: gm.groups_id == ^groups_id and gm.users_id == ^users_id and gm.active == true) do
-      nil ->
+    # Ensure user is a member and admin of the group
+    case is_member_and_admin?(users_id, groups_id) do
+      {:error, error} ->
         conn
-        |> put_status(:forbidden)
-        |> render(Thegm.ErrorView, "error.json", errors: ["Must be a member of the group"])
+        |> put_status(:bad_request)
+        |> render(Thegm.ErrorView, "error.json", errors: error)
         |> halt()
-      member ->
-        member
+      {:ok, _} ->
+        nil
     end
 
-    # Ensure the member is an admin of the group
-    unless GroupMembers.isAdmin(member) do
-      conn
-      |> put_status(:forbidden)
-      |> render(Thegm.ErrorView, "error.json", errors: ["Must be a group admin to take this action"])
-      |> halt()
-    end
-
-    # Ensure received data type is `events`
-    unless type == "events" do
-      conn
-      |> put_status(:bad_request)
-      |> render(Thegm.ErrorView, "error.json", errors: ["Posted a non `events` data type"])
-      |> halt()
-    end
+    # # Ensure received data type is `events`
+    # unless type == "events" do
+    #   conn
+    #   |> put_status(:bad_request)
+    #   |> render(Thegm.ErrorView, "error.json", errors: ["Posted a non `events` data type"])
+    #   |> halt()
+    # end
 
     # Get the event specified
     event = case Repo.get(Thegm.GroupEvents, events_id) do
@@ -110,9 +95,10 @@ defmodule Thegm.GroupEventsController do
     # Read the start and end times
     params = case read_start_end(params) do
       {:ok, settings} ->
-        params = Map.put(params, "start_time", settings.start_time)
-        params = Map.put(params, "end_time", settings.end_time)
-        params = Map.put(params, "groups_id", groups_id)
+        params
+        |> Map.put("start_time", settings.start_time)
+        |> Map.put("end_time", settings.end_time)
+        |> Map.put("groups_id", groups_id)
       {:error, errors} ->
         conn
         |> put_status(:bad_request)
@@ -153,16 +139,15 @@ defmodule Thegm.GroupEventsController do
         |> put_status(:not_found)
         |> render(Thegm.ErrorView, "error.json", errors: ["Could not find specified event for group"])
       event ->
-        cond do
-          event.deleted ->
-            conn
-            |> put_status(:gone)
-            |> render(Thegm.ErrorView, "error.json", errors: ["That event no longer exists."])
-          true ->
-            is_member = Thegm.GroupMembersController.is_member(groups_id: groups_id, users_id: users_id)
-            conn
-            |> put_status(:ok)
-            |> render("show.json", event: event, is_member: is_member)
+        if event.deleted do
+          conn
+          |> put_status(:gone)
+          |> render(Thegm.ErrorView, "error.json", errors: ["That event no longer exists."])
+        else
+          is_member = Thegm.GroupMembersController.is_member(groups_id: groups_id, users_id: users_id)
+          conn
+          |> put_status(:ok)
+          |> render("show.json", event: event, is_member: is_member)
         end
     end
   end
@@ -175,63 +160,46 @@ defmodule Thegm.GroupEventsController do
         found.id
     end
 
-    case read_search_params(params) do
+    groups_id = params["groups_id"]
+    if groups_id == nil do
+      conn
+      |> put_status(:bad_request)
+      |> render(Thegm.ErrorView, "error.json", errors: ["groups_id: Must be supplied!"])
+      |> halt()
+    end
+
+    settings = case read_pagination_params(params) do
       {:ok, settings} ->
-        is_member = Thegm.GroupMembersController.is_member(groups_id: settings.groups_id, users_id: users_id)
-
-        # Search params
-        offset = (settings.page - 1) * settings.limit
-        now = NaiveDateTime.utc_now()
-
-        # Get total in search
-        total = Repo.one(from ge in GroupEvents, where: ge.groups_id == ^settings.groups_id and ge.end_time >= ^now and ge.deleted == false, select: count(ge.id))
-        cond do
-          total > 0 ->
-            events =  Repo.all(from ge in GroupEvents,
-              where: ge.groups_id == ^settings.groups_id and ge.end_time >= ^now and ge.deleted == false,
-              order_by: [asc: ge.start_time],
-              limit: ^settings.limit,
-              offset: ^offset
-            ) |> Repo.preload([:groups, :games])
-
-            meta = %{total: total, limit: settings.limit, offset: offset, count: length(events)}
-
-            conn
-            |> put_status(:ok)
-            |> render("index.json", events: events, meta: meta, is_member: is_member)
-          true ->
-            meta = %{total: total, limit: settings.limit, offset: offset, count: 0}
-            conn
-            |> put_status(:ok)
-            |> render("index.json", events: [], meta: meta, is_member: is_member)
-        end
+        settings
       {:error, errors} ->
         conn
         |> put_status(:bad_request)
         |> render(Thegm.ErrorView, "error.json", errors: Enum.map(errors, fn {k, v} -> Atom.to_string(k) <> ": " <> elem(v, 0) end))
+        |> halt()
     end
+
+    {meta, events} = query_events_with_meta(%{groups_id: groups_id, settings: settings})
+
+    # Is the user a member?
+    is_member = Thegm.GroupMembersController.is_member(groups_id: settings.groups_id, users_id: users_id)
+
+    conn
+    |> put_status(:ok)
+    |> render("index.json", events: events, meta: meta, is_member: is_member)
   end
 
   def delete(conn, %{"groups_id" => groups_id, "id" => events_id}) do
     users_id = conn.assigns[:current_user].id
 
-    # Ensure user is a member of the group
-    member = case Repo.one(from gm in Thegm.GroupMembers, where: gm.groups_id == ^groups_id and gm.users_id == ^users_id and gm.active == true) do
-      nil ->
+    # Ensure user is a member and admin of the group
+    case is_member_and_admin?(users_id, groups_id) do
+      {:error, error} ->
         conn
-        |> put_status(:forbidden)
-        |> render(Thegm.ErrorView, "error.json", errors: ["Must be a member of the group"])
+        |> put_status(:bad_request)
+        |> render(Thegm.ErrorView, "error.json", errors: error)
         |> halt()
-      member ->
-        member
-    end
-
-    # Ensure member is an admin
-    unless GroupMembers.isAdmin(member) do
-      conn
-      |> put_status(:forbidden)
-      |> render(Thegm.ErrorView, "error.json", errors: ["Must be a group admin to take this action"])
-      |> halt()
+      {:ok, _} ->
+        nil
     end
 
     # Get the specified event
@@ -294,62 +262,111 @@ defmodule Thegm.GroupEventsController do
         end
     end
 
-    cond do
-      length(errors) > 0 ->
+
+    if length(errors) > 0 do
         {:error, errors}
-      true ->
+    else
         {:ok, %{start_time: start_time, end_time: end_time}}
     end
   end
 
-  defp read_search_params(params) do
+  defp read_pagination_params(params) do
     errors = []
 
-    # verify groups_id
-    {groups_id, errors} = case params["groups_id"] do
-      nil ->
-        errors = errors ++ [groups_id: "Must be supplied"]
-        {nil, errors}
-      temp ->
-        {temp, errors}
-    end
-
     # set page
-    {page, errors} = case params["page"] do
-      nil ->
-        {1, errors}
-      temp ->
-        {page, _} = Integer.parse(temp)
-        errors = cond do
-          page < 1 ->
-            errors ++ [page: "Must be a positive integer"]
-          true ->
-            errors
+    {page, errors} = case read_int_param_with_default(params: params, name: "page", default: 1) do
+      {:error, error} ->
+        {nil, errors ++ [page: error]}
+
+      {:ok, val} ->
+        case ensure_between_inclusive(val: val, min: 1, max: nil) do
+          {:error, error} ->
+            {nil, errors ++ [page: error]}
+
+          {:ok, val} ->
+            {val, errors}
         end
-        {page, errors}
     end
 
-    {limit, errors} = case params["limit"] do
-      nil ->
-        {100, errors}
-      temp ->
-        {limit, _} = Integer.parse(temp)
-        errors = cond do
+    # set limit
+    {limit, errors} = case read_int_param_with_default(params: params, name: "limit", default: 1) do
+      {:error, error} ->
+        {nil, errors ++ [limit: error]}
 
-          limit < 1 ->
-            errors ++ [limit: "Must be at integer greater than 0"]
-          true ->
-            errors
+      {:ok, val} ->
+        case ensure_between_inclusive(val: val, min: 1, max: nil) do
+          {:error, error} ->
+            {nil, errors ++ [limit: error]}
+
+          {:ok, val} ->
+            {val, errors}
         end
-        {limit, errors}
     end
 
-    resp = cond do
-      length(errors) > 0 ->
-        {:error, errors}
+    if length(errors) > 0 do
+      {:error, errors}
+    else
+      {:ok, %{offset: (page - 1) * limit, page: page, limit: limit, after: NaiveDateTime.utc_now()}}
+    end
+  end
+
+  defp read_int_param_with_default(params: params, name: name, default: default) do
+    case params[name] do
+      nil ->
+        {:ok, default}
+
+      temp ->
+        case Integer.parse(temp) do
+          {:error} ->
+            {:error, "Unable to parse integer"}
+
+          {integer, _remainder} ->
+            {:ok, integer}
+        end
+    end
+  end
+
+  defp ensure_between_inclusive(val: val, min: min, max: max) do
+    cond do
+      min == nil and val < min ->
+        {:error, "Value must be an integer greater than or equal to " <> Integer.to_string(min)}
+
+      max == nil and val > max ->
+        {:error, "Value must be an integer less than or equal to " <> Integer.to_string(max)}
+
       true ->
-        {:ok, %{page: page, limit: limit, groups_id: groups_id}}
+        {:ok, val}
     end
-    resp
+  end
+
+  defp is_member_and_admin?(users_id, groups_id) do
+    # Ensure user is a member of group
+    case Repo.one(from gm in Thegm.GroupMembers, where: gm.groups_id == ^groups_id and gm.users_id == ^users_id and gm.active == true) do
+      nil ->
+        {:error, ["Must be a member of the group"]}
+      member ->
+        # Ensure user is an admin of the group
+        if GroupMembers.isAdmin(member) do
+          {:ok, member}
+        else
+          {:error, ["Must be a group admin to take this action"]}
+        end
+    end
+  end
+
+  defp query_events_with_meta(groups_id: groups_id, settings: settings) do
+    # Get total in search
+    total = Repo.one(from ge in GroupEvents, where: ge.groups_id == ^settings.groups_id and ge.end_time >= ^settings.after and ge.deleted == false, select: count(ge.id))
+
+    events =  Repo.all(from ge in GroupEvents,
+      where: ge.groups_id == ^groups_id and ge.end_time >= ^settings.after and ge.deleted == false,
+      order_by: [asc: ge.start_time],
+      limit: ^settings.limit,
+      offset: ^settings.offset
+    ) |> Repo.preload([:groups, :games])
+
+    meta = %{total: total, limit: settings.limit, offset: settings.offset, count: length(events)}
+
+    {meta, events}
   end
 end
