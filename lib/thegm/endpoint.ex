@@ -23,7 +23,8 @@ defmodule Thegm.Endpoint do
   plug Plug.Parsers,
     parsers: [:urlencoded, :multipart, :json],
     pass: ["*/*"],
-    json_decoder: Poison
+    json_decoder: Poison,
+    length: 20_000_000
 
   plug Plug.MethodOverride
   plug Plug.Head
