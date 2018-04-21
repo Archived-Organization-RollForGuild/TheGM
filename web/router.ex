@@ -25,7 +25,8 @@ defmodule Thegm.Router do
       resources "/games", UserGamesController, only: [:update], singleton: true
     end
 
-    resources "/games", GamesController, only: [:index, :create]
+    resources "/games", GamesController, only: [:index, :show]
+    resources "/game-sugestions", GameSuggestionsController, only: [:create, :index, :show]
 
     resources "/groups", GroupsController, only: [:create, :update, :delete] do
       resources "/events", GroupEventsController, only: [:create, :update, :delete]

@@ -37,27 +37,17 @@ defmodule Thegm.GamesController do
     end
   end
 
-  def create(conn, %{"data" => %{"type" => type, "attributes" => params}}) do
-    users_id = conn.assigns[:current_user].id
-    if  type == "games" do
-      game_changeset = Thegm.GameSuggestions.create_changeset(%Thegm.GameSuggestions{}, Map.merge(params, %{"users_id" => users_id}))
-      case Repo.insert(game_changeset) do
-        {:ok, game_suggestion} ->
-          conn
-          |> put_status(:created)
-          |> render(Thegm.GameSuggestionsView, "show.json", game_suggestion: game_suggestion)
-
-        {:error, resp} ->
-          conn
-          |> put_status(:bad_request)
-          |> render(Thegm.ErrorView, "error.json", errors: Enum.map(resp.errors, fn {k, v} -> Atom.to_string(k) <> ": " <> elem(v, 0) end))
-          |> halt()
-      end
-    else
-      conn
-      |> put_status(:bad_request)
-      |> render(Thegm.ErrorView, "error.json", errors: ["Posted a non 'games' type"])
-      |> halt()
+  def show(conn, %{"id" => games_id}) do
+    Repo.get(Games, games_id) do
+      nil ->
+        conn
+        |> put_status(:not_found)
+        |> render(Thegm.ErrorView, "error.json", errors: ["No game with that id found"])
+        |> halt()
+      game ->
+        conn
+        |> put_status(:ok)
+        |> render("show.json", game: game)
     end
   end
 end

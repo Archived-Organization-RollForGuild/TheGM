@@ -4,7 +4,7 @@ defmodule Thegm.Repo.Migrations.CreateEventGames do
   def change do
     create table(:group_event_games, primary_key: false) do
       add :id, :uuid, primary_key: true
-      add :events_id, references(:events, on_delete: :nothing, type: :uuid)
+      add :group_events_id, references(:group_events, on_delete: :nothing, type: :uuid)
       add :games_id, references(:games, on_delete: :delete_all, type: :uuid)
       add :game_suggestions_id, references(:game_suggestions, on_delete: :nothing, type: :uuid)
     end
