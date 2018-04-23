@@ -22,8 +22,9 @@ defmodule Thegm.GameSuggestions do
   end
 
   def create_changeset(model, params \\ :empty) do
+    params = Map.merge(params, %{"status" => "pending"})
     model
-    |> cast(params, [:name, :version, :publisher, :url, :users_id, :groups_id])
+    |> cast(params, [:name, :version, :publisher, :url, :users_id, :groups_id, :status])
     |> validate_required([:name, :users_id], message: "are required")
     |> validate_length(:name, min: 1, max: 8192, message: "must be between 1 and 8192 characters")
     |> validate_length(:version, max: 8192, message: "must be less than 8192 characters")

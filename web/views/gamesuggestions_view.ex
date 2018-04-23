@@ -7,6 +7,12 @@ defmodule Thegm.GameSuggestionsView do
     }
   end
 
+  def render("index.json", %{game_suggestions: game_suggestions, meta: meta}) do
+    data = Enum.map(game_suggestions, &game_suggestion_show/1)
+
+    %{meta: Thegm.MetaView.meta(meta), data: data}
+  end
+
   def game_suggestion_show(game_suggestion) do
     %{
       type: "game-suggestions",
