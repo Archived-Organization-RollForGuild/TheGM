@@ -38,7 +38,7 @@ defmodule Thegm.GamesController do
   end
 
   def show(conn, %{"id" => games_id}) do
-    Repo.get(Games, games_id) do
+    case Repo.get(Games, games_id) do
       nil ->
         conn
         |> put_status(:not_found)
