@@ -8,7 +8,7 @@ defmodule Thegm.GroupEventsController do
     users_id = conn.assigns[:current_user].id
 
     # Ensure user is a member and admin of the group
-    case is_member_and_admin?(users_id, groups_id) do
+    case Thegm.GroupMembersController.is_member_and_admin?(users_id, groups_id) do
       {:error, error} ->
         conn
         |> put_status(:bad_request)
@@ -63,7 +63,7 @@ defmodule Thegm.GroupEventsController do
     users_id = conn.assigns[:current_user].id
 
     # Ensure user is a member and admin of the group
-    case is_member_and_admin?(users_id, groups_id) do
+    case Thegm.GroupMembersController.is_member_and_admin?(users_id, groups_id) do
       {:error, error} ->
         conn
         |> put_status(:bad_request)
@@ -192,7 +192,7 @@ defmodule Thegm.GroupEventsController do
     users_id = conn.assigns[:current_user].id
 
     # Ensure user is a member and admin of the group
-    case is_member_and_admin?(users_id, groups_id) do
+    case Thegm.GroupMembersController.is_member_and_admin?(users_id, groups_id) do
       {:error, error} ->
         conn
         |> put_status(:bad_request)
@@ -270,21 +270,6 @@ defmodule Thegm.GroupEventsController do
           {:error, error} ->
             errors = errors ++ [end_time: Atom.to_string(error)]
             {nil, errors}
-        end
-    end
-  end
-
-  defp is_member_and_admin?(users_id, groups_id) do
-    # Ensure user is a member of group
-    case Repo.one(from gm in Thegm.GroupMembers, where: gm.groups_id == ^groups_id and gm.users_id == ^users_id and gm.active == true) do
-      nil ->
-        {:error, ["Must be a member of the group"]}
-      member ->
-        # Ensure user is an admin of the group
-        if GroupMembers.isAdmin(member) do
-          {:ok, member}
-        else
-          {:error, ["Must be a group admin to take this action"]}
         end
     end
   end
