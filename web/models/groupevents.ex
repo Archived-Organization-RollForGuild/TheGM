@@ -13,14 +13,13 @@ defmodule Thegm.GroupEvents do
     field :end_time, :utc_datetime
     field :deleted, :boolean
     belongs_to :groups, Thegm.Groups
-    belongs_to :games, Thegm.Games
 
     timestamps()
   end
 
   def create_changeset(model, params \\ :empty) do
     model
-    |> cast(params, [:title, :description, :location, :start_time, :end_time, :groups_id, :games_id])
+    |> cast(params, [:title, :description, :location, :start_time, :end_time, :groups_id])
     |> validate_required([:title, :start_time, :end_time, :groups_id], message: "are required.")
     |> validate_length(:title, min: 1, max: 8192, message: "must be between 1 and 8192 characters.")
     |> validate_length(:description, max: 8192, message: "must be less than 8192 characters")

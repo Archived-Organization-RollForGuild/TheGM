@@ -2,7 +2,6 @@ defmodule Thegm.GroupEventsController do
   use Thegm.Web, :controller
 
   alias Thegm.GroupEvents
-  alias Thegm.GroupMembers
 
   def create(conn, %{"groups_id" => groups_id, "data" => %{"attributes" => params, "type" => "events"}}) do
     users_id = conn.assigns[:current_user].id
@@ -18,13 +17,26 @@ defmodule Thegm.GroupEventsController do
         nil
     end
 
-    # # Ensure received data type is `events`
-    # unless type == "events" do
-    #   conn
-    #   |> put_status(:bad_request)
-    #   |> render(Thegm.ErrorView, "error.json", errors: ["Posted a non `events` data type"])
-    #   |> halt()
-    # end
+    games = case params["games"] do
+      nil ->
+        []
+      list ->
+        list
+    end
+
+    game_suggestions = case params["game_suggestions"] do
+      nil ->
+        []
+      list ->
+        list
+    end
+
+    # NOTE: Once we have guilds, this should only be triggered if a group is not a guild.
+    if length(games) + length(game_suggestions) > 1 do
+      conn
+      |> put_status(:bad_request)
+      |> render(Thegm.ErrorView, "error.json", errors: ["Events can only have one game associated with them"])
+    end
 
     # Read start/end time params
     params = case read_start_and_end_times(params) do
@@ -43,18 +55,32 @@ defmodule Thegm.GroupEventsController do
     # Create event changeset
     event_changeset = GroupEvents.create_changeset(%GroupEvents{}, params)
 
-    # Attept to insert event changeset
-    case Repo.insert(event_changeset) do
+    multi =
+      Multi.new
+      |> Multi.insert(:group_events, event_changeset)
+      |> Multi.run(:group_event_games, fn %{group_events: group_event} ->
+
+        event_games = compile_game_changesets(games, group_event.id) ++ compile_game_suggestion_changesets(game_suggestions, group_event.id)
+
+        Repo.insert_all(Thegm.GroupEventGames, event_games)
+      end)
+
+    case Repo.transaction(multi) do
       {:ok, event} ->
-        event = event |> Repo.preload([:groups, :games])
         conn
         |> put_status(:created)
         |> render("show.json", event: event, is_member: true)
-      {:error, resp} ->
-        error_list = Enum.map(resp.errors, fn {k, v} -> Atom.to_string(k) <> ": " <> elem(v, 0) end)
+
+      {:error, :group_events, changeset, %{}} ->
         conn
-        |> put_status(:bad_request)
-        |> render(Thegm.ErrorView, "error.json", errors: error_list)
+        |> put_status(:unprocessable_entity)
+        |> render(Thegm.ErrorView, "error.json", errors: Enum.map(changeset.errors, fn {k, v} -> Atom.to_string(k) <> ": " <> elem(v, 0) end))
+        |> halt()
+
+      {:error, :group_event_games, changeset, %{}} ->
+        conn
+        |> put_status(:unprocessable_entity)
+        |> render(Thegm.ErrorView, "error.json", errors: Enum.map(changeset.errors, fn {k, v} -> Atom.to_string(k) <> ": " <> elem(v, 0) end))
         |> halt()
     end
   end
@@ -290,5 +316,23 @@ defmodule Thegm.GroupEventsController do
     meta = %{total: total, limit: settings.limit, offset: settings.offset, count: length(events)}
 
     {meta, events}
+  end
+
+  def compile_game_changesets([], _) do
+    []
+  end
+
+  def compile_game_changesets([head | tail], group_events_id) do
+    changeset = Thegm.GroupEvents.create_changeset(%Thegm.GroupEvents{}, %{"group_events_id" => group_events_id, "games_id" => head})
+    [changeset] ++ compile_game_changesets(tail, group_events_id)
+  end
+
+  def compile_game_suggestion_changesets([], _) do
+    []
+  end
+
+  def compile_game_suggestion_changesets([head | tail], group_events_id) do
+    changeset = Thegm.GroupEvents.create_changeset(%Thegm.GroupEvents{}, %{"group_events_id" => group_events_id, "game_suggestions_id" => head})
+    [changeset] ++ compile_game_changesets(tail, group_events_id)
   end
 end
