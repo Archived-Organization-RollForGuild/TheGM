@@ -1,0 +1,31 @@
+api:
+  build: .
+  ports:
+    - "4000:4000"
+  command: >
+    sh -c "mix deps.get
+    && mix ecto.create
+    && mix ecto.migrate
+    && mix phx.server"
+  environment:
+    - RFG_API_AWS_BUCKET
+    - RFG_API_AWS_REGION
+    - RFG_API_DB_HOST=db
+    - RFG_API_DB_NAME
+    - RFG_API_DB_PASS
+    - RFG_API_DB_PORT
+    - RFG_API_DB_USER
+    - RFG_API_PORT
+    - RFG_AWS_ACCESS_KEY_ID
+    - RFG_AWS_SECRET_ACCESS_KEY
+  volumes:
+    - .:/app
+  links:
+    - db
+
+db:
+  image: mdillon/postgis:10-alpine
+  environment:
+    - POSTGRES_HOST=db
+    - POSTGRES_PASSWORD=${RFG_API_DB_PASS}
+    - POSTGRES_USER=${RFG_API_DB_USER}

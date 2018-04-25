@@ -1,25 +1,20 @@
-FROM buildpack-deps:jessie
-MAINTAINER The Roll For Guild team "founder@rollforguild.com"
+FROM elixir:alpine
 
-ARG RELEASE=master
+# RUN apt-get install gcc make libc-dev libgcc
 
-ENV HOME /root
-ENV MIX_ENV prod
-ENV PORT 4000
-ENV REPLACE_OS_VARS true
+# Install Argon2
+# RUN apk --no-cache add --virtual build-dependencies g++ make ca-certificates openssl\
+#     && wget https://github.com/P-H-C/phc-winner-argon2/archive/20161029.tar.gz -O /tmp/argon2.tar.gz\
+#     && tar zxvf /tmp/argon2.tar.gz -C /tmp && rm /tmp/argon2.tar.gz\
+#     && mkdir -p /usr/src && mv /tmp/phc-winner-argon2-20161029 /usr/src/argon2\
+#     && cd /usr/src/argon2\
+#     && make && make bench && make test && make install\
+#     && install bench /usr/bin\
+#     && apk del build-dependencies
 
-ENV APP_ROOT /opt/app
-ENV APP_NAME thegm
+# Prep Elixir deps
+RUN mix local.hex --force
+RUN mix archive.install --force https://github.com/phoenixframework/archives/raw/master/phoenix_new.ez
+RUN mix local.rebar --force
 
-RUN mkdir -p ${APP_ROOT}
-
-RUN wget --quiet https://s3.amazonaws.com/thegm/releases/${RELEASE}.tar.gz && \
-    tar -xf ${RELEASE}.tar.gz -C ${APP_ROOT} && \
-    rm -rf ${RELEASE}.tar.gz && \
-    chmod 550 ${APP_ROOT}/bin/${APP_NAME}
-
-WORKDIR ${APP_ROOT}
-
-EXPOSE $PORT
-
-ENTRYPOINT ["bin/thegm", "foreground"]
+WORKDIR /app
