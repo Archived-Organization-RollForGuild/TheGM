@@ -13,6 +13,7 @@ defmodule Thegm.GroupEvents do
     field :end_time, :utc_datetime
     field :deleted, :boolean
     belongs_to :groups, Thegm.Groups
+    has_many :group_event_games, Thegm.GroupEventGames
 
     timestamps()
   end

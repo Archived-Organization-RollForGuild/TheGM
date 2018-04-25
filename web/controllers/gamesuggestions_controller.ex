@@ -4,32 +4,30 @@ defmodule Thegm.GameSuggestionsController do
 
   def create(conn, %{"users_id" => users_id, "data" => %{"type" => type, "attributes" => params}}) do
     curr_users_id = conn.assigns[:current_user].id
-    if users_id != curr_users_id do
-      conn
-      |> put_status(:forbidden)
-      |> render(Thegm.ErrorView, "error.json", errors: ["You cannot summit a game suggestion for a different user"])
-      |> halt()
-    end
+    cond do
+      users_id != curr_users_id ->
+        conn
+        |> put_status(:forbidden)
+        |> render(Thegm.ErrorView, "error.json", errors: ["You cannot summit a game suggestion for a different user"])
 
-    if  type == "game-suggestions" do
-      game_changeset = Thegm.GameSuggestions.create_changeset(%Thegm.GameSuggestions{}, Map.merge(params, %{"users_id" => users_id}))
-      case Repo.insert(game_changeset) do
-        {:ok, game_suggestion} ->
-          conn
-          |> put_status(:created)
-          |> render(Thegm.GameSuggestionsView, "show.json", game_suggestion: game_suggestion)
+      type == "game-suggestions" ->
+        game_changeset = Thegm.GameSuggestions.create_changeset(%Thegm.GameSuggestions{}, Map.merge(params, %{"users_id" => users_id}))
+        case Repo.insert(game_changeset) do
+          {:ok, game_suggestion} ->
+            conn
+            |> put_status(:created)
+            |> render(Thegm.GameSuggestionsView, "show.json", game_suggestion: game_suggestion)
 
-        {:error, resp} ->
-          conn
-          |> put_status(:bad_request)
-          |> render(Thegm.ErrorView, "error.json", errors: Enum.map(resp.errors, fn {k, v} -> Atom.to_string(k) <> ": " <> elem(v, 0) end))
-          |> halt()
-      end
-    else
-      conn
-      |> put_status(:bad_request)
-      |> render(Thegm.ErrorView, "error.json", errors: ["Posted a non 'games' type"])
-      |> halt()
+          {:error, resp} ->
+            conn
+            |> put_status(:bad_request)
+            |> render(Thegm.ErrorView, "error.json", errors: Enum.map(resp.errors, fn {k, v} -> Atom.to_string(k) <> ": " <> elem(v, 0) end))
+        end
+
+      true ->
+        conn
+        |> put_status(:bad_request)
+        |> render(Thegm.ErrorView, "error.json", errors: ["Posted a non 'games' type"])
     end
   end
 
@@ -42,30 +40,30 @@ defmodule Thegm.GameSuggestionsController do
         conn
         |> put_status(:bad_request)
         |> render(Thegm.ErrorView, "error.json", errors: error)
-        |> halt()
+
       {:ok, _} ->
-        nil
-    end
-
-    if  type == "game-suggestions" do
-      game_changeset = Thegm.GameSuggestions.create_changeset(%Thegm.GameSuggestions{}, Map.merge(params, %{"users_id" => users_id, "groups_id" => groups_id}))
-      case Repo.insert(game_changeset) do
-        {:ok, game_suggestion} ->
-          conn
-          |> put_status(:created)
-          |> render(Thegm.GameSuggestionsView, "show.json", game_suggestion: game_suggestion)
-
-        {:error, resp} ->
+        if  type != "game-suggestions" do
           conn
           |> put_status(:bad_request)
-          |> render(Thegm.ErrorView, "error.json", errors: Enum.map(resp.errors, fn {k, v} -> Atom.to_string(k) <> ": " <> elem(v, 0) end))
-          |> halt()
-      end
-    else
-      conn
-      |> put_status(:bad_request)
-      |> render(Thegm.ErrorView, "error.json", errors: ["Posted a non 'games' type"])
-      |> halt()
+          |> render(Thegm.ErrorView, "error.json", errors: ["Posted a non 'games' type"])
+        else
+          game_changeset = Thegm.GameSuggestions.create_changeset(%Thegm.GameSuggestions{}, Map.merge(params, %{"users_id" => users_id, "groups_id" => groups_id}))
+          insert_game_suggestion_changeset(conn, game_changeset)
+        end
+    end
+  end
+
+  def insert_game_suggestion_changeset(conn, game_changeset) do
+    case Repo.insert(game_changeset) do
+      {:ok, game_suggestion} ->
+        conn
+        |> put_status(:created)
+        |> render(Thegm.GameSuggestionsView, "show.json", game_suggestion: game_suggestion)
+
+      {:error, resp} ->
+        conn
+        |> put_status(:bad_request)
+        |> render(Thegm.ErrorView, "error.json", errors: Enum.map(resp.errors, fn {k, v} -> Atom.to_string(k) <> ": " <> elem(v, 0) end))
     end
   end
 
@@ -96,7 +94,6 @@ defmodule Thegm.GameSuggestionsController do
         conn
         |> put_status(:bad_request)
         |> render(Thegm.ErrorView, "error.json", errors: Enum.map(errors, fn {k, v} -> Atom.to_string(k) <> ": " <> elem(v, 0) end))
-        |> halt()
     end
   end
 
@@ -127,7 +124,6 @@ defmodule Thegm.GameSuggestionsController do
         conn
         |> put_status(:bad_request)
         |> render(Thegm.ErrorView, "error.json", errors: Enum.map(errors, fn {k, v} -> Atom.to_string(k) <> ": " <> elem(v, 0) end))
-        |> halt()
     end
   end
 
@@ -137,7 +133,6 @@ defmodule Thegm.GameSuggestionsController do
         conn
         |> put_status(:not_found)
         |> render(Thegm.ErrorView, "error.json", errors: ["No game suggestion with the specified and id and groups_id cobination found"])
-        |> halt()
       game ->
         conn
         |> put_status(:ok)
@@ -151,7 +146,6 @@ defmodule Thegm.GameSuggestionsController do
         conn
         |> put_status(:not_found)
         |> render(Thegm.ErrorView, "error.json", errors: ["No game suggestion with the specified and id and users_id cobination found"])
-        |> halt()
       game ->
         conn
         |> put_status(:ok)

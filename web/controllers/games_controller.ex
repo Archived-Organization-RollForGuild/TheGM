@@ -33,7 +33,6 @@ defmodule Thegm.GamesController do
         conn
         |> put_status(:bad_request)
         |> render(Thegm.ErrorView, "error.json", errors: Enum.map(errors, fn {k, v} -> Atom.to_string(k) <> ": " <> elem(v, 0) end))
-        |> halt()
     end
   end
 
@@ -43,7 +42,6 @@ defmodule Thegm.GamesController do
         conn
         |> put_status(:not_found)
         |> render(Thegm.ErrorView, "error.json", errors: ["No game with that id found"])
-        |> halt()
       game ->
         conn
         |> put_status(:ok)
