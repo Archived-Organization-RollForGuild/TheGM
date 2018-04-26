@@ -29,7 +29,7 @@ defmodule Thegm.GroupEvents do
 
   def update_changeset(model, params \\ :empty) do
     model
-    |> cast(params, [:title, :description, :location, :start_time, :end_time, :games_id])
+    |> cast(params, [:title, :description, :location, :start_time, :end_time])
     |> validate_length(:title, min: 1, max: 8192, message: "must be between 1 and 8192 characters.")
     |> validate_length(:description, max: 8192, message: "must be less than 8192 characters")
     |> validate_length(:location, max: 8192, message: "must be less than 8192 characters")

@@ -53,31 +53,19 @@ defmodule Thegm.GroupEventsController do
     # Create event changeset
     event_changeset = GroupEvents.create_changeset(%GroupEvents{}, params)
 
-    multi =
-      Multi.new
-      |> Multi.insert(:group_events, event_changeset)
-      |> Multi.run(:group_event_games, fn %{group_events: group_event} ->
-
-        event_games = compile_game_changesets(games, group_event.id) ++ compile_game_suggestion_changesets(game_suggestions, group_event.id)
-
-        Repo.insert_all(Thegm.GroupEventGames, event_games, [on_conflict: :nothing])
-      end)
-
-    case Repo.transaction(multi) do
+    case Repo.insert(event_changeset) do
       {:ok, event} ->
+        event_games = compile_game_changesets(games, event.id) ++ compile_game_suggestion_changesets(game_suggestions, event.id)
+        Repo.insert_all(Thegm.GroupEventGames, event_games)
+
         conn
         |> put_status(:created)
-        |> render("show.json", event: event, is_member: true)
+        |> render("show.json", event: event |> Repo.preload(:groups), is_member: true)
 
-      {:error, :group_events, changeset, %{}} ->
+      {:error, errors} ->
         conn
         |> put_status(:unprocessable_entity)
-        |> render(Thegm.ErrorView, "error.json", errors: Enum.map(changeset.errors, fn {k, v} -> Atom.to_string(k) <> ": " <> elem(v, 0) end))
-
-      {:error, :group_event_games, changeset, %{}} ->
-        conn
-        |> put_status(:unprocessable_entity)
-        |> render(Thegm.ErrorView, "error.json", errors: Enum.map(changeset.errors, fn {k, v} -> Atom.to_string(k) <> ": " <> elem(v, 0) end))
+        |> render(Thegm.ErrorView, "error.json", errors: Enum.map(errors, fn {k, v} -> Atom.to_string(k) <> ": " <> elem(v, 0) end))
     end
   end
 
@@ -102,7 +90,7 @@ defmodule Thegm.GroupEventsController do
 
   def update_continued_get_event_and_parse_params(conn, events_id, groups_id, users_id, params) do
     # Get the event specified
-    case Repo.get(Thegm.GroupEvents, events_id) do
+    case Repo.get(Thegm.GroupEvents, events_id) |> Repo.preload(:group_event_games) do
       nil ->
         conn
         |> put_status(:not_found)
@@ -151,7 +139,7 @@ defmodule Thegm.GroupEventsController do
     # Create list of event games changesets
     event_games = compile_game_changesets(games, event.id) ++ compile_game_suggestion_changesets(game_suggestions, event.id)
     # Will figure out how to go about delete event games, if at all
-    update_continued_decide_which_delete_type(conn, event_changeset, event_games, games_status, game_suggestions_status)
+    update_continued_decide_which_delete_type(conn, event, event_changeset, event_games, games_status, game_suggestions_status)
   end
 
   def non_guild_check_replace_and_skip(games_status, game_suggestions_status, games, current_games, game_suggestions, current_game_suggestions) do
@@ -165,47 +153,47 @@ defmodule Thegm.GroupEventsController do
     end
   end
 
-  def update_continued_decide_which_delete_type(conn, event_changeset, event_games, games_status, game_suggestions_status) do
+  def update_continued_decide_which_delete_type(conn, event, event_changeset, event_games, games_status, game_suggestions_status) do
     cond do
       games_status == :replace and game_suggestions_status == :replace ->
-        update_and_replace_all(conn, event_changeset, event_games)
+        update_and_replace_all(conn, event, event_changeset, event_games)
 
       games_status == :replace and game_suggestions_status == :skip ->
-        update_and_replace_games(conn, event_changeset, event_games)
+        update_and_replace_games(conn, event, event_changeset, event_games)
 
       games_status == :skip and game_suggestions_status == :replace ->
-        update_and_replace_game_suggestions(conn, event_changeset, event_games)
+        update_and_replace_game_suggestions(conn, event, event_changeset, event_games)
 
       games_status == :skip and game_suggestions_status == :skip ->
         update_and_replace_none(conn, event_changeset)
     end
   end
 
-  def update_and_replace_all(conn, event_changeset, event_games) do
+  def update_and_replace_all(conn, event, event_changeset, event_games) do
     multi =
       Multi.new
-      |> Multi.delete_all(:remove_all_event_games, from(geg in Thegm.GroupEventGames, where:  geg.group_events_id == ^event_changeset.id))
       |> Multi.update(:group_events, event_changeset)
+      |> Multi.delete_all(:remove_all_event_games, from(geg in Thegm.GroupEventGames, where:  geg.group_events_id == ^event.id))
       |> Multi.insert_all(:insert_group_event_games1, Thegm.GroupEventGames, event_games)
 
     update_continued_transact_multi(conn, multi)
   end
 
-  def update_and_replace_games(conn, event_changeset, event_games) do
+  def update_and_replace_games(conn, event, event_changeset, event_games) do
     multi =
       Multi.new
-      |> Multi.delete_all(:remove_event_games, from(geg in Thegm.GroupEventGames, where:  geg.group_events_id == ^event_changeset.id and not is_nil(geg.games_id)))
       |> Multi.update(:group_events, event_changeset)
+      |> Multi.delete_all(:remove_event_games, from(geg in Thegm.GroupEventGames, where:  geg.group_events_id == ^event.id and not is_nil(geg.games_id)))
       |> Multi.insert_all(:insert_event_games2, Thegm.GroupEventGames, event_games)
 
       update_continued_transact_multi(conn, multi)
   end
 
-  def update_and_replace_game_suggestions(conn, event_changeset, event_games) do
+  def update_and_replace_game_suggestions(conn, event, event_changeset, event_games) do
     multi =
       Multi.new
-      |> Multi.delete_all(:remove_event_game_sugestions, from(geg in Thegm.GroupEventGames, where:  geg.group_events_id == ^event_changeset.id and not is_nil(geg.game_suggestions_id)))
       |> Multi.update(:group_events, event_changeset)
+      |> Multi.delete_all(:remove_event_game_sugestions, from(geg in Thegm.GroupEventGames, where:  geg.group_events_id == ^event.id and not is_nil(geg.game_suggestions_id)))
       |> Multi.insert_all(:insert_group_event_games3, Thegm.GroupEventGames, event_games)
 
       update_continued_transact_multi(conn, multi)
@@ -227,7 +215,8 @@ defmodule Thegm.GroupEventsController do
 
   def update_continued_transact_multi(conn, multi) do
     case Repo.transaction(multi) do
-      {:ok, event} ->
+      {:ok, resp} ->
+        event = resp.group_events |> Repo.preload(:groups)
         conn
         |> put_status(:ok)
         |> render("show.json", event: event, is_member: true)
@@ -267,7 +256,7 @@ defmodule Thegm.GroupEventsController do
         found.id
     end
 
-    case Repo.one(from ge in GroupEvents, where: ge.groups_id == ^groups_id and ge.id == ^events_id) |> Repo.preload([:groups, :games]) do
+    case Repo.one(from ge in GroupEvents, where: ge.groups_id == ^groups_id and ge.id == ^events_id) |> Repo.preload([:groups]) do
       nil ->
         conn
         |> put_status(:not_found)
@@ -413,7 +402,7 @@ defmodule Thegm.GroupEventsController do
       order_by: [asc: ge.start_time],
       limit: ^settings.limit,
       offset: ^settings.offset
-    ) |> Repo.preload([:groups, :games])
+    ) |> Repo.preload([:groups])
 
     meta = %{total: total, limit: settings.limit, offset: settings.offset, count: length(events)}
 
@@ -443,8 +432,15 @@ defmodule Thegm.GroupEventsController do
   end
 
   def compile_game_changesets([head | tail], group_events_id) do
-    changeset = Thegm.GroupEvents.create_changeset(%Thegm.GroupEvents{}, %{"group_events_id" => group_events_id, "games_id" => head})
-    [changeset] ++ compile_game_changesets(tail, group_events_id)
+    this = %{
+      id: UUID.uuid4,
+      group_events_id: group_events_id,
+      game_suggestions_id: nil,
+      games_id: head,
+      inserted_at: NaiveDateTime.utc_now(),
+      updated_at: NaiveDateTime.utc_now()
+    }
+    [this] ++ compile_game_changesets(tail, group_events_id)
   end
 
   def compile_game_suggestion_changesets([], _) do
@@ -452,7 +448,14 @@ defmodule Thegm.GroupEventsController do
   end
 
   def compile_game_suggestion_changesets([head | tail], group_events_id) do
-    changeset = Thegm.GroupEvents.create_changeset(%Thegm.GroupEvents{}, %{"group_events_id" => group_events_id, "game_suggestions_id" => head})
-    [changeset] ++ compile_game_changesets(tail, group_events_id)
+    this = %{
+      id: UUID.uuid4,
+      group_events_id: group_events_id,
+      game_suggestions_id: head,
+      games_id: nil,
+      inserted_at: NaiveDateTime.utc_now(),
+      updated_at: NaiveDateTime.utc_now()
+    }
+    [this] ++ compile_game_changesets(tail, group_events_id)
   end
 end
