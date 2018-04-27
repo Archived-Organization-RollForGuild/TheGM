@@ -60,9 +60,12 @@ defmodule Thegm.Groups do
       Map.has_key?(params, "lat") && Map.has_key?(params, "lng") ->
         model
         |> put_change(:geom, %Geo.Point{coordinates: {params["lng"], params["lat"]}, srid: 4326})
-      true ->
+      Map.has_key?(params, "address") ->
         model
         |> put_change(:geom, nil)
+
+      true ->
+        model
     end
   end
 end
