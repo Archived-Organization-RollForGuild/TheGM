@@ -1,7 +1,7 @@
 defmodule Thegm.GroupEventGamesView do
   use Thegm.Web, :view
 
-  def index("index.json", %{event_games: event_games, meta: meta}) do
+  def render("index.json", %{event_games: event_games, meta: meta}) do
     data = Enum.map(event_games, &show/1)
 
     %{

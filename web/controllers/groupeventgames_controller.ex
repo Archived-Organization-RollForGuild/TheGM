@@ -2,19 +2,19 @@ defmodule Thegm.GroupEventGamesController do
   use Thegm.Web, :controller
   alias Thegm.GroupEventGames
 
-  def index(conn, params = %{"groups_id" => _, "events_id" => events_id}) do
+  def index(conn, params = %{"groups_id" => _, "group_events_id" => events_id}) do
     case Thegm.ReadPagination.read_pagination_params(params) do
       {:ok, settings} ->
         total = Repo.one(
           from geg in GroupEventGames,
-          select: count(geg.id),
-          where: geg.events_id == ^events_id
+          where: geg.group_events_id == ^events_id,
+          select: count(geg.id)
         )
 
         # Do the search
         games = Repo.all(
           from geg in GroupEventGames,
-          where: geg.event_id == ^events_id,
+          where: geg.group_events_id == ^events_id,
           limit: ^settings.limit,
           offset: ^settings.offset,
           preload: [:games, :game_suggestions]
