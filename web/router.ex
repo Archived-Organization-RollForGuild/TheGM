@@ -64,7 +64,7 @@ defmodule Thegm.Router do
     resources "/email", EmailChangeController, only: [:update]
     resources "/groups", GroupsController, only: [:show, :index] do
       resources "/events", GroupEventsController, only: [:show, :index] do
-        resources "games", GroupEventGamesController, only [:index]
+        resources "/games", GroupEventGamesController, only: [:index]
       end
     end
 
