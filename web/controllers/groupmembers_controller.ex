@@ -175,6 +175,21 @@ defmodule Thegm.GroupMembersController do
     end
   end
 
+  def is_member_and_admin?(users_id, groups_id) do
+    # Ensure user is a member of group
+    case Repo.one(from gm in Thegm.GroupMembers, where: gm.groups_id == ^groups_id and gm.users_id == ^users_id and gm.active == true) do
+      nil ->
+        {:error, ["Must be a member of the group"]}
+      member ->
+        # Ensure user is an admin of the group
+        if GroupMembers.isAdmin(member) do
+          {:ok, member}
+        else
+          {:error, ["Must be a group admin to take this action"]}
+        end
+    end
+  end
+
   defp read_params(params) do
     errors = []
 

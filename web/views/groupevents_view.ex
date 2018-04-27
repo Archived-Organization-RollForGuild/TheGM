@@ -6,12 +6,12 @@ defmodule Thegm.GroupEventsView do
       is_member ->
         %{
           data: private_show(event),
-          included: [hydrate_group(event.groups), hydrate_game(event.games)]
+          included: [hydrate_group(event.groups)]
         }
       true ->
         %{
           data: public_show(event),
-          included: [hydrate_group(event.groups), hydrate_game(event.games)]
+          included: [hydrate_group(event.groups)]
         }
     end
   end
@@ -40,6 +40,7 @@ defmodule Thegm.GroupEventsView do
   end
 
   def private_show(event) do
+    IO.inspect event
     %{
       id: event.id,
       type: "events",
@@ -53,7 +54,7 @@ defmodule Thegm.GroupEventsView do
       },
       relationships: %{
         groups: Thegm.GroupsView.relationship_data(event.groups),
-        games: Thegm.GamesView.relationship_data(event.games)
+        games: Thegm.GroupEventGamesView.relationship_link(event)
       }
     }
   end
@@ -71,7 +72,7 @@ defmodule Thegm.GroupEventsView do
       },
       relationships: %{
         groups: Thegm.GroupsView.relationship_data(event.groups),
-        games: Thegm.GamesView.relationship_data(event.games)
+        games: Thegm.GroupEventGamesView.relationship_link(event)
       }
     }
   end
