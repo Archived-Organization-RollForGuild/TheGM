@@ -37,7 +37,7 @@ defmodule Thegm.ReadPagination do
   end
 
   defp read_limit(params, errors) do
-    case read_int_param_with_default(params: params, name: "limit", default: 1) do
+    case read_int_param_with_default(params: params, name: "limit", default: 20) do
       {:error, error} ->
         {nil, errors ++ [limit: error]}
 
