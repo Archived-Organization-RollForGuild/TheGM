@@ -37,11 +37,11 @@ defmodule Thegm.Router do
       end
       resources "/games", GroupGamesController, only: [:index, :delete, :create]
       resources "/games", GroupGamesController, only: [:update], singleton: true
+      resources "/game-suggestions", GameSuggestionsController, only: [:create, :index, :show]
     end
 
     resources "/threads", ThreadsController, only: [:create, :delete] do
       resources "/comments", ThreadCommentsController, only: [:create, :delete]
-    resources "/game-sugestions", GameSuggestionsController, only: [:create, :index, :show]
     end
 
     post "/logout", SessionsController, :delete
