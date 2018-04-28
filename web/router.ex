@@ -23,7 +23,7 @@ defmodule Thegm.Router do
       resources "/password", UserPasswordsController, only: [:update], singleton: true
       resources "/games", UserGamesController, only: [:index, :delete, :create]
       resources "/games", UserGamesController, only: [:update], singleton: true
-      resources "/game-sugestions", GameSuggestionsController, only: [:create, :index, :show]
+      resources "/game-suggestions", GameSuggestionsController, only: [:create, :index, :show]
     end
 
     resources "/games", GamesController, only: [:index, :show]
@@ -37,11 +37,11 @@ defmodule Thegm.Router do
       end
       resources "/games", GroupGamesController, only: [:index, :delete, :create]
       resources "/games", GroupGamesController, only: [:update], singleton: true
+      resources "/game-suggestions", GameSuggestionsController, only: [:create, :index, :show]
     end
 
     resources "/threads", ThreadsController, only: [:create, :delete] do
       resources "/comments", ThreadCommentsController, only: [:create, :delete]
-    resources "/game-sugestions", GameSuggestionsController, only: [:create, :index, :show]
     end
 
     post "/logout", SessionsController, :delete
