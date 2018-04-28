@@ -108,7 +108,6 @@ defmodule Thegm.GameSuggestionsController do
         # do the search
         games = Repo.all(
           from gs in GameSuggestions,
-          select: count(gs.id),
           where: gs.users_id == ^users_id and is_nil(gs.groups_id),
           limit: ^settings.limit,
           offset: ^settings.offset
