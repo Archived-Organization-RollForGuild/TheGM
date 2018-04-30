@@ -17,7 +17,6 @@ defmodule Thegm.GroupEventsView do
   end
 
   def render("index.json", %{events: events, meta: meta, is_member: is_member}) do
-    distinct_games = Thegm.GamesView.included_games(events, [])
     hydrated_group = case events do
       [] ->
         []
@@ -35,7 +34,7 @@ defmodule Thegm.GroupEventsView do
     %{
       meta: meta,
       data: data,
-      included: Enum.map(distinct_games, &hydrate_game/1) ++ hydrated_group
+      included: hydrated_group
     }
   end
 
@@ -74,14 +73,6 @@ defmodule Thegm.GroupEventsView do
         groups: Thegm.GroupsView.relationship_data(event.groups),
         games: Thegm.GroupEventGamesView.relationship_link(event)
       }
-    }
-  end
-
-  def hydrate_game(game) do
-    %{
-      id: game.id,
-      type: "games",
-      attributes: Thegm.GamesView.games_show(game)
     }
   end
 
