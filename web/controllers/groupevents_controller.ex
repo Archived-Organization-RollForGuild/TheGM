@@ -402,7 +402,7 @@ defmodule Thegm.GroupEventsController do
       order_by: [asc: ge.start_time],
       limit: ^settings.limit,
       offset: ^settings.offset
-    ) |> Repo.preload([:groups, :games])
+    ) |> Repo.preload([:groups])
 
     meta = %{total: total, limit: settings.limit, offset: settings.offset, count: length(events)}
 
