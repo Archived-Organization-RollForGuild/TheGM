@@ -62,10 +62,10 @@ defmodule Thegm.GroupEventsController do
         |> put_status(:created)
         |> render("show.json", event: event |> Repo.preload(:groups), is_member: true)
 
-      {:error, errors} ->
+      {:error, resp} ->
         conn
         |> put_status(:unprocessable_entity)
-        |> render(Thegm.ErrorView, "error.json", errors: Enum.map(errors, fn {k, v} -> Atom.to_string(k) <> ": " <> elem(v, 0) end))
+        |> render(Thegm.ErrorView, "error.json", errors: Enum.map(resp.errors, fn {k, v} -> Atom.to_string(k) <> ": " <> elem(v, 0) end))
     end
   end
 
