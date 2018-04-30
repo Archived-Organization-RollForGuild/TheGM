@@ -39,7 +39,6 @@ defmodule Thegm.GroupEventsView do
   end
 
   def private_show(event) do
-    IO.inspect event
     %{
       id: event.id,
       type: "events",
