@@ -97,11 +97,9 @@ defmodule Thegm.GroupEventsController do
         |> render(Thegm.ErrorView, "error.json", errors: ["No event with that id found"])
       event ->
         # Read the start and end times
-        case read_start_and_end_times(params) do
-          {:ok, settings} ->
+        case read_start_and_end_times_optional(params) do
+          {:ok, params} ->
             params = params
-            |> Map.put("start_time", settings.start_time)
-            |> Map.put("end_time", settings.end_time)
             |> Map.put("groups_id", groups_id)
             |> Map.put("users_id", users_id)
 
@@ -356,6 +354,32 @@ defmodule Thegm.GroupEventsController do
         {:error, errors}
     else
         {:ok, %{start_time: start_time, end_time: end_time}}
+    end
+  end
+
+  def read_start_and_end_times_optional(params) do
+    errors = []
+
+    {params, errors} = if params["start_time"] != nil do
+      {start_time, errors} = read_start_time(params, errors)
+      params = Map.put(params, "start_time", start_time)
+      {params, errors}
+    else
+      {params, errors}
+    end
+
+    {params, errors} = if params["end_time"] != nil do
+      {end_time, errors} = read_end_time(params, errors)
+      params = Map.put(params, "end_time", end_time)
+      {params, errors}
+    else
+      {params, errors}
+    end
+
+    if length(errors) > 0 do
+        {:error, errors}
+    else
+        {:ok, params}
     end
   end
 
