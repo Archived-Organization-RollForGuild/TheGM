@@ -200,6 +200,7 @@ defmodule Thegm.GroupEventsController do
   def update_and_replace_none(conn, event_changeset) do
     case Repo.update(event_changeset) do
       {:ok, event} ->
+        event = event |> Repo.preload([:groups, :group_event_games])
         conn
         |> put_status(:created)
         |> render("show.json", event: event, is_member: true)
