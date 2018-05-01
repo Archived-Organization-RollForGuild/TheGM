@@ -11,7 +11,8 @@ defmodule Thegm.MessagesChannel do
     MessageParticipants,
     Messages,
     MessageThreadsView,
-    MessagesView
+    MessagesView,
+    Thegm.ReadPagination
   }
 
   def join("message_threads:index", _, socket) do
@@ -118,6 +119,25 @@ defmodule Thegm.MessagesChannel do
     end
   end
 
+    def handle_in("messages:index", %{"data" => %{"attributes" => params}}, socket) do
+    users_id = socket.assigns.users_id
+    message_threads_id = socket.assigns.message_threads_id
+
+    case ReadPagination.read_pagination_params(params) do
+        {:ok, settings} ->
+          {meta, messages} = query_messages_with_meta(message_threads_id, settings)
+
+
+          conn
+          |> put_status(:ok)
+          |> render("index.json", events: events, meta: meta)
+        {:error, errors} ->
+          conn
+          |> put_status(:bad_request)
+          |> render(Thegm.ErrorView, "error.json", errors: Enum.map(errors, fn {k, v} -> Atom.to_string(k) <> ": " <> elem(v, 0) end))
+      end
+  end
+
   def handle_in("messages:create", %{"data" => %{"attributes" => params}}, socket) do
     users_id = socket.assigns.users_id
     message_threads_id = socket.assigns.message_threads_id
@@ -205,6 +225,41 @@ defmodule Thegm.MessagesChannel do
         error_list = Enum.map(resp.errors, fn {k, v} -> Atom.to_string(k) <> ": " <> elem(v, 0) end)
         response = ErrorView.render("errors.json", errors: error_list)
         {:error, response}
+    end
+  end
+
+  defp query_messages_with_meta(message_threads_id, settings) do
+    # Get total in search
+    total = Repo.one(
+      from m in Messages,
+      where: m.message_threads_id == ^message_threads_id
+      select: count(ge.id)
+    )
+
+    messages =  Repo.all(from m in Messages,
+      where: m.message_threads_id == ^message_threads_id,
+      order_by: [asc: m.created_at],
+      limit: ^settings.limit,
+      offset: ^settings.offset
+    ) |> Repo.preload([:users, :message_threads])
+
+    meta = %{total: total, limit: settings.limit, offset: settings.offset, count: length(messages)}
+
+    {meta, messages}
+  end
+
+  defp read_playback_time(params, errors) do
+    case params["playback_time"] do
+      nil ->
+        {nil, errors}
+      playback ->
+        case DateTime.from_iso8601(playback) do
+          {:ok, datetime, _} ->
+            {datetime, errors}
+          {:error, error} ->
+            errors = errors ++ [playback_time: Atom.to_string(error)]
+            {nil, errors}
+        end
     end
   end
 end
