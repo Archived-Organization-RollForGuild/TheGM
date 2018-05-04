@@ -2,110 +2,248 @@ defmodule Thegm.GroupEventsController do
   use Thegm.Web, :controller
 
   alias Thegm.GroupEvents
-  alias Thegm.GroupMembers
+  alias Ecto.Multi
 
   def create(conn, %{"groups_id" => groups_id, "data" => %{"attributes" => params, "type" => type}}) do
     users_id = conn.assigns[:current_user].id
-    case Repo.one(from gm in Thegm.GroupMembers, where: gm.groups_id == ^groups_id and gm.users_id == ^users_id and gm.active == true) do
-      nil ->
-        conn
-        |> put_status(:forbidden)
-        |> render(Thegm.ErrorView, "error.json", errors: ["Must be a member of the group"])
-      member ->
-        cond do
-          GroupMembers.isAdmin(member) ->
-            case {type, params} do
-              {"events", params} ->
-                case read_start_end(params) do
-                  {:ok, settings} ->
-                    params = Map.put(params, "start_time", settings.start_time)
-                    params = Map.put(params, "end_time", settings.end_time)
-                    params = Map.put(params, "groups_id", groups_id)
-                    event_changeset = GroupEvents.create_changeset(%GroupEvents{}, params)
-
-                    case Repo.insert(event_changeset) do
-                      {:ok, event} ->
-                        event = event |> Repo.preload([:groups, :games])
-                        conn
-                        |> put_status(:created)
-                        |> render("show.json", event: event, is_member: true)
-                      {:error, resp} ->
-                        error_list = Enum.map(resp.errors, fn {k, v} -> Atom.to_string(k) <> ": " <> elem(v, 0) end)
-                        conn
-                        |> put_status(:bad_request)
-                        |> render(Thegm.ErrorView, "error.json", errors: error_list)
-                    end
-                  {:error, errors} ->
-                    conn
-                    |> put_status(:bad_request)
-                    |> render(Thegm.ErrorView, "error.json", errors: Enum.map(errors, fn {k, v} -> Atom.to_string(k) <> ": " <> elem(v, 0) end))
-                end
-              _ ->
-                conn
-                |> put_status(:bad_request)
-                |> render(Thegm.ErrorView, "error.json", errors: ["Posted a non `evets` data type"])
-            end
-          true ->
-            conn
-            |> put_status(:forbidden)
-            |> render(Thegm.ErrorView, "error.json", errors: ["Must be a group admin to take this action"])
+    # Do the base validation
+    case Thegm.GroupMembersController.is_member_and_admin?(users_id, groups_id) do
+      {:ok, _} ->
+        if type == "events" do
+          create_continued_parse_params(conn, groups_id, users_id, params)
+        else
+          conn
+          |> put_status(:bad_request)
+          |> render(Thegm.ErrorView, "error.json", errors: ["Posted a non `events` type"])
         end
+      {:error, error} ->
+        conn
+        |> put_status(:bad_request)
+        |> render(Thegm.ErrorView, "error.json", errors: error)
+    end
+  end
+
+  def create_continued_parse_params(conn, groups_id, users_id, params) do
+    {games, game_suggestions} = read_games_and_game_suggestions(params)
+
+    # NOTE: Once we have guilds, this should only be triggered if a group is not a guild.
+    if length(games) + length(game_suggestions) <= 1 do
+      case read_start_and_end_times(params) do
+        {:ok, settings} ->
+          params = params
+          |> Map.put("start_time", settings.start_time)
+          |> Map.put("end_time", settings.end_time)
+          |> Map.put("groups_id", groups_id)
+          |> Map.put("users_id", users_id)
+
+          create_continued_define_multi_and_insert(conn, params, games, game_suggestions)
+        {:error, errors} ->
+          conn
+          |> put_status(:bad_request)
+          |> render(Thegm.ErrorView, "error.json", errors: Enum.map(errors, fn {k, v} -> Atom.to_string(k) <> ": " <> elem(v, 0) end))
+      end
+    else
+      conn
+      |> put_status(:bad_request)
+      |> render(Thegm.ErrorView, "error.json", errors: ["Events can only have one game associated with them"])
+    end
+  end
+
+  def create_continued_define_multi_and_insert(conn, params, games, game_suggestions) do
+    # Create event changeset
+    event_changeset = GroupEvents.create_changeset(%GroupEvents{}, params)
+
+    case Repo.insert(event_changeset) do
+      {:ok, event} ->
+        event_games = compile_game_changesets(games, event.id) ++ compile_game_suggestion_changesets(game_suggestions, event.id)
+        Repo.insert_all(Thegm.GroupEventGames, event_games)
+
+        conn
+        |> put_status(:created)
+        |> render("show.json", event: event |> Repo.preload(:groups), is_member: true)
+
+      {:error, resp} ->
+        conn
+        |> put_status(:unprocessable_entity)
+        |> render(Thegm.ErrorView, "error.json", errors: Enum.map(resp.errors, fn {k, v} -> Atom.to_string(k) <> ": " <> elem(v, 0) end))
     end
   end
 
   def update(conn, %{"groups_id" => groups_id, "id" => events_id, "data" => %{"attributes" => params, "type" => type}}) do
     users_id = conn.assigns[:current_user].id
-    case Repo.one(from gm in Thegm.GroupMembers, where: gm.groups_id == ^groups_id and gm.users_id == ^users_id and gm.active == true) do
+    # Do the base validation
+    case Thegm.GroupMembersController.is_member_and_admin?(users_id, groups_id) do
+      {:ok, _} ->
+        if type == "events" do
+          update_continued_get_event_and_parse_params(conn, events_id, groups_id, users_id, params)
+        else
+          conn
+          |> put_status(:bad_request)
+          |> render(Thegm.ErrorView, "error.json", errors: ["Posted a non `events` type"])
+        end
+      {:error, error} ->
+        conn
+        |> put_status(:bad_request)
+        |> render(Thegm.ErrorView, "error.json", errors: error)
+    end
+  end
+
+  def update_continued_get_event_and_parse_params(conn, events_id, groups_id, users_id, params) do
+    # Get the event specified
+    case Repo.get(Thegm.GroupEvents, events_id) |> Repo.preload(:group_event_games) do
       nil ->
         conn
-        |> put_status(:forbidden)
-        |> render(Thegm.ErrorView, "error.json", errors: ["Must be a member of the group"])
-      member ->
-        cond do
-          GroupMembers.isAdmin(member) ->
-            case {type, params} do
-              {"events", params} ->
-                case Repo.get(Thegm.GroupEvents, events_id) do
-                  nil ->
-                    conn
-                    |> put_status(:not_found)
-                    |> render(Thegm.ErrorView, "error.json", errors: ["No event with that id found"])
-                  event ->
-                    case read_start_end(params) do
-                      {:ok, settings} ->
-                        params = Map.put(params, "start_time", settings.start_time)
-                        params = Map.put(params, "end_time", settings.end_time)
-                        params = Map.put(params, "groups_id", groups_id)
-                        event_changeset = GroupEvents.update_changeset(event, params)
+        |> put_status(:not_found)
+        |> render(Thegm.ErrorView, "error.json", errors: ["No event with that id found"])
+      event ->
+        # Read the start and end times
+        case read_start_and_end_times_optional(params) do
+          {:ok, params} ->
+            params = params
+            |> Map.put("groups_id", groups_id)
+            |> Map.put("users_id", users_id)
 
-                        case Repo.update(event_changeset) do
-                          {:ok, event} ->
-                            event = event |> Repo.preload([:groups, :games])
-                            conn
-                            |> put_status(:created)
-                            |> render("show.json", event: event, is_member: true)
-                          {:error, resp} ->
-                            error_list = Enum.map(resp.errors, fn {k, v} -> Atom.to_string(k) <> ": " <> elem(v, 0) end)
-                            conn
-                            |> put_status(:bad_request)
-                            |> render(Thegm.ErrorView, "error.json", errors: error_list)
-                        end
-                      {:error, errors} ->
-                        conn
-                        |> put_status(:bad_request)
-                        |> render(Thegm.ErrorView, "error.json", errors: Enum.map(errors, fn {k, v} -> Atom.to_string(k) <> ": " <> elem(v, 0) end))
-                    end
-                end
-              _ ->
-                conn
-                |> put_status(:bad_request)
-                |> render(Thegm.ErrorView, "error.json", errors: ["Posted a non `evets` data type"])
-            end
-          true ->
+            update_continued_parse_games_and_game_suggestions(conn, params, event)
+          {:error, errors} ->
             conn
-            |> put_status(:forbidden)
-            |> render(Thegm.ErrorView, "error.json", errors: ["Must be a group admin to take this action"])
+            |> put_status(:bad_request)
+            |> render(Thegm.ErrorView, "error.json", errors: Enum.map(errors, fn {k, v} -> Atom.to_string(k) <> ": " <> elem(v, 0) end))
         end
+    end
+  end
+
+  def update_continued_parse_games_and_game_suggestions(conn, params, event) do
+    {games, games_status}  = case params["games"] do
+      nil ->
+        {[], :skip}
+      list ->
+        {list, :replace}
+    end
+
+    {game_suggestions, game_suggestions_status} = case params["game_suggestions"] do
+      nil ->
+        {[], :skip}
+      list ->
+        {list, :replace}
+    end
+
+    {current_games, current_game_suggestions} = games_reduce_and_divide(event.group_event_games, [], [])
+
+    # NOTE: Skip if group is guild
+    {games_status, game_suggestions_status} = non_guild_check_replace_and_skip(games_status, game_suggestions_status, games, current_games, game_suggestions, current_game_suggestions)
+
+    # Update the event
+    event_changeset = GroupEvents.update_changeset(event, params)
+    # Create list of event games changesets
+    event_games = compile_game_changesets(games, event.id) ++ compile_game_suggestion_changesets(game_suggestions, event.id)
+    # Will figure out how to go about delete event games, if at all
+    update_continued_decide_which_delete_type(conn, event, event_changeset, event_games, games_status, game_suggestions_status)
+  end
+
+  def non_guild_check_replace_and_skip(games_status, game_suggestions_status, games, current_games, game_suggestions, current_game_suggestions) do
+    cond do
+      (games_status == :replace and game_suggestions_status == :skip) and length(games) + length(current_game_suggestions) > 1 ->
+        {games_status, :replace}
+      (games_status == :skip and game_suggestions_status == :replace) and length(game_suggestions) + length(current_games) > 1 ->
+        {:replace, game_suggestions_status}
+      true ->
+        {games_status, game_suggestions_status}
+    end
+  end
+
+  def update_continued_decide_which_delete_type(conn, event, event_changeset, event_games, games_status, game_suggestions_status) do
+    cond do
+      games_status == :replace and game_suggestions_status == :replace ->
+        update_and_replace_all(conn, event, event_changeset, event_games)
+
+      games_status == :replace and game_suggestions_status == :skip ->
+        update_and_replace_games(conn, event, event_changeset, event_games)
+
+      games_status == :skip and game_suggestions_status == :replace ->
+        update_and_replace_game_suggestions(conn, event, event_changeset, event_games)
+
+      games_status == :skip and game_suggestions_status == :skip ->
+        update_and_replace_none(conn, event_changeset)
+    end
+  end
+
+  def update_and_replace_all(conn, event, event_changeset, event_games) do
+    multi =
+      Multi.new
+      |> Multi.update(:group_events, event_changeset)
+      |> Multi.delete_all(:remove_all_event_games, from(geg in Thegm.GroupEventGames, where:  geg.group_events_id == ^event.id))
+      |> Multi.insert_all(:insert_group_event_games1, Thegm.GroupEventGames, event_games)
+
+    update_continued_transact_multi(conn, multi)
+  end
+
+  def update_and_replace_games(conn, event, event_changeset, event_games) do
+    multi =
+      Multi.new
+      |> Multi.update(:group_events, event_changeset)
+      |> Multi.delete_all(:remove_event_games, from(geg in Thegm.GroupEventGames, where:  geg.group_events_id == ^event.id and not is_nil(geg.games_id)))
+      |> Multi.insert_all(:insert_event_games2, Thegm.GroupEventGames, event_games)
+
+      update_continued_transact_multi(conn, multi)
+  end
+
+  def update_and_replace_game_suggestions(conn, event, event_changeset, event_games) do
+    multi =
+      Multi.new
+      |> Multi.update(:group_events, event_changeset)
+      |> Multi.delete_all(:remove_event_game_sugestions, from(geg in Thegm.GroupEventGames, where:  geg.group_events_id == ^event.id and not is_nil(geg.game_suggestions_id)))
+      |> Multi.insert_all(:insert_group_event_games3, Thegm.GroupEventGames, event_games)
+
+      update_continued_transact_multi(conn, multi)
+  end
+
+  def update_and_replace_none(conn, event_changeset) do
+    case Repo.update(event_changeset) do
+      {:ok, event} ->
+        event = event |> Repo.preload([:groups, :group_event_games])
+        conn
+        |> put_status(:created)
+        |> render("show.json", event: event, is_member: true)
+      {:error, resp} ->
+        error_list = Enum.map(resp.errors, fn {k, v} -> Atom.to_string(k) <> ": " <> elem(v, 0) end)
+        conn
+        |> put_status(:bad_request)
+        |> render(Thegm.ErrorView, "error.json", errors: error_list)
+    end
+  end
+
+  def update_continued_transact_multi(conn, multi) do
+    case Repo.transaction(multi) do
+      {:ok, resp} ->
+        event = resp.group_events |> Repo.preload(:groups)
+        conn
+        |> put_status(:ok)
+        |> render("show.json", event: event, is_member: true)
+
+      {:error, :group_events, changeset, %{}} ->
+        conn
+        |> put_status(:unprocessable_entity)
+        |> render(Thegm.ErrorView, "error.json", errors: Enum.map(changeset.errors, fn {k, v} -> Atom.to_string(k) <> ": " <> elem(v, 0) end))
+
+      {:error, :group_event_games, changeset, %{}} ->
+        conn
+        |> put_status(:unprocessable_entity)
+        |> render(Thegm.ErrorView, "error.json", errors: Enum.map(changeset.errors, fn {k, v} -> Atom.to_string(k) <> ": " <> elem(v, 0) end))
+    end
+  end
+
+  def games_reduce_and_divide([], games, game_suggestions) do
+    {games, game_suggestions}
+  end
+
+  def games_reduce_and_divide([head | tail], games, game_suggestions) do
+    cond do
+      head.games_id != nil ->
+        games_reduce_and_divide(tail, games ++ [head.games_id], game_suggestions)
+      head.game_suggestions_id != nil ->
+        games_reduce_and_divide(tail, games, game_suggestions ++ [head.game_suggestions_id])
+      true ->
+        games_reduce_and_divide(tail, games, game_suggestions)
     end
   end
 
@@ -117,22 +255,21 @@ defmodule Thegm.GroupEventsController do
         found.id
     end
 
-    case Repo.one(from ge in GroupEvents, where: ge.groups_id == ^groups_id and ge.id == ^events_id) |> Repo.preload([:groups, :games]) do
+    case Repo.one(from ge in GroupEvents, where: ge.groups_id == ^groups_id and ge.id == ^events_id) |> Repo.preload([:groups]) do
       nil ->
         conn
         |> put_status(:not_found)
         |> render(Thegm.ErrorView, "error.json", errors: ["Could not find specified event for group"])
       event ->
-        cond do
-          event.deleted ->
-            conn
-            |> put_status(:gone)
-            |> render(Thegm.ErrorView, "error.json", errors: ["That event no longer exists."])
-          true ->
-            is_member = Thegm.GroupMembersController.is_member(groups_id: groups_id, users_id: users_id)
-            conn
-            |> put_status(:ok)
-            |> render("show.json", event: event, is_member: is_member)
+        if event.deleted do
+          conn
+          |> put_status(:gone)
+          |> render(Thegm.ErrorView, "error.json", errors: ["That event no longer exists."])
+        else
+          is_member = Thegm.GroupMembersController.is_member(groups_id: groups_id, users_id: users_id)
+          conn
+          |> put_status(:ok)
+          |> render("show.json", event: event, is_member: is_member)
         end
     end
   end
@@ -145,84 +282,110 @@ defmodule Thegm.GroupEventsController do
         found.id
     end
 
-    case read_search_params(params) do
-      {:ok, settings} ->
-        is_member = Thegm.GroupMembersController.is_member(groups_id: settings.groups_id, users_id: users_id)
+    groups_id = params["groups_id"]
+    if groups_id != nil do
+      case Thegm.ReadPagination.read_pagination_params(params) do
+        {:ok, settings} ->
+          {meta, events} = query_events_with_meta(groups_id, settings)
 
-        # Search params
-        offset = (settings.page - 1) * settings.limit
-        now = NaiveDateTime.utc_now()
+          # Is the user a member?
+          is_member = Thegm.GroupMembersController.is_member(groups_id: groups_id, users_id: users_id)
 
-        # Get total in search
-        total = Repo.one(from ge in GroupEvents, where: ge.groups_id == ^settings.groups_id and ge.end_time >= ^now and ge.deleted == false, select: count(ge.id))
-        cond do
-          total > 0 ->
-            events =  Repo.all(from ge in GroupEvents,
-              where: ge.groups_id == ^settings.groups_id and ge.end_time >= ^now and ge.deleted == false,
-              order_by: [asc: ge.start_time],
-              limit: ^settings.limit,
-              offset: ^offset
-            ) |> Repo.preload([:groups, :games])
-
-            meta = %{total: total, limit: settings.limit, offset: offset, count: length(events)}
-
-            conn
-            |> put_status(:ok)
-            |> render("index.json", events: events, meta: meta, is_member: is_member)
-          true ->
-            meta = %{total: total, limit: settings.limit, offset: offset, count: 0}
-            conn
-            |> put_status(:ok)
-            |> render("index.json", events: [], meta: meta, is_member: is_member)
-        end
-      {:error, errors} ->
-        conn
-        |> put_status(:bad_request)
-        |> render(Thegm.ErrorView, "error.json", errors: Enum.map(errors, fn {k, v} -> Atom.to_string(k) <> ": " <> elem(v, 0) end))
+          conn
+          |> put_status(:ok)
+          |> render("index.json", events: events, meta: meta, is_member: is_member)
+        {:error, errors} ->
+          conn
+          |> put_status(:bad_request)
+          |> render(Thegm.ErrorView, "error.json", errors: Enum.map(errors, fn {k, v} -> Atom.to_string(k) <> ": " <> elem(v, 0) end))
+      end
+    else
+      conn
+      |> put_status(:bad_request)
+      |> render(Thegm.ErrorView, "error.json", errors: ["groups_id: Must be supplied!"])
     end
   end
 
   def delete(conn, %{"groups_id" => groups_id, "id" => events_id}) do
     users_id = conn.assigns[:current_user].id
-    case Repo.one(from gm in Thegm.GroupMembers, where: gm.groups_id == ^groups_id and gm.users_id == ^users_id and gm.active == true) do
-      nil ->
-        conn
-        |> put_status(:forbidden)
-        |> render(Thegm.ErrorView, "error.json", errors: ["Must be a member of the group"])
-      member ->
-        cond do
-          GroupMembers.isAdmin(member) ->
-            case Repo.get(Thegm.GroupEvents, events_id) do
-              nil ->
-                conn
-                |> put_status(:not_found)
-                |> render(Thegm.ErrorView, "error.json", errors: ["No event with that id found"])
-              event ->
-                event_changeset = GroupEvents.delete_changeset(event)
 
-                case Repo.update(event_changeset) do
-                  {:ok, _} ->
-                    send_resp(conn, :no_content, "")
-                  {:error, resp} ->
-                    error_list = Enum.map(resp.errors, fn {k, v} -> Atom.to_string(k) <> ": " <> elem(v, 0) end)
-                    conn
-                    |> put_status(:bad_request)
-                    |> render(Thegm.ErrorView, "error.json", errors: error_list)
-                end
-            end
-          true ->
+    # Ensure user is a member and admin of the group
+    case Thegm.GroupMembersController.is_member_and_admin?(users_id, groups_id) do
+      {:ok, _} ->
+        # Get the specified event
+        case Repo.get(Thegm.GroupEvents, events_id) do
+          nil ->
             conn
-            |> put_status(:forbidden)
-            |> render(Thegm.ErrorView, "error.json", errors: ["Must be a group admin to take this action"])
+            |> put_status(:not_found)
+            |> render(Thegm.ErrorView, "error.json", errors: ["No event with that id found"])
+          event ->
+            delete_continued_alter_changeset_and_update(conn, event)
         end
+
+      {:error, error} ->
+        conn
+        |> put_status(:bad_request)
+        |> render(Thegm.ErrorView, "error.json", errors: error)
     end
   end
 
-  def read_start_end(params) do
+  def delete_continued_alter_changeset_and_update(conn, event) do
+    # Mark event as deleted
+    event_changeset = GroupEvents.delete_changeset(event)
+
+    # Update event to be known as deleted
+    case Repo.update(event_changeset) do
+      {:ok, _} ->
+        send_resp(conn, :no_content, "")
+      {:error, resp} ->
+        error_list = Enum.map(resp.errors, fn {k, v} -> Atom.to_string(k) <> ": " <> elem(v, 0) end)
+        conn
+        |> put_status(:bad_request)
+        |> render(Thegm.ErrorView, "error.json", errors: error_list)
+    end
+  end
+
+  def read_start_and_end_times(params) do
     errors = []
 
-    # parse start_time
-    {start_time, errors} = case params["start_time"] do
+    {start_time, errors} = read_start_time(params, errors)
+    {end_time, errors} = read_end_time(params, errors)
+
+    if length(errors) > 0 do
+        {:error, errors}
+    else
+        {:ok, %{start_time: start_time, end_time: end_time}}
+    end
+  end
+
+  def read_start_and_end_times_optional(params) do
+    errors = []
+
+    {params, errors} = if params["start_time"] != nil do
+      {start_time, errors} = read_start_time(params, errors)
+      params = Map.put(params, "start_time", start_time)
+      {params, errors}
+    else
+      {params, errors}
+    end
+
+    {params, errors} = if params["end_time"] != nil do
+      {end_time, errors} = read_end_time(params, errors)
+      params = Map.put(params, "end_time", end_time)
+      {params, errors}
+    else
+      {params, errors}
+    end
+
+    if length(errors) > 0 do
+        {:error, errors}
+    else
+        {:ok, params}
+    end
+  end
+
+  defp read_start_time(params, errors) do
+    case params["start_time"] do
       nil ->
         errors = errors ++ [start_time: "Must provide a startime in iso8601 format"]
         {nil, errors}
@@ -235,9 +398,10 @@ defmodule Thegm.GroupEventsController do
             {nil, errors}
         end
     end
+  end
 
-    # parse end_time
-    {end_time, errors} = case params["end_time"] do
+  defp read_end_time(params, errors) do
+    case params["end_time"] do
       nil ->
         errors = errors ++ [end_time: "Must provide a startime in iso8601 format"]
         {nil, errors}
@@ -250,64 +414,73 @@ defmodule Thegm.GroupEventsController do
             {nil, errors}
         end
     end
-
-    cond do
-      length(errors) > 0 ->
-        {:error, errors}
-      true ->
-        {:ok, %{start_time: start_time, end_time: end_time}}
-    end
   end
 
-  defp read_search_params(params) do
-    errors = []
+  defp query_events_with_meta(groups_id, settings) do
+    now = NaiveDateTime.utc_now()
 
-    # verify groups_id
-    {groups_id, errors} = case params["groups_id"] do
+    # Get total in search
+    total = Repo.one(from ge in GroupEvents, where: ge.groups_id == ^groups_id and ge.end_time >= ^now and ge.deleted == false, select: count(ge.id))
+
+    events =  Repo.all(from ge in GroupEvents,
+      where: ge.groups_id == ^groups_id and ge.end_time >= ^now and ge.deleted == false,
+      order_by: [asc: ge.start_time],
+      limit: ^settings.limit,
+      offset: ^settings.offset
+    ) |> Repo.preload([:groups])
+
+    meta = %{total: total, limit: settings.limit, offset: settings.offset, count: length(events)}
+
+    {meta, events}
+  end
+
+  defp read_games_and_game_suggestions(params) do
+    games = case params["games"] do
       nil ->
-        errors = errors ++ [groups_id: "Must be supplied"]
-        {nil, errors}
-      temp ->
-        {temp, errors}
+        []
+      list ->
+        list
     end
 
-    # set page
-    {page, errors} = case params["page"] do
+    game_suggestions = case params["game_suggestions"] do
       nil ->
-        {1, errors}
-      temp ->
-        {page, _} = Integer.parse(temp)
-        errors = cond do
-          page < 1 ->
-            errors ++ [page: "Must be a positive integer"]
-          true ->
-            errors
-        end
-        {page, errors}
+        []
+      list ->
+        list
     end
 
-    {limit, errors} = case params["limit"] do
-      nil ->
-        {100, errors}
-      temp ->
-        {limit, _} = Integer.parse(temp)
-        errors = cond do
+    {games, game_suggestions}
+  end
 
-          limit < 1 ->
-            errors ++ [limit: "Must be at integer greater than 0"]
-          true ->
-            errors
-        end
-        {limit, errors}
-    end
+  def compile_game_changesets([], _) do
+    []
+  end
 
-    resp = cond do
-      length(errors) > 0 ->
-        {:error, errors}
-      true ->
-        {:ok, %{page: page, limit: limit, groups_id: groups_id}}
-    end
-    resp
+  def compile_game_changesets([head | tail], group_events_id) do
+    this = %{
+      id: UUID.uuid4,
+      group_events_id: group_events_id,
+      game_suggestions_id: nil,
+      games_id: head,
+      inserted_at: NaiveDateTime.utc_now(),
+      updated_at: NaiveDateTime.utc_now()
+    }
+    [this] ++ compile_game_changesets(tail, group_events_id)
+  end
+
+  def compile_game_suggestion_changesets([], _) do
+    []
+  end
+
+  def compile_game_suggestion_changesets([head | tail], group_events_id) do
+    this = %{
+      id: UUID.uuid4,
+      group_events_id: group_events_id,
+      game_suggestions_id: head,
+      games_id: nil,
+      inserted_at: NaiveDateTime.utc_now(),
+      updated_at: NaiveDateTime.utc_now()
+    }
+    [this] ++ compile_game_changesets(tail, group_events_id)
   end
 end
-# credo:disable-for-this-file
