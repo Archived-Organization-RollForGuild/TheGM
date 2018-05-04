@@ -12,7 +12,7 @@ api:
     - RFG_API_AWS_REGION
     - RFG_API_DB_HOST=db
     - RFG_API_DB_NAME
-    - RFG_API_DB_PASS=
+    - RFG_API_DB_PASS
     - RFG_API_DB_PORT
     - RFG_API_DB_USER
     - RFG_API_PORT=4000
