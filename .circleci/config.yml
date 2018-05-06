@@ -1,6 +1,6 @@
 defaults: &defaults
   docker:
-    - image: trezytv/elixir
+    - image: rollforguildinc/elixir
     - image: mdillon/postgis:10-alpine
 
   working_directory: ~/repo

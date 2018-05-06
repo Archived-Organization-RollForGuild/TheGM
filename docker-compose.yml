@@ -1,5 +1,5 @@
 api:
-  image: trezytv/elixir
+  image: rollforguildinc/elixir
   ports:
     - "4000:4000"
   command: >
