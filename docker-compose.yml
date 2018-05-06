@@ -1,5 +1,5 @@
 api:
-  build: .
+  image: trezytv/elixir
   ports:
     - "4000:4000"
   command: >
@@ -22,6 +22,7 @@ api:
     - .:/app
   links:
     - db
+  working_dir: /app
 
 db:
   image: mdillon/postgis:10-alpine
