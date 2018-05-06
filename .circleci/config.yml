@@ -1,11 +1,49 @@
+defaults: &defaults
+  docker:
+    - image: elixir:alpine
+    - image: mdillon/postgis:10-alpine
+
+  working_directory: ~/repo
+
+
+
+
+
 version: 2
 
 jobs:
-  build:
-    docker:
-      - image: 709489362086.dkr.ecr.us-east-1.amazonaws.com/thegm
-
-    working_directory: ~/repo
+  checkout:
+    <<: *defaults
 
     steps:
+      - restore_cache:
+          name: Restore Repository Cache
+          keys:
+            - repo-{{ .Branch }}-{{ .Environment.CIRCLE_SHA1 }}
+            - repo-{{ .Branch }}
+            - repo-master
+            - repo-
+
+      - checkout
+
+      - save_cache:
+          name: Save Repository Cache
+          key: repo-{{ .Branch }}-{{ .Environment.CIRCLE_SHA1 }}
+          paths:
+            - ~/repo
+
+      - persist_to_workspace:
+          root: .
+          paths:
+            - .
+
+
+
+
+
+workflows:
+  version: 2
+
+  roll-the-die:
+    jobs:
       - checkout
