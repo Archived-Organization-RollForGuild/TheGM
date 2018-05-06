@@ -1,6 +1,6 @@
 FROM elixir:alpine
 
-RUN apk --no-cache add --virtual make
+RUN apk --no-cache add --virtual g++ make
 
 # Prep Elixir deps
 RUN mix local.hex --force
