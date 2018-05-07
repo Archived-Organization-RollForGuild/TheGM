@@ -16,6 +16,7 @@ defmodule Thegm.Users do
     field :bio, :string
     has_many :group_members, Thegm.GroupMembers
     has_many :user_games, Thegm.UserGames
+    has_many :message_participants, Thegm.MessageParticipants
 
     timestamps()
   end
@@ -70,3 +71,4 @@ defmodule Thegm.Users do
     end
   end
 end
+# credo:disable-for-this-file

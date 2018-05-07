@@ -48,3 +48,4 @@ defmodule Thegm.Games do
     |> cast(%{id: generate_uuid(params.name, params.version)}, [:id])
   end
 end
+# credo:disable-for-this-file

@@ -23,3 +23,4 @@ defmodule Thegm.EmailChangeCodes do
     |> cast(params, [:used, :users_id, :email, :old_email])
   end
 end
+# credo:disable-for-this-file

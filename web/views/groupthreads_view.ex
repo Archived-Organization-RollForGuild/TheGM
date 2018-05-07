@@ -100,3 +100,4 @@ defmodule Thegm.GroupThreadsView do
     end
   end
 end
+# credo:disable-for-this-file

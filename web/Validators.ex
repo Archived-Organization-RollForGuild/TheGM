@@ -9,4 +9,4 @@ defmodule Thegm.Validators do
       end
     end)
   end
-end
+end# credo:disable-for-this-file

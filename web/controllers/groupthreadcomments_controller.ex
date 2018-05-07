@@ -211,3 +211,4 @@ defmodule Thegm.GroupThreadCommentsController do
     resp
   end
 end
+# credo:disable-for-this-file

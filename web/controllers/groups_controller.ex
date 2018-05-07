@@ -332,3 +332,4 @@ defmodule Thegm.GroupsController do
     |> Repo.preload([join_requests: join_requests_query, group_members: :users, group_games: :games])
   end
 end
+# credo:disable-for-this-file

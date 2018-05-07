@@ -1,8 +1,10 @@
 defmodule Thegm.UserSocket do
   use Phoenix.Socket
+  alias Thegm.{Repo, Sessions, ErrorView}
+  import Ecto.Query
 
   ## Channels
-  # channel "room:*", Thegm.RoomChannel
+  channel "message_threads:*", Thegm.MessagesChannel
 
   ## Transports
   transport :websocket, Phoenix.Transports.WebSocket
@@ -19,8 +21,19 @@ defmodule Thegm.UserSocket do
   #
   # See `Phoenix.Token` documentation for examples in
   # performing token verification on connect.
-  def connect(_params, socket) do
-    {:ok, socket}
+  def connect(%{"userToken" => token}, socket) do
+    case find_session_by_token(token) do
+      :error ->
+        unauthenticated_error = ErrorView.render(
+          "error.json",
+          errors: ["Unauthorized request, please login"]
+        )
+
+        {:error, unauthenticated_error}
+
+      {:ok, session} ->
+        {:ok, assign(socket, :users_id, session.users_id)}
+    end
   end
 
   # Socket id's are topics that allow you to identify all sockets for a given user:
@@ -33,5 +46,12 @@ defmodule Thegm.UserSocket do
   #     Thegm.Endpoint.broadcast("users_socket:#{user.id}", "disconnect", %{})
   #
   # Returning `nil` makes this socket anonymous.
-  def id(_socket), do: nil
+  def id(socket), do: "users_socket:#{socket.assigns.users_id}"
+
+  def find_session_by_token(token) do
+    case Repo.one(from s in Sessions, where: s.token == ^token) do
+      nil -> :error
+      session -> {:ok, session}
+    end
+  end
 end

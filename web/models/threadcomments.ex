@@ -28,3 +28,4 @@ defmodule Thegm.ThreadComments do
     |> cast(params, [:comment, :deleted])
   end
 end
+# credo:disable-for-this-file

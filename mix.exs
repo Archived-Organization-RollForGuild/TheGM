@@ -1,4 +1,5 @@
 defmodule Thegm.Mixfile do
+  @moduledoc "File that describes the project and its dependencies"
   use Mix.Project
 
   def project do
@@ -20,7 +21,6 @@ defmodule Thegm.Mixfile do
   def application do
     [
       mod: {Thegm, []},
-      #applications: [:mailchimp, :bamboo],
       extra_applications: [:logger, :mailchimp]
     ]
   end
@@ -55,7 +55,9 @@ defmodule Thegm.Mixfile do
       {:hackney, "~> 1.11"},
       {:mogrify, "~> 0.5.6"},
       {:sweet_xml, "~> 0.6"},
-      {:temp, "~> 0.4"}
+      {:temp, "~> 0.4"},
+      {:credo, "~> 0.3", only: [:dev, :test]},
+      {:ex_crypto, "~> 0.9.0"}
     ]
   end
 

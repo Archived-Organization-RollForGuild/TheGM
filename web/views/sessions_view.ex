@@ -16,3 +16,4 @@ defmodule Thegm.SessionsView do
     }
   end
 end
+# credo:disable-for-this-file

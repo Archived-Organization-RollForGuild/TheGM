@@ -25,3 +25,4 @@ defmodule Thegm.Sessions do
     |> put_change(:token, SecureRandom.urlsafe_base64())
   end
 end
+# credo:disable-for-this-file

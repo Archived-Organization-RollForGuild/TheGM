@@ -23,9 +23,10 @@ defmodule Thegm.Router do
       resources "/password", UserPasswordsController, only: [:update], singleton: true
       resources "/games", UserGamesController, only: [:index, :delete, :create]
       resources "/games", UserGamesController, only: [:update], singleton: true
+      resources "/game-suggestions", GameSuggestionsController, only: [:create, :index, :show]
     end
 
-    resources "/games", GamesController, only: [:index, :create]
+    resources "/games", GamesController, only: [:index, :show]
 
     resources "/groups", GroupsController, only: [:create, :update, :delete] do
       resources "/events", GroupEventsController, only: [:create, :update, :delete]
@@ -36,6 +37,7 @@ defmodule Thegm.Router do
       end
       resources "/games", GroupGamesController, only: [:index, :delete, :create]
       resources "/games", GroupGamesController, only: [:update], singleton: true
+      resources "/game-suggestions", GameSuggestionsController, only: [:create, :index, :show]
     end
 
     resources "/threads", ThreadsController, only: [:create, :delete] do
@@ -49,7 +51,7 @@ defmodule Thegm.Router do
     pipe_through [:api, :tryauth]
 
     get "/isteapot", IsTeapotController, :index
-    get "/deathcheck", DeathCheckController, :index
+    resources "/deathcheck", DeathCheckController, only: [:index]
     post "/register", UsersController, :create
     post "/login", SessionsController, :create
     get "/sessions/:id", SessionsController, :show
@@ -61,7 +63,9 @@ defmodule Thegm.Router do
     put "/resets/:id", PasswordResetsController, :update
     resources "/email", EmailChangeController, only: [:update]
     resources "/groups", GroupsController, only: [:show, :index] do
-      resources "/events", GroupEventsController, only: [:show, :index]
+      resources "/events", GroupEventsController, only: [:show, :index] do
+        resources "/games", GroupEventGamesController, only: [:index]
+      end
     end
 
     resources "/threads", ThreadsController, only: [:index, :show] do
@@ -69,3 +73,4 @@ defmodule Thegm.Router do
     end
   end
 end
+# credo:disable-for-this-file

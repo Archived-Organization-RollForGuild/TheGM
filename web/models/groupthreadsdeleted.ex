@@ -18,3 +18,4 @@ defmodule Thegm.GroupThreadsDeleted do
     |> validate_required([:users_id, :group_threads_id, :deleter_role], message: "are required.")
   end
 end
+# credo:disable-for-this-file

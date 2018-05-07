@@ -62,3 +62,4 @@ defmodule Thegm.GamesView do
     included_games(tail, included)
   end
 end
+# credo:disable-for-this-file

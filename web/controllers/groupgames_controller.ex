@@ -242,3 +242,4 @@ defmodule Thegm.GroupGamesController do
     resp
   end
 end
+# credo:disable-for-this-file

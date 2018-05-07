@@ -86,3 +86,4 @@ defmodule Thegm.ThreadCommentsView do
     Thegm.ThreadsView.just_thread(thread)
   end
 end
+# credo:disable-for-this-file

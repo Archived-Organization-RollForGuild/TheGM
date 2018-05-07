@@ -25,3 +25,4 @@ defmodule Thegm.GameDisambiguations do
     |> changeset(params)
   end
 end
+# credo:disable-for-this-file

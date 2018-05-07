@@ -17,3 +17,4 @@ defmodule Thegm.RollDiceView do
     }
   end
 end
+# credo:disable-for-this-file
