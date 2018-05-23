@@ -24,6 +24,11 @@ defmodule Thegm.GroupsView do
     %{meta: search_meta(meta), data: data}
   end
 
+  def show_search_json(group, user) do
+    json = show_json(group, user)
+    Kernel.put_in(json, [:attributes, :distance], group.distance)
+  end
+
   def show_json(group, user) do
     status = group_member_status(group, user)
     cond do
