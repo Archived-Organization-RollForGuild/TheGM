@@ -271,7 +271,7 @@ defmodule Thegm.GroupsController do
 
     {meters, errors} = case params["meters"] do
       nil ->
-        {80467, errors}
+        {40075000, errors}
       temp ->
         {meters, _} = Float.parse(temp)
         errors = cond do
