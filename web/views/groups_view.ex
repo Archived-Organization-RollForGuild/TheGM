@@ -20,7 +20,7 @@ defmodule Thegm.GroupsView do
   end
 
   def render("index.json", %{groups: groups, meta: meta, users_id: users_id}) do
-    data = Enum.map(groups, fn g -> show_json(g, users_id) end)
+    data = Enum.map(groups, fn g -> show_search_json(g, users_id) end)
     %{meta: search_meta(meta), data: data}
   end
 
