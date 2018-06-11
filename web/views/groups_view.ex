@@ -20,8 +20,15 @@ defmodule Thegm.GroupsView do
   end
 
   def render("index.json", %{groups: groups, meta: meta, users_id: users_id}) do
-    data = Enum.map(groups, fn g -> show_json(g, users_id) end)
+    data = Enum.map(groups, fn g -> show_search_json(g, users_id) end)
     %{meta: search_meta(meta), data: data}
+  end
+
+  def show_search_json(group, user) do
+    json = show_json(group, user)
+    dist = round(group.distance)
+    distance = dist + (500 - rem(dist, 500))
+    Kernel.put_in(json, [:attributes, :distance], distance)
   end
 
   def show_json(group, user) do
