@@ -12,58 +12,68 @@ defaults: &defaults
 version: 2
 
 jobs:
-  checkout:
+  do-eet:
     <<: *defaults
 
     steps:
-      - restore_cache:
-          name: Restore Repository Cache
-          keys:
-            - repo-{{ .Branch }}-{{ .Environment.CIRCLE_SHA1 }}
-            - repo-{{ .Branch }}
-            - repo-master
-            - repo-
-
       - checkout
-
-      - save_cache:
-          name: Save Repository Cache
-          key: repo-{{ .Branch }}-{{ .Environment.CIRCLE_SHA1 }}
-          paths:
-            - .
-
-      - persist_to_workspace:
-          root: .
-          paths:
-            - .
-
-  install-dependencies:
-    <<: *defaults
-
-    steps:
-      - attach_workspace:
-          at: .
-
-      - restore_cache:
-          name: Restore Elixir Dependencies Cache
-          keys:
-            - mix-{{ checksum "mix.lock" }}
-            - mix-
 
       - run:
           name: Install Dependencies
           command: mix deps.get
 
-      - save_cache:
-          name: Save Elixir Dependencies Cache
-          key: mix-{{ checksum "mix.lock" }}
-          paths:
-            - deps
+  # checkout:
+  #   <<: *defaults
 
-      - persist_to_workspace:
-          root: .
-          paths:
-            - deps
+  #   steps:
+  #     - restore_cache:
+  #         name: Restore Repository Cache
+  #         keys:
+  #           - repo-{{ .Branch }}-{{ .Environment.CIRCLE_SHA1 }}
+  #           - repo-{{ .Branch }}
+  #           - repo-master
+  #           - repo-
+
+  #     - checkout
+
+  #     - save_cache:
+  #         name: Save Repository Cache
+  #         key: repo-{{ .Branch }}-{{ .Environment.CIRCLE_SHA1 }}
+  #         paths:
+  #           - .
+
+  #     - persist_to_workspace:
+  #         root: .
+  #         paths:
+  #           - .
+
+  # install-dependencies:
+  #   <<: *defaults
+
+  #   steps:
+  #     - attach_workspace:
+  #         at: .
+
+  #     - restore_cache:
+  #         name: Restore Elixir Dependencies Cache
+  #         keys:
+  #           - mix-{{ checksum "mix.lock" }}
+  #           - mix-
+
+  #     - run:
+  #         name: Install Dependencies
+  #         command: mix deps.get
+
+  #     - save_cache:
+  #         name: Save Elixir Dependencies Cache
+  #         key: mix-{{ checksum "mix.lock" }}
+  #         paths:
+  #           - deps
+
+  #     - persist_to_workspace:
+  #         root: .
+  #         paths:
+  #           - deps
 
 
 
@@ -74,7 +84,8 @@ workflows:
 
   roll-the-die:
     jobs:
-      - checkout
-      - install-dependencies:
-          requires:
-            - checkout
+      - do-eet
+      # - checkout
+      # - install-dependencies:
+      #     requires:
+      #       - checkout
