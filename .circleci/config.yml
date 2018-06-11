@@ -1,6 +1,6 @@
 defaults: &defaults
   docker:
-    - image: rollforguildinc/elixir
+    - image: rollforguildinc/build-elixir
     - image: mdillon/postgis:10-alpine
 
   working_directory: ~/app
