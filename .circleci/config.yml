@@ -1,7 +1,23 @@
 defaults: &defaults
   docker:
     - image: rollforguildinc/elixir:build-latest
+      environment:
+        RFG_API_AWS_BUCKET: $RFG_API_AWS_BUCKET
+        RFG_API_AWS_REGION: $RFG_API_AWS_REGION
+        RFG_API_DB_HOST: postgres
+        RFG_API_DB_NAME: $RFG_API_DB_NAME
+        RFG_API_DB_PASS: $RFG_API_DB_PASS
+        RFG_API_DB_PORT: $RFG_API_DB_PORT
+        RFG_API_DB_USER: $RFG_API_DB_USER
+        RFG_API_ENCRYPTION_KEYPHRASE: $RFG_API_ENCRYPTION_KEYPHRASE
+        RFG_API_PORT: 4000
+        RFG_AWS_ACCESS_KEY_ID: $RFG_AWS_ACCESS_KEY_ID
+        RFG_AWS_SECRET_ACCESS_KEY: $RFG_AWS_SECRET_ACCESS_KEY
     - image: mdillon/postgis:10-alpine
+      environment:
+        POSTGRES_HOST: postgres
+        POSTGRES_PASSWORD: $RFG_API_DB_PASS
+        POSTGRES_USER: $RFG_API_DB_USER
 
   working_directory: ~/app
 
@@ -19,61 +35,19 @@ jobs:
       - checkout
 
       - run:
-          name: Install Dependencies
-          command: mix deps.get
+        name: Install Dependencies
+        command: mix deps.get
 
-  # checkout:
-  #   <<: *defaults
-
-  #   steps:
-  #     - restore_cache:
-  #         name: Restore Repository Cache
-  #         keys:
-  #           - repo-{{ .Branch }}-{{ .Environment.CIRCLE_SHA1 }}
-  #           - repo-{{ .Branch }}
-  #           - repo-master
-  #           - repo-
-
-  #     - checkout
-
-  #     - save_cache:
-  #         name: Save Repository Cache
-  #         key: repo-{{ .Branch }}-{{ .Environment.CIRCLE_SHA1 }}
-  #         paths:
-  #           - .
-
-  #     - persist_to_workspace:
-  #         root: .
-  #         paths:
-  #           - .
-
-  # install-dependencies:
-  #   <<: *defaults
-
-  #   steps:
-  #     - attach_workspace:
-  #         at: .
-
-  #     - restore_cache:
-  #         name: Restore Elixir Dependencies Cache
-  #         keys:
-  #           - mix-{{ checksum "mix.lock" }}
-  #           - mix-
-
-  #     - run:
-  #         name: Install Dependencies
-  #         command: mix deps.get
-
-  #     - save_cache:
-  #         name: Save Elixir Dependencies Cache
-  #         key: mix-{{ checksum "mix.lock" }}
-  #         paths:
-  #           - deps
-
-  #     - persist_to_workspace:
-  #         root: .
-  #         paths:
-  #           - deps
+      - run:
+        name: Waiting for Postgres to be ready
+        command: |
+          for i in `seq 1 10`;
+          do
+            nc -z localhost 5432 && echo Success && exit 0
+            echo -n .
+            sleep 1
+          done
+          echo Failed waiting for Postgress && exit 1
 
 
 
@@ -85,7 +59,3 @@ workflows:
   roll-the-die:
     jobs:
       - do-eet
-      # - checkout
-      # - install-dependencies:
-      #     requires:
-      #       - checkout
