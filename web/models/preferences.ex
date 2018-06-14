@@ -9,6 +9,7 @@ defmodule Thegm.Preferences do
   @foreign_key_type :binary_id
 
   schema "preferences" do
+    field :time, :string, null: true
     belongs_to :users, Thegm.Users
 
     timestamps()
@@ -22,6 +23,6 @@ defmodule Thegm.Preferences do
 
   def changeset(model, params \\ :empty) do
     model
-    |> cast(params, [])
+    |> cast(params, [:time])
   end
 end

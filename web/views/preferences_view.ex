@@ -16,6 +16,7 @@ defmodule Thegm.PreferencesView do
 
   def preferences_show(preferences) do
     %{
+      time: preferences.time,
       updated_at: preferences.updated_at
     }
   end
