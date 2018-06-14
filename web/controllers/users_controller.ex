@@ -18,6 +18,8 @@ defmodule Thegm.UsersController do
         case Repo.insert(changeset) do
           {:ok, resp} ->
             Thegm.ConfirmationCodesController.new(resp.id, resp.email)
+            Repo.insert(Preferences)
+
             Thegm.Mailchimp.subscribe_new_user(resp.email)
             send_resp(conn, :created, "")
           {:error, resp} ->
@@ -37,7 +39,7 @@ defmodule Thegm.UsersController do
     current_user = conn.assigns[:current_user]
     cond do
       type == "users" ->
-        case Repo.get(Users, users_id) |> Repo.preload([{:user_games, :games}, {:group_members, :groups}]) do
+        case Repo.get(Users, users_id) |> Repo.preload([{:user_games, :games}, {:group_members, :groups}, :preferences]) do
           nil ->
             conn
             |> put_status(:not_found)
@@ -77,7 +79,7 @@ defmodule Thegm.UsersController do
   def show(conn, %{"id" => users_id}) do
     current_user_id = conn.assigns[:current_user].id
 
-    case Repo.get(Users, users_id) |> Repo.preload([{:user_games, :games}, {:group_members, :groups}]) do
+    case Repo.get(Users, users_id) |> Repo.preload([{:user_games, :games}, {:group_members, :groups}, :preferences]) do
       nil ->
         conn
         |> put_status(:not_found)

@@ -20,6 +20,7 @@ defmodule Thegm.Router do
 
     resources "/users", UsersController do
       resources "/avatar", UserAvatarsController, only: [:create, :delete], singleton: true
+      resources "/preferences", PreferencesController, only: [:update, :show], singleton: true
       resources "/password", UserPasswordsController, only: [:update], singleton: true
       resources "/games", UserGamesController, only: [:index, :delete, :create]
       resources "/games", UserGamesController, only: [:update], singleton: true
