@@ -16,6 +16,7 @@ defmodule Thegm.PreferencesView do
 
   def preferences_show(preferences) do
     %{
+      units: preferences.units,
       date: preferences.date,
       time: preferences.time,
       timezone: preferences.timezone,

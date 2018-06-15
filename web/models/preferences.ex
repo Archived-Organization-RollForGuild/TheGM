@@ -9,6 +9,7 @@ defmodule Thegm.Preferences do
   @foreign_key_type :binary_id
 
   schema "preferences" do
+    field :units, :string, null: true
     field :date, :string, null: true
     field :time, :string, null: true
     field :timezone, :integer, null: true
@@ -25,6 +26,7 @@ defmodule Thegm.Preferences do
 
   def changeset(model, params \\ :empty) do
     model
-    |> cast(params, [:time, :timezone, :date])
+    |> cast(params, [:units])
+    |> cast(params, [:time, :timezone, :date, :units])
   end
 end
