@@ -10,6 +10,8 @@ defmodule Thegm.Preferences do
 
   schema "preferences" do
     field :date, :string, null: true
+    field :time, :string, null: true
+    field :timezone, :integer, null: true
     belongs_to :users, Thegm.Users
 
     timestamps()
@@ -23,6 +25,6 @@ defmodule Thegm.Preferences do
 
   def changeset(model, params \\ :empty) do
     model
-    |> cast(params, [:date])
+    |> cast(params, [:time, :timezone, :date])
   end
 end

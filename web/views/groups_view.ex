@@ -26,7 +26,9 @@ defmodule Thegm.GroupsView do
 
   def show_search_json(group, user) do
     json = show_json(group, user)
-    Kernel.put_in(json, [:attributes, :distance], group.distance)
+    dist = round(group.distance)
+    distance = dist + (500 - rem(dist, 500))
+    Kernel.put_in(json, [:attributes, :distance], distance)
   end
 
   def show_json(group, user) do
