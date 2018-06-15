@@ -8,6 +8,8 @@ defmodule Thegm.Repo.Migrations.AddPreferencesTable do
       timestamps()
     end
 
+    execute "CREATE EXTENSION \"uuid-ossp\""
+
     execute "INSERT INTO preferences(id,inserted_at,updated_at, users_id)
     SELECT uuid_generate_v4(), current_timestamp, current_timestamp, users.id
     FROM users"
