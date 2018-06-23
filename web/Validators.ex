@@ -9,4 +9,12 @@ defmodule Thegm.Validators do
       end
     end)
   end
-end# credo:disable-for-this-file
+
+  def validate_type(type, expected_type) do
+    if type == expected_type do
+      {:ok, type}
+    else 
+      {:error, "Expected data type \"" <> expected_type <> "\", got \"" <> type <> "\""}
+    end
+  end
+end

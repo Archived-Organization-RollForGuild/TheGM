@@ -7,53 +7,34 @@ defmodule Thegm.GroupsController do
   alias Thegm.GroupMembers
 
   def create(conn, %{"data" => %{"attributes" => params, "type" => type}}) do
-    case {type, params} do
-      {"groups", params} ->
-        params = cond do
-          Map.has_key?(params, "address") && params["address"] != nil ->
-            case Thegm.Geos.get_lat_lng(params["address"]) do
-              {:ok, geo} ->
-                Map.merge(params, %{"lat" => geo[:lat], "lng" => geo[:lng]})
-              {:error, error} ->
-                conn
-                |> put_status(:bad_request)
-                |> Phoenix.Controller.render(Thegm.ErrorView, "error.json", errors: [error])
-                |> halt()
-            end
-          true ->
-            params
-        end
-        group_changeset = Groups.create_changeset(%Groups{}, params)
-        multi =
-          Multi.new
-          |> Multi.insert(:groups, group_changeset)
-          |> Multi.run(:group_members, fn %{groups: group} ->
-            member_changeset =
-              %Thegm.GroupMembers{groups_id: group.id}
-              |> Thegm.GroupMembers.create_changeset(%{role: "owner", users_id: conn.assigns[:current_user].id})
-            Repo.insert(member_changeset)
-          end)
+    with {:ok, _} <- Thegm.Validators.validate_type(type, "groups"),
+      {:ok, params} <- parse_params(params),
+      group_changeset <- Groups.create_changeset(%Groups{}, params),
+      {:ok, multi} <- create_group_multi(conn, group_changeset),
+      {:ok, resp} <- Repo.transaction(multi),
+      group <- Repo.preload(resp.groups, [{:group_members, :users}]),
+      {:ok, games, game_suggestions} <- Thegm.Reader.read_games_and_game_suggestions(params),
+      {:ok, group_games} <- Thegm.GameCompiling.compile_game_changesets(games, :groups_id, group.id),
+      {:ok, group_game_suggestions} <- Thegm.GameCompiling.compile_game_suggestion_changesets(game_suggestions, :groups_id, group.id) do
+        # Inserting games is separate than group multi as games failing should not affect group creation
+        Repo.insert_all(Thegm.GroupGames, group_games ++ group_game_suggestions)
+        conn
+        |> put_status(:created)
+        |> render("show.json", group: group, users_id: conn.assigns[:current_user].id)
 
-        case Repo.transaction(multi) do
-          {:ok, result} ->
-            group = Repo.preload(result.groups, [{:group_games, :games}, {:group_members, :users}])
-
-            conn
-            |> put_status(:created)
-            |> render("show.json", group: group, users_id: conn.assigns[:current_user].id)
-          {:error, :groups, changeset, %{}} ->
-            conn
-            |> put_status(:unprocessable_entity)
-            |> render(Thegm.ErrorView, "error.json", errors: Enum.map(changeset.errors, fn {k, v} -> Atom.to_string(k) <> ": " <> elem(v, 0) end))
-          {:error, :group_members, changeset, %{}} ->
-            conn
-            |> put_status(:unprocessable_entity)
-            |> render(Thegm.ErrorView, "error.json", errors: Enum.map(changeset.errors, fn {k, v} -> Atom.to_string(k) <> ": " <> elem(v, 0) end))
-        end
-      _ ->
+    else
+      {:error, :groups, changeset, %{}} ->
+        conn
+        |> put_status(:unprocessable_entity)
+        |> render(Thegm.ErrorView, "error.json", errors: Enum.map(changeset.errors, fn {k, v} -> Atom.to_string(k) <> ": " <> elem(v, 0) end))
+      {:error, :group_members, changeset, %{}} ->
+        conn
+        |> put_status(:unprocessable_entity)
+        |> render(Thegm.ErrorView, "error.json", errors: Enum.map(changeset.errors, fn {k, v} -> Atom.to_string(k) <> ": " <> elem(v, 0) end))
+      {:error, error} ->
         conn
         |> put_status(:bad_request)
-        |> render(Thegm.ErrorView, "error.json", errors: ["Posted a non `group` data type"])
+        |> render(Thegm.ErrorView, "error.json", errors: [error])
     end
   end
 
@@ -219,6 +200,21 @@ defmodule Thegm.GroupsController do
     end
   end
 
+  defp parse_params(params) do
+    cond do
+      Map.has_key?(params, "address") && params["address"] != nil ->
+        case Thegm.Geos.get_lat_lng(params["address"]) do
+          {:ok, geo} ->
+            params = Map.merge(params, %{"lat" => geo[:lat], "lng" => geo[:lng]})
+            {:ok, params}
+          {:error, error} ->
+            {:error, error}
+        end
+      true ->
+        {:ok, params}
+    end
+  end
+
   defp read_search_params(params) do
     errors = []
 
@@ -331,5 +327,18 @@ defmodule Thegm.GroupsController do
     Repo.one(from g in Groups, where: (g.id == ^groups_id))
     |> Repo.preload([join_requests: join_requests_query, group_members: :users, group_games: :games])
   end
+
+  defp create_group_multi(conn, group_changeset) do
+    multi =
+      Multi.new
+      |> Multi.insert(:groups, group_changeset)
+      |> Multi.run(:group_members, fn %{groups: group} ->
+        member_changeset =
+          %Thegm.GroupMembers{groups_id: group.id}
+          |> Thegm.GroupMembers.create_changeset(%{role: "owner", users_id: conn.assigns[:current_user].id})
+        Repo.insert(member_changeset)
+      end)
+
+    {:ok, multi}
+  end
 end
-# credo:disable-for-this-file
