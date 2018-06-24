@@ -19,7 +19,9 @@ defmodule Thegm.UsersView do
   end
 
   def render("private.json", %{user: user}) do
-    included = Enum.map(user.group_members, &group_hydration/1) ++ Enum.map(user.user_games, &game_hydration/1)
+    included = Enum.map(user.group_members, &group_hydration/1) ++
+               Enum.map(user.user_games, &game_hydration/1) ++
+               [preferences_hydration(user.preferences)]
 
     %{
       data: %{
@@ -28,7 +30,8 @@ defmodule Thegm.UsersView do
         attributes: users_private(user),
         relationships: %{
           groups: Thegm.GroupMembersView.users_groups(user.group_members),
-          games: Thegm.UserGamesView.users_games(user.user_games)
+          games: Thegm.UserGamesView.users_games(user.user_games),
+          preferences: Thegm.PreferencesView.relationship_data(user.preferences)
         }
       },
       included: included
@@ -55,6 +58,14 @@ defmodule Thegm.UsersView do
       type: "games",
       id: user_game.games_id,
       attributes: Thegm.GamesView.users_usergames_games(user_game.games)
+    }
+  end
+
+  def preferences_hydration(preferences) do
+    %{
+      type: "preferences",
+      id: preferences.id,
+      attributes: Thegm.PreferencesView.users_preferences(preferences)
     }
   end
 

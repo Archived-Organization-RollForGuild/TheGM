@@ -84,7 +84,16 @@ defmodule Thegm.GroupEventsView do
   end
 
   def relationship_link(group) do
-    %{link: Application.get_env(:thegm, :api_url) <> "/groups/" <> group.id <> "/events"}
+    %{
+      links: %{
+        related: %{
+          href: Application.get_env(:thegm, :api_url) <> "/groups/" <> group.id <> "/events",
+          meta: %{
+            count: 0
+          }
+        }
+      }
+    }
   end
 end
 # credo:disable-for-this-file
