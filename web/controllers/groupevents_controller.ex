@@ -7,7 +7,7 @@ defmodule Thegm.GroupEventsController do
   def create(conn, %{"groups_id" => groups_id, "data" => %{"attributes" => params, "type" => type}}) do
     users_id = conn.assigns[:current_user].id
     # Do the base validation
-    case Thegm.GroupMembersController.is_member_and_admin?(users_id, groups_id) do
+    case Thegm.GroupMembers.is_member_and_admin?(users_id, groups_id) do
       {:ok, _} ->
         if type == "events" do
           create_continued_parse_params(conn, groups_id, users_id, params)
@@ -72,7 +72,7 @@ defmodule Thegm.GroupEventsController do
   def update(conn, %{"groups_id" => groups_id, "id" => events_id, "data" => %{"attributes" => params, "type" => type}}) do
     users_id = conn.assigns[:current_user].id
     # Do the base validation
-    case Thegm.GroupMembersController.is_member_and_admin?(users_id, groups_id) do
+    case Thegm.GroupMembers.is_member_and_admin?(users_id, groups_id) do
       {:ok, _} ->
         if type == "events" do
           update_continued_get_event_and_parse_params(conn, events_id, groups_id, users_id, params)
@@ -310,7 +310,7 @@ defmodule Thegm.GroupEventsController do
     users_id = conn.assigns[:current_user].id
 
     # Ensure user is a member and admin of the group
-    case Thegm.GroupMembersController.is_member_and_admin?(users_id, groups_id) do
+    case Thegm.GroupMembers.is_member_and_admin?(users_id, groups_id) do
       {:ok, _} ->
         # Get the specified event
         case Repo.get(Thegm.GroupEvents, events_id) do

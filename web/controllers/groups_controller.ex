@@ -3,7 +3,6 @@ defmodule Thegm.GroupsController do
 
   alias Thegm.Groups
   alias Ecto.Multi
-  import Geo.PostGIS
   alias Thegm.GroupMembers
 
   def create(conn, %{"data" => %{"attributes" => params, "type" => type}}) do
@@ -40,112 +39,54 @@ defmodule Thegm.GroupsController do
 
   def delete(conn, %{"id" => groups_id}) do
     users_id = conn.assigns[:current_user].id
-    case Repo.get(Groups, groups_id) |> Repo.preload(:group_members) do
-      nil ->
+    with {:ok, _} <- Thegm.GroupMembers.is_member_and_admin?(users_id, groups_id),
+      {1, _} <- Repo.delete_all(from g in Thegm.Groups, where: g.id == ^groups_id) do
+        send_resp(conn, :no_content, "")
+    else
+      {0, _} ->
         conn
         |> put_status(:not_found)
         |> render(Thegm.ErrorView, "error.json", errors: ["Group not found, maybe you already deleted it?"])
-      group ->
-        case Enum.find(group.group_members, fn x -> x.users_id == users_id end) do
-          nil ->
-            conn
-            |> put_status(:forbidden)
-            |> render(Thegm.ErrorView, "error.json", errors: ["members: Must be member of group", "role: Must be admin of group"])
-          member ->
-            cond do
-              GroupMembers.isAdmin(member) ->
-                case Repo.delete(group) do
-                  {:ok, _} ->
-                    send_resp(conn, :no_content, "")
-                  {:error, changeset} ->
-                    conn
-                    |> put_status(:internal_server_error)
-                    |> render(Thegm.ErrorView, "error.json", errors: Enum.map(changeset.errors, fn {k, v} -> Atom.to_string(k) <> ": " <> elem(v, 0) end))
-                end
-              true ->
-                conn
-                |> put_status(:forbidden)
-                |> render(Thegm.ErrorView, "error.json", errors: ["role: Must be admin"])
-            end
-        end
+      {:error, error} ->
+        conn
+        |> put_status(:forbidden)
+        |> render(Thegm.ErrorView, "error.json", errors: error)
     end
   end
 
   def index(conn, params) do
-    case read_search_params(params) do
-      {:ok, settings} ->
-        {users_id, memberships, blocks} = case conn.assigns[:current_user] do
-          nil ->
-            {nil, [], []}
-          found ->
-            # Get user's current groups so we can properly exclude them
-            memberships = Repo.all(from m in Thegm.GroupMembers, where: m.users_id == ^found.id, select: m.groups_id)
-            blocks = Repo.all(from b in Thegm.GroupBlockedUsers, where: b.users_id == ^found.id and b.rescinded == false, select: b.groups_id)
-            {found.id, memberships, blocks}
-        end
-
-        # Group search params
-        offset = (settings.page - 1) * settings.limit
-        geom = %Geo.Point{coordinates: {settings.lng, settings.lat}, srid: 4326}
-
-        # Get total in search
-        total = Repo.one(from g in Groups,
-        select: count(g.id),
-        where: st_distancesphere(g.geom, ^geom) <= ^settings.meters and not g.id in ^memberships and g.discoverable == true)
-
-        # Do the search
-        join_requests_query = case users_id do
-          nil ->
-            from gjr in Thegm.GroupJoinRequests, where: is_nil(gjr.users_id), order_by: [desc: gjr.inserted_at]
-          _ ->
-            from gjr in Thegm.GroupJoinRequests, where: gjr.users_id == ^users_id, order_by: [desc: gjr.inserted_at]
-        end
-        cond do
-          total > 0 ->
-            groups = Repo.all(
-              from g in Groups,
-              select: %{g | distance: st_distancesphere(g.geom, ^geom)},
-              where: st_distancesphere(g.geom, ^geom) <= ^settings.meters and not g.id in ^memberships and not g.id in ^blocks and g.discoverable == true,
-              order_by: [asc: st_distancesphere(g.geom, ^geom)],
-              limit: ^settings.limit,
-              offset: ^offset
-            ) |> Repo.preload([join_requests: join_requests_query, group_members: :users, group_games: :games])
-
-            meta = %{total: total, limit: settings.limit, offset: offset, count: length(groups)}
-
-            conn
-            |> put_status(:ok)
-            |> render("index.json", groups: groups, meta: meta, users_id: users_id)
-          true ->
-            meta = %{total: total, limit: settings.limit, offset: offset, count: 0}
-            conn
-            |> put_status(:ok)
-            |> render("index.json", groups: [], meta: meta, users_id: users_id)
-        end
-      {:error, errors} ->
+    users_id = conn.assigns[:current_user]
+    with {:ok, settings} <- read_search_params(params),
+      {:ok, memberships} <- Thegm.GroupMembers.get_group_ids_where_user_is_member(users_id),
+      {:ok, blocked_by} <- Thegm.GroupBlockedUsers.get_group_ids_blocking_user(users_id),
+      geom <- %Geo.Point{coordinates: {settings.lng, settings.lat}, srid: 4326},
+      {:ok, total} <- Thegm.Groups.get_total_groups_with_settings(settings, geom, memberships, blocked_by),
+      offset <- (settings.page - 1) * settings.limit,
+      {:ok, groups} <- Thegm.Groups.get_groups_with_settings(users_id, settings, geom, memberships, blocked_by, offset) do
+        meta = %{total: total, limit: settings.limit, offset: offset, count: length(groups)}
+        conn
+        |> put_status(:ok)
+        |> render("index.json", groups: groups, meta: meta, users_id: users_id)
+    else
+      {:error, error} ->
         conn
         |> put_status(:bad_request)
-        |> render(Thegm.ErrorView, "error.json", errors: Enum.map(errors, fn {k, v} -> Atom.to_string(k) <> ": " <> elem(v, 0) end))
+        |> render(Thegm.ErrorView, "error.json", errors: error)
     end
   end
 
   def show(conn, %{"id" => groups_id}) do
-    users_id = case conn.assigns[:current_user] do
-      nil ->
-        nil
-      found ->
-        found.id
-    end
-
-    case groups_query(groups_id, users_id) do
-      nil ->
-        conn
-        |> put_status(:not_found)
-        |> render(Thegm.ErrorView, "error.json", errors: ["A group with the specified `id` was not found"])
-      group ->
+    users_id = conn.assigns[:current_user]
+    with {:ok, group} <- Thegm.Groups.get_group_by_id(groups_id),
+      {:ok, group} <- Thegm.Groups.preload_join_requests_by_requestee_id(group, users_id) do
         conn
         |> put_status(:ok)
         |> render("show.json", group: group, users_id: users_id)
+    else
+      {:error, :not_found, error} ->
+        conn
+        |> put_status(:not_found)
+        |> render(Thegm.ErrorView, "error.json", errors: [error])
     end
   end
 

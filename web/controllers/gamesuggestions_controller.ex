@@ -35,7 +35,7 @@ defmodule Thegm.GameSuggestionsController do
     users_id = conn.assigns[:current_user].id
 
     # Ensure user is a member and admin of the group
-    case Thegm.GroupMembersController.is_member_and_admin?(users_id, groups_id) do
+    case Thegm.GroupMembers.is_member_and_admin?(users_id, groups_id) do
       {:error, error} ->
         conn
         |> put_status(:bad_request)
