@@ -1,6 +1,6 @@
 defaults: &defaults
   docker:
-    - image: rollforguildinc/elixir:build-latest
+    - image: rollforguildinc/elixir:latest-build
       environment:
         RFG_API_AWS_BUCKET: $RFG_API_AWS_BUCKET
         RFG_API_AWS_REGION: $RFG_API_AWS_REGION
@@ -41,6 +41,7 @@ jobs:
       - run:
           name: Waiting for Postgres to be ready
           command: |
+            echo -n Waiting for Postgres
             for i in `seq 1 10`;
             do
               nc -z localhost 5432 && echo Success && exit 0
