@@ -1,5 +1,5 @@
 api:
-  image: rollforguildinc/elixir
+  image: rollforguildinc/elixir:1.0.3
   ports:
     - "4000:4000"
   command: >

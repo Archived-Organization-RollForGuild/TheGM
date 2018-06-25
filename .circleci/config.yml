@@ -1,6 +1,6 @@
 defaults: &defaults
   docker:
-    - image: rollforguildinc/elixir:latest-build
+    - image: rollforguildinc/elixir:1.0.3-build
       environment:
         RFG_API_AWS_BUCKET: $RFG_API_AWS_BUCKET
         RFG_API_AWS_REGION: $RFG_API_AWS_REGION
