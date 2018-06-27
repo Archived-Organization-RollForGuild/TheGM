@@ -6,10 +6,11 @@ defmodule Thegm.GroupsController do
   alias Thegm.GroupMembers
 
   def create(conn, %{"data" => %{"attributes" => params, "type" => type}}) do
+    users_id = conn.assigns[:current_user].id
     with {:ok, _} <- Thegm.Validators.validate_type(type, "groups"),
       {:ok, params} <- parse_params(params),
       group_changeset <- Groups.create_changeset(%Groups{}, params),
-      {:ok, multi} <- create_group_multi(conn, group_changeset),
+      {:ok, multi} <- create_group_multi(group_changeset, users_id),
       {:ok, resp} <- Repo.transaction(multi),
       group <- Repo.preload(resp.groups, [{:group_members, :users}]),
       {:ok, games, game_suggestions} <- Thegm.Reader.read_games_and_game_suggestions(params),
@@ -77,7 +78,7 @@ defmodule Thegm.GroupsController do
 
   def show(conn, %{"id" => groups_id}) do
     users_id = conn.assigns[:current_user]
-    with {:ok, group} <- Thegm.Groups.get_group_by_id(groups_id),
+    with {:ok, group} <- Thegm.Groups.get_group_by_id!(groups_id),
       {:ok, group} <- Thegm.Groups.preload_join_requests_by_requestee_id(group, users_id) do
         conn
         |> put_status(:ok)
@@ -92,52 +93,25 @@ defmodule Thegm.GroupsController do
 
   def update(conn, %{"id" => groups_id, "data" => %{"attributes" => params, "type" => type}}) do
     users_id = conn.assigns[:current_user].id
-    cond do
-      type == "groups" ->
-        case Repo.one(from m in Thegm.GroupMembers, where: m.groups_id == ^groups_id and m.users_id == ^users_id) |> Repo.preload(:groups) do
-          nil ->
-            conn
-            |> put_status(:forbidden)
-            |> render(Thegm.ErrorView, "error.json", errors: ["membership: You must be a member", "role: You must be an admin"])
-          member ->
-            cond do
-              GroupMembers.isAdmin(member) ->
-                params = cond do
-                  Map.has_key?(params, "address") && params["address"] != nil ->
-                    case Thegm.Geos.get_lat_lng(params["address"]) do
-                      {:ok, geo} ->
-                        Map.merge(params, %{"lat" => geo[:lat], "lng" => geo[:lng]})
-                      {:error, error} ->
-                        conn
-                        |> put_status(:unprocessable_entity)
-                        |> Phoenix.Controller.render(Thegm.ErrorView, "error.json", errors: [error])
-                        |> halt()
-                    end
-                  true ->
-                    params
-                end
-                group = Groups.changeset(member.groups, params)
-                case Repo.update(group) do
-                  {:ok, _} ->
-                    group_response = groups_query(groups_id, users_id)
-                    conn
-                    |> put_status(:ok)
-                    |> render("show.json", group: group_response, users_id: users_id)
-                  {:error, changeset} ->
-                    conn
-                    |> put_status(:unprocessable_entity)
-                    |> render(Thegm.ErrorView, "error.json", errors: Enum.map(changeset.errors, fn {k, v} -> Atom.to_string(k) <> ": " <> elem(v, 0) end))
-                end
-              true ->
-                conn
-                |> put_status(:forbidden)
-                |> render(Thegm.ErrorView, "error.json", errors: ["role: You must be an admin"])
-            end
-        end
-      true ->
+    with {:ok, _} <- Thegm.Validators.validate_type(type, "groups"),
+      {:ok, _} <- Thegm.GroupMembers.is_member_and_admin?(users_id, groups_id),
+      {:ok, group} <- Thegm.Groups.get_group_by_id!(groups_id),
+      {:ok, params_games, games_status} <- Thegm.Reader.read_games_and_status(params),
+      {:ok, params_game_suggestions, game_suggestions_status} <- Thegm.Reader.read_games_and_status(params),
+      {:ok, games} <- Thegm.GameCompiling.compile_game_changesets(params_games, :groups_id, group.id),
+      {:ok, game_suggestions} <- Thegm.GameCompiling.compile_game_suggestion_changesets(params_game_suggestions, :groups_id, group.id),
+      group_changeset <- Groups.changeset(group, params),
+      {:ok, multi} <- create_update_group_with_games_list_multi(group_changeset, games_status, game_suggestions_status, games ++ game_suggestions),
+      {:ok, resp} <- Repo.transaction(multi),
+      group <- Repo.preload(resp.groups, [{:group_members, :users}]) do
         conn
-        |> put_status(:bad_request)
-        |> render(Thegm.ErrorView, "error.json", errors: ["Posted a non `group` data type"])
+        |> put_status(:ok)
+        |> render("show.json", group: group, users_id: users_id)
+    else
+      {:error, :not_found, error} ->
+        conn
+        |> put_status(:not_found)
+        |> render(Thegm.ErrorView, "error.json", errors: error)
     end
   end
 
@@ -269,14 +243,36 @@ defmodule Thegm.GroupsController do
     |> Repo.preload([join_requests: join_requests_query, group_members: :users, group_games: :games])
   end
 
-  defp create_group_multi(conn, group_changeset) do
+  defp create_update_group_with_games_list_multi(group_changeset, games_status, game_suggestions_status, games_list) do
+    multi = Multi.new
+    |> Multi.update(:groups, group_changeset)
+
+    multi = cond do
+      games_status == :replace and game_suggestions_status == :replace ->
+        multi |> Multi.delete_all(:remove_group_games, from(gg in Thegm.GroupGames, where:  gg.groups_id == ^group_changeset.id))
+      games_status == :replace and game_suggestions_status == :skip ->
+        multi |> Multi.delete_all(:remove_group_games, from(gg in Thegm.GroupGames, where:  gg.groups_id == ^group_changeset.id and not is_nil(gg.games_id)))
+      games_status == :skip and game_suggestions_status == :replace ->
+        multi |> Multi.delete_all(:remove_group_games,from(gg in Thegm.GroupGames, where: gg.groups_id == ^group_changeset.id and not is_nil(gg.game_suggestions_id)))
+      true ->
+        multi
+    end
+
+    multi = if games_status == :replace or game_suggestions_status == :replace do
+      multi |> Multi.insert_all(:inserg_group_games, Thegm.GroupGames, games_list)
+    end
+
+    {:ok, multi}
+  end
+
+  defp create_group_multi(group_changeset, users_id) do
     multi =
       Multi.new
       |> Multi.insert(:groups, group_changeset)
       |> Multi.run(:group_members, fn %{groups: group} ->
         member_changeset =
           %Thegm.GroupMembers{groups_id: group.id}
-          |> Thegm.GroupMembers.create_changeset(%{role: "owner", users_id: conn.assigns[:current_user].id})
+          |> Thegm.GroupMembers.create_changeset(%{role: "owner", users_id: users_id})
         Repo.insert(member_changeset)
       end)
 

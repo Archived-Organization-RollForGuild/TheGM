@@ -26,4 +26,17 @@ defmodule Thegm.GameCompiling do
     this = Map.put(this, parent_key, parent_id)
     compile_game_suggestion_changesets(tail, parent_key, parent_id, [this | result])
   end
+
+  def reduce_and_divide(list, games \\ [], game_suggestions \\ [])
+  def reduce_and_divide([], games, game_suggestions), do: {:ok, games, game_suggestions}
+  def reduce_and_divide([head | tail], games, game_suggestions) do
+    cond do
+      head.games_id != nil ->
+        reduce_and_divide(tail, games ++ [head.games_id], game_suggestions)
+      head.game_suggestions_id != nil ->
+        reduce_and_divide(tail, games, game_suggestions ++ [head.game_suggestions_id])
+      true ->
+        reduce_and_divide(tail, games, game_suggestions)
+    end
+  end
 end

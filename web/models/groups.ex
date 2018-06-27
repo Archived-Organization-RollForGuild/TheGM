@@ -79,6 +79,15 @@ defmodule Thegm.Groups do
     {:ok, total}
   end
 
+  def get_group_by_id_with_games(groups_id) do
+    case Repo.one(from g in Thegm.Groups, where: g.id == ^groups_id, preload: :group_games) do
+      nil ->
+        {:error, :not_found, "could not find group with specified `id`"}
+      group ->
+        {:ok, group}
+    end
+  end
+
   def get_groups_with_settings(users_id, settings, geom, memberships, blocked_by, offset) do
     join_requests_query = case users_id do
       nil ->
@@ -99,7 +108,7 @@ defmodule Thegm.Groups do
     {:ok, groups}
   end
 
-  def get_group_by_id(groups_id) do
+  def get_group_by_id!(groups_id) do
     group = Repo.one(from g in Thegm.Groups, where: (g.id == ^groups_id))
     if group == nil do
       {:error, :not_found, "A group with the specified `id` was not found"}

@@ -127,28 +127,12 @@ defmodule Thegm.GroupEventsController do
         {list, :replace}
     end
 
-    {current_games, current_game_suggestions} = games_reduce_and_divide(event.group_event_games, [], [])
-
-    # NOTE: Skip if group is guild
-    {games_status, game_suggestions_status} = non_guild_check_replace_and_skip(games_status, game_suggestions_status, games, current_games, game_suggestions, current_game_suggestions)
-
     # Update the event
     event_changeset = GroupEvents.update_changeset(event, params)
     # Create list of event games changesets
     event_games = compile_game_changesets(games, event.id) ++ compile_game_suggestion_changesets(game_suggestions, event.id)
     # Will figure out how to go about delete event games, if at all
     update_continued_decide_which_delete_type(conn, event, event_changeset, event_games, games_status, game_suggestions_status)
-  end
-
-  def non_guild_check_replace_and_skip(games_status, game_suggestions_status, games, current_games, game_suggestions, current_game_suggestions) do
-    cond do
-      (games_status == :replace and game_suggestions_status == :skip) and length(games) + length(current_game_suggestions) > 1 ->
-        {games_status, :replace}
-      (games_status == :skip and game_suggestions_status == :replace) and length(game_suggestions) + length(current_games) > 1 ->
-        {:replace, game_suggestions_status}
-      true ->
-        {games_status, game_suggestions_status}
-    end
   end
 
   def update_continued_decide_which_delete_type(conn, event, event_changeset, event_games, games_status, game_suggestions_status) do
