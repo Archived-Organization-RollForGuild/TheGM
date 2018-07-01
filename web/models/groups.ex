@@ -37,6 +37,10 @@ defmodule Thegm.Groups do
     |> put_change(:member_status, status)
   end
 
+  def update_changeset(model, params \\ :empty) do
+    changeset(model, params)
+  end
+
   def changeset(model, params \\ :empty) do
     model
     |> cast(params, [:name, :description, :address, :discoverable])

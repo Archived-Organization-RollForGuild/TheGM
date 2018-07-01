@@ -56,8 +56,10 @@ defmodule Thegm.GroupsController do
   end
 
   def index(conn, params) do
-    users_id = conn.assigns[:current_user]
-    with {:ok, settings} <- read_search_params(params),
+    users_id = conn.assigns[:current_user].id
+    with {:ok, pagination_params} <- Thegm.Reader.read_pagination_params(params),
+      {:ok, geo_params} <- Thegm.Reader.read_geo_search_params(params, 40_075_000),
+      settings <- Map.merge(pagination_params, geo_params),
       {:ok, memberships} <- Thegm.GroupMembers.get_group_ids_where_user_is_member(users_id),
       {:ok, blocked_by} <- Thegm.GroupBlockedUsers.get_group_ids_blocking_user(users_id),
       geom <- %Geo.Point{coordinates: {settings.lng, settings.lat}, srid: 4326},
@@ -77,7 +79,7 @@ defmodule Thegm.GroupsController do
   end
 
   def show(conn, %{"id" => groups_id}) do
-    users_id = conn.assigns[:current_user]
+    users_id = conn.assigns[:current_user].id
     with {:ok, group} <- Thegm.Groups.get_group_by_id!(groups_id),
       {:ok, group} <- Thegm.Groups.preload_join_requests_by_requestee_id(group, users_id) do
         conn
@@ -95,15 +97,18 @@ defmodule Thegm.GroupsController do
     users_id = conn.assigns[:current_user].id
     with {:ok, _} <- Thegm.Validators.validate_type(type, "groups"),
       {:ok, _} <- Thegm.GroupMembers.is_member_and_admin?(users_id, groups_id),
-      {:ok, group} <- Thegm.Groups.get_group_by_id!(groups_id),
+      {:ok, params} <- parse_params(params),
       {:ok, params_games, games_status} <- Thegm.Reader.read_games_and_status(params),
-      {:ok, params_game_suggestions, game_suggestions_status} <- Thegm.Reader.read_games_and_status(params),
+      {:ok, params_game_suggestions, game_suggestions_status} <- Thegm.Reader.read_game_suggestions_and_status(params),
+      {:ok, group} <- Thegm.Groups.get_group_by_id!(groups_id),
       {:ok, games} <- Thegm.GameCompiling.compile_game_changesets(params_games, :groups_id, group.id),
       {:ok, game_suggestions} <- Thegm.GameCompiling.compile_game_suggestion_changesets(params_game_suggestions, :groups_id, group.id),
-      group_changeset <- Groups.changeset(group, params),
+      group_changeset <- Groups.update_changeset(group, params),
+      #{:ok, updated_group} <- Repo.update(group_changeset),
       {:ok, multi} <- create_update_group_with_games_list_multi(group_changeset, games_status, game_suggestions_status, games ++ game_suggestions),
       {:ok, resp} <- Repo.transaction(multi),
       group <- Repo.preload(resp.groups, [{:group_members, :users}]) do
+      #group <- Repo.preload(updated_group, [{:group_members, :users}]) do
         conn
         |> put_status(:ok)
         |> render("show.json", group: group, users_id: users_id)
@@ -128,94 +133,6 @@ defmodule Thegm.GroupsController do
       true ->
         {:ok, params}
     end
-  end
-
-  defp read_search_params(params) do
-    errors = []
-
-    # verify lat
-    {lat, errors} = case params["lat"] do
-      nil ->
-        errors = errors ++ [lat: "Must be supplied"]
-        {nil, errors}
-      temp ->
-        {lat, _} = Float.parse(temp)
-        errors = cond do
-          lat > 90 or lat < -90 ->
-            errors ++ [lat: "Must be between +-90"]
-          true ->
-            errors
-        end
-        {lat, errors}
-    end
-
-    # verify lng
-    {lng, errors} = case params["lng"] do
-      nil ->
-        errors = errors ++ [lng: "Must be supplied"]
-        {nil, errors}
-      temp ->
-        {lng, _} = Float.parse(temp)
-        errors = cond do
-          lng > 180 or lat < -180 ->
-            errors ++ [lng: "Must be between +-189"]
-          true ->
-            errors
-        end
-        {lng, errors}
-    end
-
-    # set page
-    {page, errors} = case params["page"] do
-      nil ->
-        {1, errors}
-      temp ->
-        {page, _} = Integer.parse(temp)
-        errors = cond do
-          page < 1 ->
-            errors ++ [page: "Must be a positive integer"]
-          true ->
-            errors
-        end
-        {page, errors}
-    end
-
-    {meters, errors} = case params["meters"] do
-      nil ->
-        {40075000, errors}
-      temp ->
-        {meters, _} = Float.parse(temp)
-        errors = cond do
-          meters <= 0 ->
-            errors ++ [meters: "Must be a real number greater than 0"]
-          true ->
-            errors
-        end
-        {meters, errors}
-    end
-
-    {limit, errors} = case params["limit"] do
-      nil ->
-        {100, errors}
-      temp ->
-        {limit, _} = Integer.parse(temp)
-        errors = cond do
-
-          limit < 1 ->
-            errors ++ [limit: "Must be at integer greater than 0"]
-          true ->
-            errors
-        end
-        {limit, errors}
-    end
-
-    resp = cond do
-      length(errors) > 0 ->
-        {:error, errors}
-      true ->
-        {:ok, %{lat: lat, lng: lng, meters: meters, page: page, limit: limit}}
-    end
-    resp
   end
 
   def get_admin([], _) do
@@ -249,17 +166,19 @@ defmodule Thegm.GroupsController do
 
     multi = cond do
       games_status == :replace and game_suggestions_status == :replace ->
-        multi |> Multi.delete_all(:remove_group_games, from(gg in Thegm.GroupGames, where:  gg.groups_id == ^group_changeset.id))
+        multi |> Multi.delete_all(:remove_group_games, from(gg in Thegm.GroupGames, where:  gg.groups_id == ^group_changeset.data.id))
       games_status == :replace and game_suggestions_status == :skip ->
-        multi |> Multi.delete_all(:remove_group_games, from(gg in Thegm.GroupGames, where:  gg.groups_id == ^group_changeset.id and not is_nil(gg.games_id)))
+        multi |> Multi.delete_all(:remove_group_games, from(gg in Thegm.GroupGames, where:  gg.groups_id == ^group_changeset.data.id and not is_nil(gg.games_id)))
       games_status == :skip and game_suggestions_status == :replace ->
-        multi |> Multi.delete_all(:remove_group_games,from(gg in Thegm.GroupGames, where: gg.groups_id == ^group_changeset.id and not is_nil(gg.game_suggestions_id)))
+        multi |> Multi.delete_all(:remove_group_games,from(gg in Thegm.GroupGames, where: gg.groups_id == ^group_changeset.data.id and not is_nil(gg.game_suggestions_id)))
       true ->
         multi
     end
 
     multi = if games_status == :replace or game_suggestions_status == :replace do
       multi |> Multi.insert_all(:inserg_group_games, Thegm.GroupGames, games_list)
+    else
+      multi
     end
 
     {:ok, multi}
