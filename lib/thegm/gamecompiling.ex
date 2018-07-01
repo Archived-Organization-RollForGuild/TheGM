@@ -1,4 +1,9 @@
 defmodule Thegm.GameCompiling do
+  @moduledoc """
+  A way to go about compiling game lists
+  """
+
+
   def compile_game_changesets(list, parent_key, parent_id, result \\ [])
   def compile_game_changesets([], _, _, result), do: {:ok, result}
   def compile_game_changesets([head | tail], parent_key, parent_id, result) do

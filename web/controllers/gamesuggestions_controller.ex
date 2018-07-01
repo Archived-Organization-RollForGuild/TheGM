@@ -68,7 +68,7 @@ defmodule Thegm.GameSuggestionsController do
   end
 
   def index(conn, params = %{"groups_id" => groups_id}) do
-    case Thegm.ReadPagination.read_pagination_params(params) do
+    case Thegm.Reader.read_pagination_params(params) do
       {:ok, settings} ->
         total = Repo.one(
           from gs in GameSuggestions,
@@ -97,7 +97,7 @@ defmodule Thegm.GameSuggestionsController do
   end
 
   def index(conn, params = %{"users_id" => users_id}) do
-    case Thegm.ReadPagination.read_pagination_params(params) do
+    case Thegm.Reader.read_pagination_params(params) do
       {:ok, settings} ->
         total = Repo.one(
           from gs in GameSuggestions,

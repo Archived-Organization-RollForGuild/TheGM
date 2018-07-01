@@ -1,4 +1,5 @@
 defmodule Thegm.GroupMembers do
+  @moduledoc false
   use Thegm.Web, :model
   alias Thegm.Repo
 

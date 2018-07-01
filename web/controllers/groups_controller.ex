@@ -121,17 +121,16 @@ defmodule Thegm.GroupsController do
   end
 
   defp parse_params(params) do
-    cond do
-      Map.has_key?(params, "address") && params["address"] != nil ->
-        case Thegm.Geos.get_lat_lng(params["address"]) do
-          {:ok, geo} ->
-            params = Map.merge(params, %{"lat" => geo[:lat], "lng" => geo[:lng]})
-            {:ok, params}
-          {:error, error} ->
-            {:error, error}
-        end
-      true ->
-        {:ok, params}
+    if Map.has_key?(params, "address") && params["address"] != nil do
+      case Thegm.Geos.get_lat_lng(params["address"]) do
+        {:ok, geo} ->
+          params = Map.merge(params, %{"lat" => geo[:lat], "lng" => geo[:lng]})
+          {:ok, params}
+        {:error, error} ->
+          {:error, error}
+      end
+    else
+      {:ok, params}
     end
   end
 
@@ -140,10 +139,9 @@ defmodule Thegm.GroupsController do
   end
 
   def get_admin([head | tail], users_id) do
-    cond do
-      head.users_id == users_id and GroupMembers.isAdmin(head) ->
+    if head.users_id == users_id and GroupMembers.isAdmin(head) do
         head
-      true ->
+      else
         get_admin(tail, users_id)
     end
   end
@@ -163,25 +161,33 @@ defmodule Thegm.GroupsController do
   defp create_update_group_with_games_list_multi(group_changeset, games_status, game_suggestions_status, games_list) do
     multi = Multi.new
     |> Multi.update(:groups, group_changeset)
+    |> decide_update_game_removal(group_changeset, games_status, game_suggestions_status)
+    |> decide_update_game_replace(games_status, game_suggestions_status, games_list)
 
-    multi = cond do
+    {:ok, multi}
+  end
+
+  # Credo considers the following funtion too complex... I disagree...
+  # credo:disable-for-lines:12
+  defp decide_update_game_removal(multi, group_changeset, games_status, game_suggestions_status) do
+    cond do
       games_status == :replace and game_suggestions_status == :replace ->
         multi |> Multi.delete_all(:remove_group_games, from(gg in Thegm.GroupGames, where:  gg.groups_id == ^group_changeset.data.id))
       games_status == :replace and game_suggestions_status == :skip ->
         multi |> Multi.delete_all(:remove_group_games, from(gg in Thegm.GroupGames, where:  gg.groups_id == ^group_changeset.data.id and not is_nil(gg.games_id)))
       games_status == :skip and game_suggestions_status == :replace ->
-        multi |> Multi.delete_all(:remove_group_games,from(gg in Thegm.GroupGames, where: gg.groups_id == ^group_changeset.data.id and not is_nil(gg.game_suggestions_id)))
+        multi |> Multi.delete_all(:remove_group_games, from(gg in Thegm.GroupGames, where: gg.groups_id == ^group_changeset.data.id and not is_nil(gg.game_suggestions_id)))
       true ->
         multi
     end
+  end
 
-    multi = if games_status == :replace or game_suggestions_status == :replace do
+  defp decide_update_game_replace(multi, games_status, game_suggestions_status, games_list) do
+    if games_status == :replace or game_suggestions_status == :replace do
       multi |> Multi.insert_all(:inserg_group_games, Thegm.GroupGames, games_list)
     else
       multi
     end
-
-    {:ok, multi}
   end
 
   defp create_group_multi(group_changeset, users_id) do

@@ -1,4 +1,8 @@
 defmodule Thegm.Reader do
+  @moduledoc """
+  A way to read consistently used parameters
+  """
+
   def read_games_and_game_suggestions(params) do
     games = case params["games"] do
       nil ->

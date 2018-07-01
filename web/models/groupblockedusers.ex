@@ -1,4 +1,6 @@
 defmodule Thegm.GroupBlockedUsers do
+  @moduledoc false
+  
   use Thegm.Web, :model
   alias Thegm.Repo
 

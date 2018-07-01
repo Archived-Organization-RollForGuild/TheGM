@@ -4,7 +4,7 @@ defmodule Thegm.GroupGamesController do
   alias Thegm.GroupGames
 
   def index(conn, params = %{"groups_id" => groups_id}) do
-    with {:ok, settings} <- Thegm.ReadPagination.read_pagination_params(params),
+    with {:ok, settings} <- Thegm.Reader.read_pagination_params(params),
       total when not is_nil(total) <- Repo.one(
         from gg in GroupGames,
         where: gg.groups_id == ^groups_id,

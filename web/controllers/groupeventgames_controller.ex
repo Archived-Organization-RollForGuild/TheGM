@@ -3,7 +3,7 @@ defmodule Thegm.GroupEventGamesController do
   alias Thegm.GroupEventGames
 
   def index(conn, params = %{"groups_id" => _, "group_events_id" => events_id}) do
-    case Thegm.ReadPagination.read_pagination_params(params) do
+    case Thegm.Reader.read_pagination_params(params) do
       {:ok, settings} ->
         total = Repo.one(
           from geg in GroupEventGames,

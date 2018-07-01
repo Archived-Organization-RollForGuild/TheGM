@@ -1,4 +1,9 @@
 defmodule Thegm.Validators do
+  @moduledoc """
+  Different validations
+  """
+
+
   import Ecto.Changeset
   def validate_url(changeset, field, options \\ []) do
     validate_change(changeset, field, fn _, url ->
@@ -13,7 +18,7 @@ defmodule Thegm.Validators do
   def validate_type(type, expected_type) do
     if type == expected_type do
       {:ok, type}
-    else 
+    else
       {:error, "Expected data type \"" <> expected_type <> "\", got \"" <> type <> "\""}
     end
   end

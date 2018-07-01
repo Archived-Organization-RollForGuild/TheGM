@@ -268,7 +268,7 @@ defmodule Thegm.GroupEventsController do
 
     groups_id = params["groups_id"]
     if groups_id != nil do
-      case Thegm.ReadPagination.read_pagination_params(params) do
+      case Thegm.Reader.read_pagination_params(params) do
         {:ok, settings} ->
           {meta, events} = query_events_with_meta(groups_id, settings)
 
