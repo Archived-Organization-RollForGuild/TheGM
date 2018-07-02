@@ -20,7 +20,7 @@ defmodule Thegm.Preferences do
 
   def create_changeset(model, params \\ :empty) do
     model
-    |> cast(params, [:user_id])
+    |> cast(params, [:users_id])
     |> changeset(params)
   end
 

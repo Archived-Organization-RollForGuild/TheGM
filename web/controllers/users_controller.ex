@@ -3,6 +3,7 @@ defmodule Thegm.UsersController do
 
   alias Thegm.Users
   alias Thegm.EmailChangeCodes
+  alias Ecto.Multi
 
   def index(conn, %{}) do
     conn
@@ -13,20 +14,25 @@ defmodule Thegm.UsersController do
   def create(conn, %{"data" => %{"attributes" => params, "type" => type}}) do
     case {type, params} do
       {"users", params} ->
-        changeset = Users.create_changeset(%Users{}, params)
+        user_changeset = Users.create_changeset(%Users{}, params)
+        multi = Multi.new
+          |> Multi.insert(:users, user_changeset)
+          |> Multi.run(:preferences, fn %{users: user} ->
+            preferences_changeset = Thegm.Preferences.create_changeset(%Thegm.Preferences{}, %{"users_id" => user.id})
+            Repo.insert(preferences_changeset)
+          end)
 
-        case Repo.insert(changeset) do
-          {:ok, resp} ->
-            Thegm.ConfirmationCodesController.new(resp.id, resp.email)
-            Repo.insert(Preferences)
+        case Repo.transaction(multi) do
+          {:ok, result} ->
+            user = result.users
+            Thegm.ConfirmationCodesController.new(user.id, user.email)
+            Thegm.Mailchimp.subscribe_new_user(user.email)
 
-            Thegm.Mailchimp.subscribe_new_user(resp.email)
             send_resp(conn, :created, "")
-          {:error, resp} ->
-            error_list = Enum.map(resp.errors, fn {k, v} -> Atom.to_string(k) <> ": " <> elem(v, 0) end)
+          {:error, _, changeset, %{}} ->
             conn
-            |> put_status(:bad_request)
-            |> render(Thegm.ErrorView, "error.json", errors: error_list)
+            |> put_status(:unprocessable_entity)
+            |> render(Thegm.ErrorView, "error.json", errors: Enum.map(changeset.errors, fn {k, v} -> Atom.to_string(k) <> ": " <> elem(v, 0) end))
         end
       _ ->
         conn
