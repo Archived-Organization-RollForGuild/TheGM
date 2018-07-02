@@ -58,7 +58,7 @@ defmodule Thegm.Users do
   def create_changeset(model, params \\ :empty) do
     model
     |> changeset(params)
-    |> cast(%{id: generate_uuid(params["username"]), password: params["password"] }, [:id, :password])
+    |> cast(%{id: generate_uuid(params["username"]), password: params["password"]}, [:id, :password])
     |> unique_constraint(:id, name: :users_pkey, message: "Username is already taken") #id is defined by username
     |> validate_required([:username, :password, :email], message: "Are required")
     |> validate_length(:password, min: 4)
