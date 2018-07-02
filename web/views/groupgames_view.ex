@@ -1,4 +1,5 @@
 defmodule Thegm.GroupGamesView do
+  @moduledoc false
   use Thegm.Web, :view
 
   def render("index.json", %{group_games: group_games, meta: meta}) do
@@ -30,4 +31,3 @@ defmodule Thegm.GroupGamesView do
     }
   end
 end
-# credo:disable-for-this-file

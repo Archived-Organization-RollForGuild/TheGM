@@ -1,7 +1,10 @@
 defmodule Thegm.Users do
+  @moduledoc false
   @uuid_namespace UUID.uuid5(:url, "https://rollforguild.com/users/")
 
   use Thegm.Web, :model
+
+  alias Thegm.Repo
 
   @primary_key {:id, :binary_id, autogenerate: false}
   @derive {Phoenix.Param, key: :id}
@@ -60,7 +63,6 @@ defmodule Thegm.Users do
     |> validate_required([:username, :password, :email], message: "Are required")
     |> validate_length(:password, min: 4)
     |> put_password_hash
-
   end
 
   defp put_password_hash(changeset) do
@@ -71,5 +73,21 @@ defmodule Thegm.Users do
         changeset
     end
   end
+
+  def get_user_by_id_with_groups_and_preferences(users_id) do
+    case Repo.get(Thegm.Users, users_id) |> Repo.preload([{:group_members, :groups}, :preferences]) do
+      nil ->
+        {:error, :not_found, "A user with that id was not found"}
+      user ->
+        {:ok, user}
+    end
+  end
+
+  def match_user_ids(users_id, current_users_id) do
+    if users_id == current_users_id do
+      {:ok, users_id}
+    else
+      {:error, :users_dont_match, "User id's do not match"}
+    end
+  end
 end
-# credo:disable-for-this-file

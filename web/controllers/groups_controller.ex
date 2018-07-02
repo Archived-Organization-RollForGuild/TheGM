@@ -104,11 +104,9 @@ defmodule Thegm.GroupsController do
       {:ok, games} <- Thegm.GameCompiling.compile_game_changesets(params_games, :groups_id, group.id),
       {:ok, game_suggestions} <- Thegm.GameCompiling.compile_game_suggestion_changesets(params_game_suggestions, :groups_id, group.id),
       group_changeset <- Groups.update_changeset(group, params),
-      #{:ok, updated_group} <- Repo.update(group_changeset),
       {:ok, multi} <- create_update_group_with_games_list_multi(group_changeset, games_status, game_suggestions_status, games ++ game_suggestions),
       {:ok, resp} <- Repo.transaction(multi),
       group <- Repo.preload(resp.groups, [{:group_members, :users}]) do
-      #group <- Repo.preload(updated_group, [{:group_members, :users}]) do
         conn
         |> put_status(:ok)
         |> render("show.json", group: group, users_id: users_id)
@@ -117,6 +115,11 @@ defmodule Thegm.GroupsController do
         conn
         |> put_status(:not_found)
         |> render(Thegm.ErrorView, "error.json", errors: error)
+
+      {:error, _, changeset, %{}} ->
+        conn
+        |> put_status(:unprocessable_entity)
+        |> render(Thegm.ErrorView, "error.json", errors: Enum.map(changeset.errors, fn {k, v} -> Atom.to_string(k) <> ": " <> elem(v, 0) end))
     end
   end
 
@@ -184,7 +187,7 @@ defmodule Thegm.GroupsController do
 
   defp decide_update_game_replace(multi, games_status, game_suggestions_status, games_list) do
     if games_status == :replace or game_suggestions_status == :replace do
-      multi |> Multi.insert_all(:inserg_group_games, Thegm.GroupGames, games_list)
+      multi |> Multi.insert_all(:insert_group_games, Thegm.GroupGames, games_list)
     else
       multi
     end
