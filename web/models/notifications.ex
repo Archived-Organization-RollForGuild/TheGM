@@ -2,6 +2,8 @@ defmodule Thegm.Notifications do
   use Thegm.Web, :model
   alias Thegm.Repo
 
+  @moduledoc false
+
   @primary_key {:id, :binary_id, autogenerate: true}
   @derive {Phoenix.Param, key: :id}
   @foreign_key_type :binary_id

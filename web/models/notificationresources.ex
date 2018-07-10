@@ -1,6 +1,8 @@
 defmodule Thegm.NotificationResources do
   use Thegm.Web, :model
 
+  @moduledoc false
+
   @primary_key false
   @foreign_key_type :binary_id
 
