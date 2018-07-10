@@ -18,6 +18,9 @@ defmodule Thegm.Router do
 
     get "/rolldice", RollDiceController, :index
 
+    resources "/notifications", NotificationsController, only: [:index]
+    resources "/notification-stats", NotificationStatsController, only: [:show], singleton: true
+
     resources "/users", UsersController do
       resources "/avatar", UserAvatarsController, only: [:create, :delete], singleton: true
       resources "/preferences", PreferencesController, only: [:update, :show], singleton: true
