@@ -35,7 +35,7 @@ defmodule Thegm.GameSuggestionsController do
     users_id = conn.assigns[:current_user].id
 
     # Ensure user is a member and admin of the group
-    case Thegm.GroupMembersController.is_member_and_admin?(users_id, groups_id) do
+    case Thegm.GroupMembers.is_member_and_admin?(users_id, groups_id) do
       {:error, error} ->
         conn
         |> put_status(:bad_request)
@@ -68,7 +68,7 @@ defmodule Thegm.GameSuggestionsController do
   end
 
   def index(conn, params = %{"groups_id" => groups_id}) do
-    case Thegm.ReadPagination.read_pagination_params(params) do
+    case Thegm.Reader.read_pagination_params(params) do
       {:ok, settings} ->
         total = Repo.one(
           from gs in GameSuggestions,
@@ -97,7 +97,7 @@ defmodule Thegm.GameSuggestionsController do
   end
 
   def index(conn, params = %{"users_id" => users_id}) do
-    case Thegm.ReadPagination.read_pagination_params(params) do
+    case Thegm.Reader.read_pagination_params(params) do
       {:ok, settings} ->
         total = Repo.one(
           from gs in GameSuggestions,

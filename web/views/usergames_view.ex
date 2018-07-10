@@ -1,27 +1,33 @@
 defmodule Thegm.UserGamesView do
+  @moduledoc false
   use Thegm.Web, :view
 
-  def render("index.json", %{usergames: usergames, meta: meta}) do
+  def render("index.json", %{group_games: group_games, meta: meta}) do
+    data = Enum.map(group_games, &show/1)
+
     %{
       meta: Thegm.MetaView.meta(meta),
-      data: Enum.map(usergames, &hydrate_user_game/1)
+      data: data
     }
   end
 
-  def hydrate_user_game(usergame) do
-    usergame_hydration = %{
-      type: "user-games",
-      id: usergame.games_id,
-      attributes: Thegm.GamesView.games_show(usergame.games)
-    }
-    usergame_hydration = put_in(usergame_hydration, [:attributes, :field], usergame.field)
-    put_in(usergame_hydration, [:attributes, :inserted_at], usergame.inserted_at)
+  def show(user_game) do
+    cond do
+      user_game.games_id != nil ->
+        Thegm.GamesView.games_show(user_game.games)
+
+      user_game.game_suggestions_id != nil ->
+        Thegm.GameSuggestionsView.game_suggestion_show(user_game.game_suggestions)
+
+      true ->
+        # Should hopefully never occur
+        {}
+    end
   end
 
-  def users_games(user_games) do
+  def relationship_link(user) do
     %{
-      data: Enum.map(user_games, fn(x) -> Thegm.GamesView.relationship_data(x.games) end)
+      link: Application.get_env(:thegm, :api_url) <> "/users/" <> user.id <> "/games"
     }
   end
 end
-# credo:disable-for-this-file

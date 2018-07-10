@@ -3,7 +3,7 @@ defmodule Thegm.GamesController do
   alias Thegm.Games
 
   def index(conn, params) do
-    case Thegm.ReadPagination.read_pagination_params(params) do
+    case Thegm.Reader.read_pagination_params(params) do
       {:ok, settings} ->
         # Get total in search
         query = params["query"] <> "%"

@@ -186,7 +186,6 @@ defmodule Thegm.GroupJoinRequestsController do
               order_by: [desc: gjr.inserted_at],
               limit: ^settings.limit,
               offset: ^offset) |> Repo.preload(:users)
-            IO.inspect gjrs
             meta = %{total: total, limit: settings.limit, offset: offset, count: length(gjrs)}
 
             conn

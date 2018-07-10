@@ -1,5 +1,8 @@
 defmodule Thegm.Groups do
   use Thegm.Web, :model
+  alias Thegm.Repo
+  import Ecto.Query
+  import Geo.PostGIS
   @uuid_namespace UUID.uuid5(:url, "https://rollforguild.com/groups/")
 
   @primary_key {:id, :binary_id, autogenerate: false}
@@ -32,6 +35,10 @@ defmodule Thegm.Groups do
   def set_member_status(model, status) do
     model
     |> put_change(:member_status, status)
+  end
+
+  def update_changeset(model, params \\ :empty) do
+    changeset(model, params)
   end
 
   def changeset(model, params \\ :empty) do
@@ -67,6 +74,58 @@ defmodule Thegm.Groups do
       true ->
         model
     end
+  end
+
+  def get_total_groups_with_settings(settings, geom, memberships, blocked_by) do
+    total = Repo.one(from g in Thegm.Groups,
+      select: count(g.id),
+      where: st_distancesphere(g.geom, ^geom) <= ^settings.meters and not g.id in ^memberships and not g.id in ^blocked_by and g.discoverable == true)
+    {:ok, total}
+  end
+
+  def get_group_by_id_with_games(groups_id) do
+    case Repo.one(from g in Thegm.Groups, where: g.id == ^groups_id, preload: :group_games) do
+      nil ->
+        {:error, :not_found, "could not find group with specified `id`"}
+      group ->
+        {:ok, group}
+    end
+  end
+
+  def get_groups_with_settings(users_id, settings, geom, memberships, blocked_by, offset) do
+    join_requests_query = case users_id do
+      nil ->
+        from gjr in Thegm.GroupJoinRequests, where: is_nil(gjr.users_id), order_by: [desc: gjr.inserted_at]
+      _ ->
+        from gjr in Thegm.GroupJoinRequests, where: gjr.users_id == ^users_id, order_by: [desc: gjr.inserted_at]
+    end
+
+    groups = Repo.all(
+      from g in Thegm.Groups,
+      select: %{g | distance: st_distancesphere(g.geom, ^geom)},
+      where: st_distancesphere(g.geom, ^geom) <= ^settings.meters and not g.id in ^memberships and not g.id in ^blocked_by and g.discoverable == true,
+      order_by: [asc: st_distancesphere(g.geom, ^geom)],
+      limit: ^settings.limit,
+      offset: ^offset
+    ) |> Repo.preload([join_requests: join_requests_query, group_members: :users, group_games: :games])
+
+    {:ok, groups}
+  end
+
+  def get_group_by_id!(groups_id) do
+    group = Repo.one(from g in Thegm.Groups, where: (g.id == ^groups_id))
+    if group == nil do
+      {:error, :not_found, "A group with the specified `id` was not found"}
+    else
+      {:ok, group}
+    end
+  end
+
+  def preload_join_requests_by_requestee_id(group, nil), do: {:ok, group}
+  def preload_join_requests_by_requestee_id(group, users_id) do
+    join_requests_query = from gjr in Thegm.GroupJoinRequests, where: gjr.users_id == ^users_id, order_by: [desc: gjr.inserted_at]
+    group = group|> Repo.preload([join_requests: join_requests_query, group_members: :users, group_games: :games])
+    {:ok, group}
   end
 end
 # credo:disable-for-this-file
