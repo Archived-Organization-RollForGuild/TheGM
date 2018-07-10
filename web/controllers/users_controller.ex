@@ -12,91 +12,87 @@ defmodule Thegm.UsersController do
   end
 
   def create(conn, %{"data" => %{"attributes" => params, "type" => type}}) do
-    case {type, params} do
-      {"users", params} ->
-        user_changeset = Users.create_changeset(%Users{}, params)
-        multi = Multi.new
-          |> Multi.insert(:users, user_changeset)
-          |> Multi.run(:preferences, fn %{users: user} ->
-            preferences_changeset = Thegm.Preferences.create_changeset(%Thegm.Preferences{}, %{"users_id" => user.id})
-            Repo.insert(preferences_changeset)
-          end)
+    with {:ok, _} <- Thegm.Validators.validate_type(type, "users"),
+      user_changeset = Users.create_changeset(%Users{}, params),
+      {:ok, multi} <- create_user_multi(user_changeset),
+      {:ok, result} <- Repo.transaction(multi),
+      {:ok, games, game_suggestions} <- Thegm.Reader.read_games_and_game_suggestions(params),
+      {:ok, user_games} <- Thegm.GameCompiling.compile_game_changesets(games, :users_id, result.users.id),
+      {:ok, user_game_suggestions} <- Thegm.GameCompiling.compile_game_suggestion_changesets(game_suggestions, :users_id, result.users.id) do
+        # Inserting games is separate than group multi as games failing shouldn't fail user creation
+        Repo.insert_all(Thegm.UserGames, user_games ++ user_game_suggestions)
 
-        case Repo.transaction(multi) do
-          {:ok, result} ->
-            user = result.users
-            Thegm.ConfirmationCodesController.new(user.id, user.email)
-            Thegm.Mailchimp.subscribe_new_user(user.email)
+        user = result.users
+        Thegm.ConfirmationCodesController.new(user.id, user.email)
+        Thegm.Mailchimp.subscribe_new_user(user.email)
 
-            send_resp(conn, :created, "")
-          {:error, _, changeset, %{}} ->
-            conn
-            |> put_status(:unprocessable_entity)
-            |> render(Thegm.ErrorView, "error.json", errors: Enum.map(changeset.errors, fn {k, v} -> Atom.to_string(k) <> ": " <> elem(v, 0) end))
-        end
-      _ ->
+        send_resp(conn, :created, "")
+    else
+      {:error, _, changeset, %{}} ->
+        conn
+        |> put_status(:unprocessable_entity)
+        |> render(Thegm.ErrorView, "error.json", errors: Enum.map(changeset.errors, fn {k, v} -> Atom.to_string(k) <> ": " <> elem(v, 0) end))
+      {:error, error} ->
         conn
         |> put_status(:bad_request)
-        |> render(Thegm.ErrorView, "error.json", errors: ["Posted a non `user` data type"])
+        |> render(Thegm.ErrorView, "error.json", errors: [error])
     end
   end
 
   def update(conn, %{"id" => users_id, "data" => %{"attributes" => params, "type" => type}}) do
     current_user = conn.assigns[:current_user]
-    cond do
-      type == "users" ->
-        case Repo.get(Users, users_id) |> Repo.preload([{:user_games, :games}, {:group_members, :groups}, :preferences]) do
-          nil ->
-            conn
-            |> put_status(:not_found)
-            |> render(Thegm.ErrorView, "error.json", errors: ["A user with the specified `username` was not found"])
-          user ->
-            cond do
-              current_user.id == users_id ->
-                user = Users.unrestricted_changeset(user, params)
-
-                if Map.has_key?(params, "email") do
+    with {:ok, _} <- Thegm.Validators.validate_type(type, "users"),
+      {:ok, _} <- Thegm.Users.match_user_ids(users_id, current_user.id),
+      {:ok, params_games, games_status} <- Thegm.Reader.read_games_and_status(params),
+      {:ok, params_game_suggestions, game_suggestions_status} <- Thegm.Reader.read_game_suggestions_and_status(params),
+      {:ok, games} <- Thegm.GameCompiling.compile_game_changesets(params_games, :users_id, current_user.id),
+      {:ok, game_suggestions} <- Thegm.GameCompiling.compile_game_suggestion_changesets(params_game_suggestions, :users_id, current_user.id),
+      user_changeset <- Users.changeset(current_user, params),
+      {:ok, multi} <- create_update_user_with_games_list_multi(user_changeset, games_status, game_suggestions_status, games ++ game_suggestions),
+      {:ok, resp} <- Repo.transaction(multi) do
+        if Map.has_key?(params, "email") do
                   update_email(current_user, params["email"])
-                end
-
-                case Repo.update(user) do
-                  {:ok, result} ->
-                    conn
-                    |> put_status(:ok)
-                    |> render("private.json", user: result)
-                  {:error, changeset} ->
-                    conn
-                    |> put_status(:unprocessable_entity)
-                    |> render(Thegm.ErrorView, "error.json", errors: Enum.map(changeset.errors, fn {k, v} -> Atom.to_string(k) <> ": " <> elem(v, 0) end))
-                end
-              true ->
-                conn
-                |> put_status(:forbidden)
-                |> render(Thegm.ErrorView, "error.json", errors: ["You do not have privileges to edit this account"])
-            end
         end
-      true ->
+        user = resp.users |> Repo.preload([{:group_members, :groups}, :preferences])
+        conn
+        |> put_status(:ok)
+        |> render("private.json", user: user)
+    else
+      {:error, :not_found, error} ->
+        conn
+        |> put_status(:not_found)
+        |> render(Thegm.ErrorView, "error.json", errors: error)
+
+      {:error, :users_dont_match, _} ->
+        conn
+        |> put_status(:forbidden)
+        |> render(Thegm.ErrorView, "error.json", errors: ["You do not have permission to take this action"])
+
+      {:error, error} ->
         conn
         |> put_status(:bad_request)
-        |> render(Thegm.ErrorView, "error.json", errors: ["Posted a non `user` data type"])
+        |> render(Thegm.ErrorView, "error.json", errors: [error])
+
+      {:error, _, changeset, %{}} ->
+        conn
+        |> put_status(:unprocessable_entity)
+        |> render(Thegm.ErrorView, "error.json", errors: Enum.map(changeset.errors, fn {k, v} -> Atom.to_string(k) <> ": " <> elem(v, 0) end))
     end
   end
 
   def show(conn, %{"id" => users_id}) do
     current_user_id = conn.assigns[:current_user].id
-
-    case Repo.get(Users, users_id) |> Repo.preload([{:user_games, :games}, {:group_members, :groups}, :preferences]) do
-      nil ->
+    with {:ok, user} <- Users.get_user_by_id_with_groups_and_preferences(users_id) do
+      if current_user_id == users_id do
+        render(conn, "private.json", user: user)
+      else
+        render(conn, "public.json", user: user)
+      end
+    else
+      {:error, :not_found, error} ->
         conn
         |> put_status(:not_found)
-        |> render(Thegm.ErrorView, "error.json", errors: ["A user with the specified `username` was not found"])
-      user ->
-      cond do
-        current_user_id == users_id ->
-          render conn, "private.json", user: user
-        true ->
-          render conn, "public.json", user: user
-      end
+        |> render(Thegm.ErrorView, "error.json", errors: [error])
     end
   end
 
@@ -116,5 +112,47 @@ defmodule Thegm.UsersController do
         |> Thegm.Mailer.deliver_now
     end
   end
+
+  defp create_user_multi(user_changeset) do
+    multi = Multi.new
+      |> Multi.insert(:users, user_changeset)
+      |> Multi.run(:preferences, fn %{users: user} ->
+        preferences_changeset = Thegm.Preferences.create_changeset(%Thegm.Preferences{}, %{"users_id" => user.id})
+        Repo.insert(preferences_changeset)
+      end)
+
+    {:ok, multi}
+  end
+
+  defp create_update_user_with_games_list_multi(user_changeset, games_status, game_suggestions_status, games_list) do
+    multi = Multi.new
+    |> Multi.update(:users, user_changeset)
+    |> decide_update_game_removal(user_changeset, games_status, game_suggestions_status)
+    |> decide_update_game_replace(games_status, game_suggestions_status, games_list)
+
+    {:ok, multi}
+  end
+
+  # Credo considers the following funtion too complex... I disagree...
+  # credo:disable-for-lines:12
+  defp decide_update_game_removal(multi, user_changeset, games_status, game_suggestions_status) do
+    cond do
+      games_status == :replace and game_suggestions_status == :replace ->
+        multi |> Multi.delete_all(:remove_user_games, from(ug in Thegm.UserGames, where:  ug.groups_id == ^user_changeset.data.id))
+      games_status == :replace and game_suggestions_status == :skip ->
+        multi |> Multi.delete_all(:remove_user_games, from(ug in Thegm.UserGames, where:  ug.groups_id == ^user_changeset.data.id and not is_nil(ug.games_id)))
+      games_status == :skip and game_suggestions_status == :replace ->
+        multi |> Multi.delete_all(:remove_user_games, from(ug in Thegm.UserGames, where: ug.groups_id == ^user_changeset.data.id and not is_nil(ug.game_suggestions_id)))
+      true ->
+        multi
+    end
+  end
+
+  defp decide_update_game_replace(multi, games_status, game_suggestions_status, games_list) do
+    if games_status == :replace or game_suggestions_status == :replace do
+      multi |> Multi.insert_all(:insert_user_games, Thegm.UserGames, games_list)
+    else
+      multi
+    end
+  end
 end
-# credo:disable-for-this-file

@@ -7,7 +7,7 @@ defmodule Thegm.GroupEventsController do
   def create(conn, %{"groups_id" => groups_id, "data" => %{"attributes" => params, "type" => type}}) do
     users_id = conn.assigns[:current_user].id
     # Do the base validation
-    case Thegm.GroupMembersController.is_member_and_admin?(users_id, groups_id) do
+    case Thegm.GroupMembers.is_member_and_admin?(users_id, groups_id) do
       {:ok, _} ->
         if type == "events" do
           create_continued_parse_params(conn, groups_id, users_id, params)
@@ -72,7 +72,7 @@ defmodule Thegm.GroupEventsController do
   def update(conn, %{"groups_id" => groups_id, "id" => events_id, "data" => %{"attributes" => params, "type" => type}}) do
     users_id = conn.assigns[:current_user].id
     # Do the base validation
-    case Thegm.GroupMembersController.is_member_and_admin?(users_id, groups_id) do
+    case Thegm.GroupMembers.is_member_and_admin?(users_id, groups_id) do
       {:ok, _} ->
         if type == "events" do
           update_continued_get_event_and_parse_params(conn, events_id, groups_id, users_id, params)
@@ -127,28 +127,12 @@ defmodule Thegm.GroupEventsController do
         {list, :replace}
     end
 
-    {current_games, current_game_suggestions} = games_reduce_and_divide(event.group_event_games, [], [])
-
-    # NOTE: Skip if group is guild
-    {games_status, game_suggestions_status} = non_guild_check_replace_and_skip(games_status, game_suggestions_status, games, current_games, game_suggestions, current_game_suggestions)
-
     # Update the event
     event_changeset = GroupEvents.update_changeset(event, params)
     # Create list of event games changesets
     event_games = compile_game_changesets(games, event.id) ++ compile_game_suggestion_changesets(game_suggestions, event.id)
     # Will figure out how to go about delete event games, if at all
     update_continued_decide_which_delete_type(conn, event, event_changeset, event_games, games_status, game_suggestions_status)
-  end
-
-  def non_guild_check_replace_and_skip(games_status, game_suggestions_status, games, current_games, game_suggestions, current_game_suggestions) do
-    cond do
-      (games_status == :replace and game_suggestions_status == :skip) and length(games) + length(current_game_suggestions) > 1 ->
-        {games_status, :replace}
-      (games_status == :skip and game_suggestions_status == :replace) and length(game_suggestions) + length(current_games) > 1 ->
-        {:replace, game_suggestions_status}
-      true ->
-        {games_status, game_suggestions_status}
-    end
   end
 
   def update_continued_decide_which_delete_type(conn, event, event_changeset, event_games, games_status, game_suggestions_status) do
@@ -284,7 +268,7 @@ defmodule Thegm.GroupEventsController do
 
     groups_id = params["groups_id"]
     if groups_id != nil do
-      case Thegm.ReadPagination.read_pagination_params(params) do
+      case Thegm.Reader.read_pagination_params(params) do
         {:ok, settings} ->
           {meta, events} = query_events_with_meta(groups_id, settings)
 
@@ -310,7 +294,7 @@ defmodule Thegm.GroupEventsController do
     users_id = conn.assigns[:current_user].id
 
     # Ensure user is a member and admin of the group
-    case Thegm.GroupMembersController.is_member_and_admin?(users_id, groups_id) do
+    case Thegm.GroupMembers.is_member_and_admin?(users_id, groups_id) do
       {:ok, _} ->
         # Get the specified event
         case Repo.get(Thegm.GroupEvents, events_id) do
