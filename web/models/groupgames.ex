@@ -8,15 +8,17 @@ defmodule Thegm.GroupGames do
   schema "group_games" do
     belongs_to :groups, Thegm.Groups
     belongs_to :games, Thegm.Games
+    belongs_to :game_suggestions, Thegm.GameSuggestions
 
     timestamps()
   end
 
   def create_changeset(model, params \\ :empty) do
     model
-    |> cast(params, [:games_id, :groups_id])
+    |> cast(params, [:games_id, :groups_id, :game_suggestions_id])
     |> validate_required([:groups_id, :games_id])
     |> unique_constraint(:groups_id, name: :group_games_games_id_groups_id_index)
     |> foreign_key_constraint(:games_id, name: :group_games_games_id_fk)
   end
 end
+# credo:disable-for-this-file

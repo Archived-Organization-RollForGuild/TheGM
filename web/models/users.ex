@@ -1,7 +1,10 @@
 defmodule Thegm.Users do
+  @moduledoc false
   @uuid_namespace UUID.uuid5(:url, "https://rollforguild.com/users/")
 
   use Thegm.Web, :model
+
+  alias Thegm.Repo
 
   @primary_key {:id, :binary_id, autogenerate: false}
   @derive {Phoenix.Param, key: :id}
@@ -16,6 +19,8 @@ defmodule Thegm.Users do
     field :bio, :string
     has_many :group_members, Thegm.GroupMembers
     has_many :user_games, Thegm.UserGames
+    has_many :message_participants, Thegm.MessageParticipants
+    has_one  :preferences, Thegm.Preferences
 
     timestamps()
   end
@@ -53,12 +58,11 @@ defmodule Thegm.Users do
   def create_changeset(model, params \\ :empty) do
     model
     |> changeset(params)
-    |> cast(%{id: generate_uuid(params["username"]), password: params["password"] }, [:id, :password])
+    |> cast(%{id: generate_uuid(params["username"]), password: params["password"]}, [:id, :password])
     |> unique_constraint(:id, name: :users_pkey, message: "Username is already taken") #id is defined by username
     |> validate_required([:username, :password, :email], message: "Are required")
     |> validate_length(:password, min: 4)
     |> put_password_hash
-
   end
 
   defp put_password_hash(changeset) do
@@ -67,6 +71,23 @@ defmodule Thegm.Users do
         put_change(changeset, :password_hash, Comeonin.Argon2.hashpwsalt(password))
       _ ->
         changeset
+    end
+  end
+
+  def get_user_by_id_with_groups_and_preferences(users_id) do
+    case Repo.get(Thegm.Users, users_id) |> Repo.preload([{:group_members, :groups}, :preferences]) do
+      nil ->
+        {:error, :not_found, "A user with that id was not found"}
+      user ->
+        {:ok, user}
+    end
+  end
+
+  def match_user_ids(users_id, current_users_id) do
+    if users_id == current_users_id do
+      {:ok, users_id}
+    else
+      {:error, :users_dont_match, "User id's do not match"}
     end
   end
 end

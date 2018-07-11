@@ -123,3 +123,4 @@ defmodule Thegm.ThreadsView do
     included_users(tail, included)
   end
 end
+# credo:disable-for-this-file

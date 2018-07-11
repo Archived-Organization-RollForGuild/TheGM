@@ -75,7 +75,6 @@ defmodule Thegm.GroupThreadCommentsController do
             end
         end
       {:error, errors} ->
-        IO.inspect errors
         conn
         |> put_status(:bad_request)
         |> render(Thegm.ErrorView, "error.json", errors: Enum.map(errors, fn {k, v} -> Atom.to_string(k) <> ": " <> v end))
@@ -211,3 +210,4 @@ defmodule Thegm.GroupThreadCommentsController do
     resp
   end
 end
+# credo:disable-for-this-file

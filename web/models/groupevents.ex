@@ -13,14 +13,14 @@ defmodule Thegm.GroupEvents do
     field :end_time, :utc_datetime
     field :deleted, :boolean
     belongs_to :groups, Thegm.Groups
-    belongs_to :games, Thegm.Games
+    has_many :group_event_games, Thegm.GroupEventGames
 
     timestamps()
   end
 
   def create_changeset(model, params \\ :empty) do
     model
-    |> cast(params, [:title, :description, :location, :start_time, :end_time, :groups_id, :games_id])
+    |> cast(params, [:title, :description, :location, :start_time, :end_time, :groups_id])
     |> validate_required([:title, :start_time, :end_time, :groups_id], message: "are required.")
     |> validate_length(:title, min: 1, max: 8192, message: "must be between 1 and 8192 characters.")
     |> validate_length(:description, max: 8192, message: "must be less than 8192 characters")
@@ -29,7 +29,7 @@ defmodule Thegm.GroupEvents do
 
   def update_changeset(model, params \\ :empty) do
     model
-    |> cast(params, [:title, :description, :location, :start_time, :end_time, :games_id])
+    |> cast(params, [:title, :description, :location, :start_time, :end_time])
     |> validate_length(:title, min: 1, max: 8192, message: "must be between 1 and 8192 characters.")
     |> validate_length(:description, max: 8192, message: "must be less than 8192 characters")
     |> validate_length(:location, max: 8192, message: "must be less than 8192 characters")
@@ -40,3 +40,4 @@ defmodule Thegm.GroupEvents do
     |> cast(%{deleted: true}, [:deleted])
   end
 end
+# credo:disable-for-this-file

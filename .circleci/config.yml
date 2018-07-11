@@ -1,11 +1,62 @@
+defaults: &defaults
+  docker:
+    - image: rollforguildinc/elixir:1.0.3-build
+      environment:
+        RFG_API_AWS_BUCKET: $RFG_API_AWS_BUCKET
+        RFG_API_AWS_REGION: $RFG_API_AWS_REGION
+        RFG_API_DB_HOST: postgres
+        RFG_API_DB_NAME: $RFG_API_DB_NAME
+        RFG_API_DB_PASS: $RFG_API_DB_PASS
+        RFG_API_DB_PORT: $RFG_API_DB_PORT
+        RFG_API_DB_USER: $RFG_API_DB_USER
+        RFG_API_ENCRYPTION_KEYPHRASE: $RFG_API_ENCRYPTION_KEYPHRASE
+        RFG_API_PORT: 4000
+        RFG_AWS_ACCESS_KEY_ID: $RFG_AWS_ACCESS_KEY_ID
+        RFG_AWS_SECRET_ACCESS_KEY: $RFG_AWS_SECRET_ACCESS_KEY
+    - image: mdillon/postgis:10-alpine
+      environment:
+        POSTGRES_HOST: postgres
+        POSTGRES_PASSWORD: $RFG_API_DB_PASS
+        POSTGRES_USER: $RFG_API_DB_USER
+
+  working_directory: ~/app
+
+
+
+
+
 version: 2
 
 jobs:
-  build:
-    docker:
-      - image: 709489362086.dkr.ecr.us-east-1.amazonaws.com/thegm
-
-    working_directory: ~/repo
+  do-eet:
+    <<: *defaults
 
     steps:
       - checkout
+
+      - run:
+          name: Install Dependencies
+          command: mix deps.get
+
+      - run:
+          name: Waiting for Postgres to be ready
+          command: |
+            echo -n Waiting for Postgres
+            for i in `seq 1 10`;
+            do
+              nc -z localhost 5432 && echo Success && exit 0
+              echo -n .
+              sleep 1
+            done
+            echo Failed waiting for Postgress && exit 1
+
+
+
+
+
+workflows:
+  version: 2
+
+  roll-the-die:
+    jobs:
+      - do-eet

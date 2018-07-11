@@ -5,3 +5,4 @@ defmodule Thegm.Mailchimp do
     Mailchimp.List.create_member(final, email, :subscribed, %{}, %{})
   end
 end
+# credo:disable-for-this-file

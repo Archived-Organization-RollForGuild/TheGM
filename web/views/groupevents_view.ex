@@ -6,18 +6,17 @@ defmodule Thegm.GroupEventsView do
       is_member ->
         %{
           data: private_show(event),
-          included: [hydrate_group(event.groups), hydrate_game(event.games)]
+          included: [hydrate_group(event.groups)]
         }
       true ->
         %{
           data: public_show(event),
-          included: [hydrate_group(event.groups), hydrate_game(event.games)]
+          included: [hydrate_group(event.groups)]
         }
     end
   end
 
   def render("index.json", %{events: events, meta: meta, is_member: is_member}) do
-    distinct_games = Thegm.GamesView.included_games(events, [])
     hydrated_group = case events do
       [] ->
         []
@@ -35,7 +34,7 @@ defmodule Thegm.GroupEventsView do
     %{
       meta: meta,
       data: data,
-      included: Enum.map(distinct_games, &hydrate_game/1) ++ hydrated_group
+      included: hydrated_group
     }
   end
 
@@ -53,7 +52,7 @@ defmodule Thegm.GroupEventsView do
       },
       relationships: %{
         groups: Thegm.GroupsView.relationship_data(event.groups),
-        games: Thegm.GamesView.relationship_data(event.games)
+        games: Thegm.GroupEventGamesView.relationship_link(event)
       }
     }
   end
@@ -71,16 +70,8 @@ defmodule Thegm.GroupEventsView do
       },
       relationships: %{
         groups: Thegm.GroupsView.relationship_data(event.groups),
-        games: Thegm.GamesView.relationship_data(event.games)
+        games: Thegm.GroupEventGamesView.relationship_link(event)
       }
-    }
-  end
-
-  def hydrate_game(game) do
-    %{
-      id: game.id,
-      type: "games",
-      attributes: Thegm.GamesView.games_show(game)
     }
   end
 
@@ -93,6 +84,16 @@ defmodule Thegm.GroupEventsView do
   end
 
   def relationship_link(group) do
-    %{link: Application.get_env(:thegm, :api_url) <> "/groups/" <> group.id <> "/events"}
+    %{
+      links: %{
+        related: %{
+          href: Application.get_env(:thegm, :api_url) <> "/groups/" <> group.id <> "/events",
+          meta: %{
+            count: 0
+          }
+        }
+      }
+    }
   end
 end
+# credo:disable-for-this-file

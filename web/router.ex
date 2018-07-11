@@ -18,14 +18,18 @@ defmodule Thegm.Router do
 
     get "/rolldice", RollDiceController, :index
 
+    resources "/notifications", NotificationsController, only: [:index]
+    resources "/notification-stats", NotificationStatsController, only: [:show], singleton: true
+
     resources "/users", UsersController do
       resources "/avatar", UserAvatarsController, only: [:create, :delete], singleton: true
+      resources "/preferences", PreferencesController, only: [:update, :show], singleton: true
       resources "/password", UserPasswordsController, only: [:update], singleton: true
-      resources "/games", UserGamesController, only: [:index, :delete, :create]
-      resources "/games", UserGamesController, only: [:update], singleton: true
+      resources "/games", UserGamesController, only: [:index]
+      resources "/game-suggestions", GameSuggestionsController, only: [:create, :index, :show]
     end
 
-    resources "/games", GamesController, only: [:index, :create]
+    resources "/games", GamesController, only: [:index, :show]
 
     resources "/groups", GroupsController, only: [:create, :update, :delete] do
       resources "/events", GroupEventsController, only: [:create, :update, :delete]
@@ -34,8 +38,8 @@ defmodule Thegm.Router do
       resources "/threads", GroupThreadsController, only: [:create, :index, :show, :delete] do
         resources "/comments", GroupThreadCommentsController, only: [:create, :index, :show, :delete]
       end
-      resources "/games", GroupGamesController, only: [:index, :delete, :create]
-      resources "/games", GroupGamesController, only: [:update], singleton: true
+      resources "/games", GroupGamesController, only: [:index]
+      resources "/game-suggestions", GameSuggestionsController, only: [:create, :index, :show]
     end
 
     resources "/threads", ThreadsController, only: [:create, :delete] do
@@ -49,7 +53,7 @@ defmodule Thegm.Router do
     pipe_through [:api, :tryauth]
 
     get "/isteapot", IsTeapotController, :index
-    get "/deathcheck", DeathCheckController, :index
+    resources "/deathcheck", DeathCheckController, only: [:index]
     post "/register", UsersController, :create
     post "/login", SessionsController, :create
     get "/sessions/:id", SessionsController, :show
@@ -61,7 +65,9 @@ defmodule Thegm.Router do
     put "/resets/:id", PasswordResetsController, :update
     resources "/email", EmailChangeController, only: [:update]
     resources "/groups", GroupsController, only: [:show, :index] do
-      resources "/events", GroupEventsController, only: [:show, :index]
+      resources "/events", GroupEventsController, only: [:show, :index] do
+        resources "/games", GroupEventGamesController, only: [:index]
+      end
     end
 
     resources "/threads", ThreadsController, only: [:index, :show] do
@@ -69,3 +75,4 @@ defmodule Thegm.Router do
     end
   end
 end
+# credo:disable-for-this-file

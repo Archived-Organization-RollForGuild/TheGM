@@ -1,25 +1,33 @@
 defmodule Thegm.GroupGamesView do
+  @moduledoc false
   use Thegm.Web, :view
 
-  def render("index.json", %{groupgames: groupgames, meta: meta}) do
+  def render("index.json", %{group_games: group_games, meta: meta}) do
+    data = Enum.map(group_games, &show/1)
+
     %{
       meta: Thegm.MetaView.meta(meta),
-      data: Enum.map(groupgames, &hydrate_group_game/1)
+      data: data
     }
   end
 
-  def hydrate_group_game(groupgame) do
-    groupgame_hydration = %{
-      type: "group-games",
-      id: groupgame.games_id,
-      attributes: Thegm.GamesView.games_show(groupgame.games)
-    }
-    put_in(groupgame_hydration, [:attributes, :inserted_at], groupgame.inserted_at)
+  def show(group_game) do
+    cond do
+      group_game.games_id != nil ->
+        Thegm.GamesView.games_show(group_game.games)
+
+      group_game.game_suggestions_id != nil ->
+        Thegm.GameSuggestionsView.game_suggestion_show(group_game.game_suggestions)
+
+      true ->
+        # Should hopefully never occur
+        {}
+    end
   end
 
-  def groups_games(group_games) do
+  def relationship_link(group) do
     %{
-      data: Enum.map(group_games, fn(x) -> Thegm.GamesView.relationship_data(x.games) end)
+      link: Application.get_env(:thegm, :api_url) <> "/groups/" <> group.id <> "/games"
     }
   end
 end

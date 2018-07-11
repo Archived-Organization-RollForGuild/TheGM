@@ -14,6 +14,7 @@ defmodule Thegm do
       supervisor(Thegm.Endpoint, []),
       # Start your own worker by calling: Thegm.Worker.start_link(arg1, arg2, arg3)
       # worker(Thegm.Worker, [arg1, arg2, arg3]),
+      supervisor(Thegm.Presence, [])
     ]
 
     # See https://hexdocs.pm/elixir/Supervisor.html
@@ -29,3 +30,4 @@ defmodule Thegm do
     :ok
   end
 end
+# credo:disable-for-this-file

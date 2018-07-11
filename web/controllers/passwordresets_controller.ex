@@ -76,3 +76,4 @@ defmodule Thegm.PasswordResetsController do
     end
   end
 end
+# credo:disable-for-this-file

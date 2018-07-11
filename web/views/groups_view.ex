@@ -7,7 +7,7 @@ defmodule Thegm.GroupsView do
     member = data[:attributes][:member_status]
     cond do
        GroupMembers.isMember(%{role: member}) ->
-        included = Enum.map(group.group_members, &user_hydration/1) ++ Enum.map(group.group_games, &game_hydration/1)
+        included = Enum.map(group.group_members, &user_hydration/1)
         %{
           data: data,
           included: included
@@ -20,8 +20,15 @@ defmodule Thegm.GroupsView do
   end
 
   def render("index.json", %{groups: groups, meta: meta, users_id: users_id}) do
-    data = Enum.map(groups, fn g -> show_json(g, users_id) end)
+    data = Enum.map(groups, fn g -> show_search_json(g, users_id) end)
     %{meta: search_meta(meta), data: data}
+  end
+
+  def show_search_json(group, user) do
+    json = show_json(group, user)
+    dist = round(group.distance)
+    distance = dist + (500 - rem(dist, 500))
+    Kernel.put_in(json, [:attributes, :distance], distance)
   end
 
   def show_json(group, user) do
@@ -50,7 +57,7 @@ defmodule Thegm.GroupsView do
       },
       relationships: %{
         group_members: Thegm.GroupMembersView.groups_users(group.group_members),
-        group_games: Thegm.GroupGamesView.groups_games(group.group_games),
+        group_games: Thegm.GroupGamesView.relationship_link(group),
         group_events: Thegm.GroupEventsView.relationship_link(group)
       }
     }
@@ -69,7 +76,7 @@ defmodule Thegm.GroupsView do
         discoverable: group.discoverable
       },
       relationships: %{
-        group_games: Thegm.GroupGamesView.groups_games(group.group_games),
+        group_games: Thegm.GroupGamesView.relationship_link(group),
         group_events: Thegm.GroupEventsView.relationship_link(group)
       }
     }
@@ -174,3 +181,4 @@ defmodule Thegm.GroupsView do
     end
   end
 end
+# credo:disable-for-this-file

@@ -12,3 +12,4 @@ defmodule Thegm.UniqueView do
     }
   end
 end
+# credo:disable-for-this-file

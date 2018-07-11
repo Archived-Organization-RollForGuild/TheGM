@@ -2,7 +2,7 @@ defmodule Thegm.UsersView do
   use Thegm.Web, :view
 
   def render("public.json", %{user: user}) do
-    included = Enum.map(user.group_members, &group_hydration/1) ++ Enum.map(user.user_games, &game_hydration/1)
+    included = Enum.map(user.group_members, &group_hydration/1)
 
     %{
       data: %{
@@ -11,7 +11,7 @@ defmodule Thegm.UsersView do
         attributes: users_public(user),
         relationships: %{
           groups: Thegm.GroupMembersView.users_groups(user.group_members),
-          games: Thegm.UserGamesView.users_games(user.user_games)
+          games: Thegm.UserGamesView.relationship_link(user)
         }
       },
       included: included
@@ -19,7 +19,7 @@ defmodule Thegm.UsersView do
   end
 
   def render("private.json", %{user: user}) do
-    included = Enum.map(user.group_members, &group_hydration/1) ++ Enum.map(user.user_games, &game_hydration/1)
+    included = Enum.map(user.group_members, &group_hydration/1) ++ [preferences_hydration(user.preferences)]
 
     %{
       data: %{
@@ -28,7 +28,8 @@ defmodule Thegm.UsersView do
         attributes: users_private(user),
         relationships: %{
           groups: Thegm.GroupMembersView.users_groups(user.group_members),
-          games: Thegm.UserGamesView.users_games(user.user_games)
+          games: Thegm.UserGamesView.relationship_link(user),
+          preferences: Thegm.PreferencesView.relationship_data(user.preferences)
         }
       },
       included: included
@@ -58,6 +59,14 @@ defmodule Thegm.UsersView do
     }
   end
 
+  def preferences_hydration(preferences) do
+    %{
+      type: "preferences",
+      id: preferences.id,
+      attributes: Thegm.PreferencesView.users_preferences(preferences)
+    }
+  end
+
   def users_public(user) do
     %{
       username: user.username,
@@ -82,3 +91,4 @@ defmodule Thegm.UsersView do
     }
   end
 end
+# credo:disable-for-this-file

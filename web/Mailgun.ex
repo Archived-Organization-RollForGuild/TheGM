@@ -58,3 +58,4 @@ defmodule Thegm.Mailgun do
     end
   end
 end
+# credo:disable-for-this-file

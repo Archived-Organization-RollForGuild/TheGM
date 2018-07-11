@@ -30,3 +30,4 @@ defmodule Thegm.Threads do
     |> cast(params, [:body, :pinned, :deleted])
   end
 end
+# credo:disable-for-this-file
