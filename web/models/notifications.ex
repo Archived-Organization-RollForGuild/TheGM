@@ -65,8 +65,8 @@ defmodule Thegm.Notifications do
     |> Repo.update_all(set: [new: false])
   end
 
-  def create_notifications(body, type, recievers, resources, notify_at \\ DateTime.utc_now) when is_bitstring(body) and is_bitstring(type) and is_list(recievers) and is_list(resources) do
-    Enum.each(recievers, fn (x) -> insert_notification(body, type, x, resources, notify_at) end)
+  def create_notifications(body, type, recipients, resources, notify_at \\ DateTime.utc_now) when is_bitstring(body) and is_bitstring(type) and is_list(recipients) and is_list(resources) do
+    Enum.each(recipients, fn (x) -> insert_notification(body, type, x, resources, notify_at) end)
   end
 
   defp insert_notification(body, type, users_id, [], notify_at) do
