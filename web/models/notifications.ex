@@ -1,6 +1,7 @@
 defmodule Thegm.Notifications do
   use Thegm.Web, :model
   alias Thegm.Repo
+  alias Ecto.Multi
 
   @moduledoc false
 
@@ -64,4 +65,27 @@ defmodule Thegm.Notifications do
     |> Repo.update_all(set: [new: false])
   end
 
+  def create_notifications(body, type, recipients, resources, notify_at \\ DateTime.utc_now) when is_bitstring(body) and is_bitstring(type) and is_list(recipients) and is_list(resources) do
+    Enum.each(recipients, fn (recipient) -> insert_notification(body, type, recipient, resources, notify_at) end)
+  end
+
+  defp insert_notification(body, type, users_id, [], notify_at) do
+    notification_changeset = create_changeset(%Thegm.Notifications{}, %{"body" => body, "type" => type, "notify_at" => notify_at, "users_id" => users_id})
+    Repo.insert(notification_changeset)
+  end
+
+  defp insert_notification(body, type, users_id, resources, notify_at) do
+    notification_changeset = create_changeset(%Thegm.Notifications{}, %{"body" => body, "type" => type, "notify_at" => notify_at, "users_id" => users_id})
+
+    multi = Multi.new
+      |> Multi.insert(:notifications, notification_changeset)
+      |> Multi.run(:notification_resources, fn %{notifications: notification} ->
+        temp = %{notifications_id: notification.id, inserted_at: NaiveDateTime.utc_now, updated_at: NaiveDateTime.utc_now}
+        resources = Enum.reduce(resources, [], fn (resource, acc) -> [Map.merge(resource, temp) | acc] end)
+        {_, objects} = Repo.insert_all(Thegm.NotificationResources, resources, returning: true)
+        {:ok, objects}
+      end)
+
+    Repo.transaction(multi)
+  end
 end
