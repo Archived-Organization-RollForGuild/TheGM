@@ -66,7 +66,7 @@ defmodule Thegm.Notifications do
   end
 
   def create_notifications(body, type, recipients, resources, notify_at \\ DateTime.utc_now) when is_bitstring(body) and is_bitstring(type) and is_list(recipients) and is_list(resources) do
-    Enum.each(recipients, fn (x) -> insert_notification(body, type, x, resources, notify_at) end)
+    Enum.each(recipients, fn (recipient) -> insert_notification(body, type, recipient, resources, notify_at) end)
   end
 
   defp insert_notification(body, type, users_id, [], notify_at) do
@@ -81,7 +81,7 @@ defmodule Thegm.Notifications do
       |> Multi.insert(:notifications, notification_changeset)
       |> Multi.run(:notification_resources, fn %{notifications: notification} ->
         temp = %{notifications_id: notification.id, inserted_at: NaiveDateTime.utc_now, updated_at: NaiveDateTime.utc_now}
-        resources = Enum.reduce(resources, [], fn (x, acc) -> [Map.merge(x, temp) | acc] end)
+        resources = Enum.reduce(resources, [], fn (resource, acc) -> [Map.merge(resource, temp) | acc] end)
         {_, objects} = Repo.insert_all(Thegm.NotificationResources, resources, returning: true)
         {:ok, objects}
       end)
