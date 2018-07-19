@@ -128,6 +128,7 @@ defmodule Thegm.GroupJoinRequestsController do
                         request_changeset = GroupJoinRequests.update_changeset(join_request, params)
                         case Repo.update(request_changeset) do
                           {:ok, _} ->
+                            Task.start(Thegm.GroupJoinRequests, :create_new_join_request_rejection_notification, [groups_id, request_user_id])
                             send_resp(conn, :no_content, "")
                           {:error, error} ->
                             conn
