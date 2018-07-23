@@ -85,4 +85,15 @@ defmodule Thegm.GroupMembers do
         end
     end
   end
+
+  def create_new_group_member_notifications(groups_id, admins_id, new_users_id) do
+    with {:ok, group} <- Thegm.Groups.get_group_by_id!(groups_id),
+        {:ok, user} <- Thegm.Users.get_user_by_id(new_users_id),
+        {:ok, recipients} <- Thegm.GroupMembers.get_group_member_ids(groups_id, [admins_id, new_users_id]) do
+          type = "group::new-member"
+          body = "#{user.name} just joined your group #{group.name}"
+          resources = [%{resources_type: "groups", resources_id: groups_id}, %{resources_type: "users", resources_id: new_users_id}]
+          Thegm.Notifications.create_notifications(body, type, recipients, resources)
+    end
+  end
 end

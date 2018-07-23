@@ -117,6 +117,7 @@ defmodule Thegm.GroupJoinRequestsController do
                         case Repo.transaction(multi) do
                           {:ok, _} ->
                             Task.start(Thegm.GroupJoinRequests, :create_new_join_request_acceptance_notification, [groups_id, request_user_id])
+                            Task.start(Thegm.GroupMembers, :create_new_group_member_notifications, [groups_id, admin_user_id, request_user_id])
                             send_resp(conn, :no_content, "")
                           {:error, :group_join_request, changeset, %{}} ->
                             conn
