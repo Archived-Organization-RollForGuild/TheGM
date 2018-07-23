@@ -39,5 +39,19 @@ defmodule Thegm.GroupEvents do
     model
     |> cast(%{deleted: true}, [:deleted])
   end
+
+  def create_new_event_notification(event, groups_id, users_id) do
+    with {:ok, group} <- Thegm.Groups.get_group_by_id!(groups_id),
+      {:ok, recipients} <- Thegm.GroupMembers.get_group_member_ids(groups_id, [users_id]) do
+        event_date_string = event.start_time
+          |> DateTime.to_date
+          |> Date.to_erl
+          |> Timex.format!("{Mfull} {D}, {YYYY}")
+        type = "group::new-event"
+        body = "#{group.name} just set up a new event #{event.title} on #{event_date_string}"
+        resources = [%{resources_type: "groups", resources_id: groups_id}, %{resources_type: "events", resources_id: event.id}]
+        Thegm.Notifications.create_notifications(body, type, recipients, resources)
+    end
+  end
 end
 # credo:disable-for-this-file

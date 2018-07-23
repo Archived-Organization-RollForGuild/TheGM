@@ -57,7 +57,8 @@ defmodule Thegm.Mixfile do
       {:sweet_xml, "~> 0.6"},
       {:temp, "~> 0.4"},
       {:credo, "~> 0.3", only: [:dev, :test]},
-      {:ex_crypto, "~> 0.9.0"}
+      {:ex_crypto, "~> 0.9.0"},
+      {:timex, "~> 3.3"}
     ]
   end
 
