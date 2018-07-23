@@ -46,5 +46,14 @@ defmodule Thegm.GroupJoinRequests do
         Thegm.Notifications.create_notifications(body, type, [users_id], resources)
     end
   end
+  
+  def create_new_join_request_rejection_notification(groups_id, users_id) do
+    with {:ok, group} <- Thegm.Groups.get_group_by_id!(groups_id) do
+        type = "group::join-request-rejected"
+        body = "Your request to join #{group.name} has been denied."
+        resources = [%{resources_type: "groups", resources_id: groups_id}]
+        Thegm.Notifications.create_notifications(body, type, [users_id], resources)
+    end
+  end
 end
 # credo:disable-for-this-file
