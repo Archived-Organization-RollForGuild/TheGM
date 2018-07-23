@@ -58,7 +58,7 @@ defmodule Thegm.GroupEventsController do
         event_games = compile_game_changesets(games, event.id) ++ compile_game_suggestion_changesets(game_suggestions, event.id)
         Repo.insert_all(Thegm.GroupEventGames, event_games)
 
-        Task.start(Thegm.GroupEvents, :create_new_event_notification, [event, params.groups_id, params.users_id])
+        Task.start(Thegm.GroupEvents, :create_new_event_notification, [event, Map.fetch!(params, "groups_id"), Map.fetch!(params, "users_id")])
 
         conn
         |> put_status(:created)
