@@ -48,7 +48,7 @@ defmodule Thegm.GroupEvents do
           |> Date.to_erl
           |> Timex.format!("{Mfull} {D}, {YYYY}")
         type = "group::new-event"
-        body = "#{group.name} just set up a new event #{event.title} on #{event_date_string}"
+        body = "#{group.name} just set up a new event \"#{event.title}\" on #{event_date_string}"
         resources = [%{resources_type: "groups", resources_id: groups_id}, %{resources_type: "events", resources_id: event.id}]
         Thegm.Notifications.create_notifications(body, type, recipients, resources)
     end
