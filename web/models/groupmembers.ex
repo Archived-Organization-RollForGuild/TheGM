@@ -2,6 +2,7 @@ defmodule Thegm.GroupMembers do
   @moduledoc false
   use Thegm.Web, :model
   alias Thegm.Repo
+  import Ecto.Query
 
   @primary_key {:id, :binary_id, autogenerate: true}
   @derive {Phoenix.Param, key: :id}
@@ -42,6 +43,11 @@ defmodule Thegm.GroupMembers do
   def get_group_member_ids(groups_id, exclude_users \\ []) do
     members = Repo.all(from m in Thegm.GroupMembers, select: m.users_id, where: m.groups_id == ^groups_id and not m.users_id in ^exclude_users)
     {:ok, members}
+  end
+
+  def get_admin_ids(groups_id) do
+    admin_ids = Repo.all(from m in Thegm.GroupMembers, select: m.users_id, where: m.groups_id == ^groups_id and m.role in ^@admin_roles)
+    {:ok, admin_ids}
   end
 
   def get_group_ids_where_user_is_member(users_id) do
