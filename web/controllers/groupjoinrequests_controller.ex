@@ -19,6 +19,7 @@ defmodule Thegm.GroupJoinRequestsController do
               [] ->
                 case Repo.insert(join_changeset) do
                   {:ok, _} ->
+                    Task.start(Thegm.GroupJoinRequests, :create_new_join_request_notifications, [groups_id, conn.assigns[:current_user]])
                     send_resp(conn, :ok, "")
                   {:error, resp} ->
                     error_list = Enum.map(resp.errors, fn {k, v} -> Atom.to_string(k) <> ": " <> elem(v, 0) end)
@@ -62,6 +63,7 @@ defmodule Thegm.GroupJoinRequestsController do
                   last.status == "accepted" ->
                     case Repo.insert(join_changeset) do
                       {:ok, _} ->
+                        Task.start(Thegm.GroupJoinRequests, :create_new_join_request_notifications, [groups_id, conn.assigns[:current_user]])
                         send_resp(conn, :ok, "")
                       {:error, resp} ->
                         error_list = Enum.map(resp.errors, fn {k, v} -> Atom.to_string(k) <> ": " <> elem(v, 0) end)
