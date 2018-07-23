@@ -30,5 +30,19 @@ defmodule Thegm.GroupThreads do
     model
     |> cast(params, [:body, :pinned, :deleted])
   end
+
+  def create_new_thread_notifications(groups_id, thread, user) do
+    with {:ok, group} <- Thegm.Groups.get_group_by_id!(groups_id),
+      {:ok, recipients} <- Thegm.GroupMembers.get_group_member_ids(groups_id, [user.id]) do
+        type = "group::new-forum-thread"
+        body = "#{user.username} created a new forum thread in #{group.name} entitled #{thread.title}"
+        resources = [
+          %{resources_type: "groups", resources_id: groups_id},
+          %{resources_type: "threads", resources_id: thread.id},
+          %{resources_type: "users", resources_id: user.id}
+        ]
+        Thegm.Notifications.create_notifications(body, type, recipients, resources)
+    end
+  end
 end
 # credo:disable-for-this-file

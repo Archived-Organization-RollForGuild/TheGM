@@ -18,6 +18,7 @@ defmodule Thegm.GroupThreadsController do
             case Repo.insert(thread_changeset) do
               {:ok, thread} ->
                 thread = thread |> Repo.preload([:users, :groups, :group_thread_comments, :group_threads_deleted])
+                Task.start(Thegm.GroupThreads, :create_new_thread_notifications, [groups_id, thread, conn.assigns[:current_user]])
                 conn
                 |> put_status(:created)
                 |> render("show.json", thread: thread)

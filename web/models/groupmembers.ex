@@ -40,6 +40,11 @@ defmodule Thegm.GroupMembers do
     |> put_change(:active, nil)
   end
 
+  def get_group_member_ids(groups_id, exclude_users \\ []) do
+    members = Repo.all(from m in Thegm.GroupMembers, select: m.users_id, where: m.groups_id == ^groups_id and not m.users_id in ^exclude_users)
+    {:ok, members}
+  end
+
   def get_admin_ids(groups_id) do
     admin_ids = Repo.all(from m in Thegm.GroupMembers, select: m.users_id, where: m.groups_id == ^groups_id and m.role in ^@admin_roles)
     {:ok, admin_ids}
