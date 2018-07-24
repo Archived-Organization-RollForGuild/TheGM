@@ -136,6 +136,9 @@ defmodule Thegm.GroupMembersController do
           true ->
             case Repo.delete(target_member) do
               {:ok, _} ->
+                if current_user_id == users_id do
+                  Task.start(Thegm.GroupMembers, :create_notifications_that_user_left, [groups_id, users_id])
+                end
                 send_resp(conn, :no_content, "")
               {:error, changeset} ->
                 conn
