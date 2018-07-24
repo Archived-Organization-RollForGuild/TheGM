@@ -90,4 +90,13 @@ defmodule Thegm.Users do
       {:error, :users_dont_match, "User id's do not match"}
     end
   end
+
+  def get_user_by_id(users_id) do
+    case Repo.get(Thegm.Users, users_id) do
+      nil ->
+        {:error, :not_found, "A user with that id was not found"}
+      user ->
+        {:ok, user}
+    end
+  end
 end
